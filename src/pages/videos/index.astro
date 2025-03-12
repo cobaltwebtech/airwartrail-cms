@@ -1,0 +1,22 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { DashboardNav } from "../../components/DashboardNav";
+import { DashboardHeader } from "../../components/DashboardHeader";
+import { VideoUploadButton } from "../../components/VideoUploadButton";
+import { VideoList } from "../../components/VideoList";
+import { getVideos } from "../../lib/bunny-api";
+
+// Fetch videos on the server
+const videos = await getVideos();
+---
+
+<DashboardLayout title="Videos">
+  <DashboardNav slot="sidebar" client:load />
+  <DashboardHeader heading="Videos" text="Manage your video library hosted on Bunny.net Stream.">
+    <VideoUploadButton client:load />
+  </DashboardHeader>
+  <div class="grid gap-4">
+    <VideoList videos={videos} client:load />
+  </div>
+</DashboardLayout>
+

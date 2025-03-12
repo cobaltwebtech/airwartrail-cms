@@ -1,11 +1,22 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { DashboardNav } from "../components/DashboardNav";
+import { DashboardHeader } from "../components/DashboardHeader";
+import { VideoUploadButton } from "../components/VideoUploadButton";
+import { VideoList } from "../components/VideoList";
+import { getVideos } from "../lib/bunny-api";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+// Fetch videos on the server
+const videos = await getVideos();
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<DashboardLayout title="Dashboard">
+  <DashboardNav slot="sidebar" client:load />
+  <DashboardHeader heading="Videos" text="Manage your video library hosted on Bunny.net Stream.">
+    <VideoUploadButton client:load />
+  </DashboardHeader>
+  <div class="grid gap-4">
+    <VideoList videos={videos} client:load />
+  </div>
+</DashboardLayout>
+
