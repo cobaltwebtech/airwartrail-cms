@@ -62,7 +62,7 @@ export function VideoUploadButton() {
         throw new Error("No valid video ID returned from API");
       }
       
-      // 2. Get authentication token for the upload
+      // 2. Get authentication token and other necessary headers for the upload
       console.log("Getting auth token for resumable upload");
       const authResponse = await fetch('/api/auth/upload-token');
       
@@ -72,22 +72,31 @@ export function VideoUploadButton() {
       
       const { token } = await authResponse.json();
       const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
+      const apiKey = import.meta.env.BUNNY_API_KEY;
+      
+      // Generate signature and expire values
+      const expire = Math.floor(Date.now() / 1000) + 3600; // 1 hour expiration
+      const signature = await generateSignature(libraryId, apiKey, expire, videoId);
+      
+      console.log("Token received:", token);
+      console.log("Video ID:", videoId);
+      console.log("Signature:", signature);
+      console.log("Expire:", expire);
       
       // 3. Use the TUS client for resumable uploads
-      // IMPORTANT: The correct endpoint for Bunny.net Stream TUS uploads
       return new Promise<void>((resolve, reject) => {
         const tusUpload = new tus.Upload(file, {
           // This is the correct endpoint for Bunny.net Stream TUS uploads
           endpoint: "https://video.bunnycdn.com/tusupload",
           retryDelays: [0, 3000, 5000, 10000, 20000],
           headers: {
-            // Use the correct authentication header for Stream API
-            "AuthorizationToken": token,
+            "AuthorizationSignature": signature,
+            "AuthorizationExpire": expire.toString(),
+            "LibraryId": libraryId,
+            "VideoId": videoId,
           },
           metadata: {
-            // These are the required metadata fields for Bunny.net Stream
-            libraryId: libraryId,
-            videoId: videoId,
+            filetype: file.type,
             title: title,
           },
           onError: function(error) {
@@ -149,10 +158,17 @@ export function VideoUploadButton() {
     }
   };
   
+  const generateSignature = async (libraryId: string, apiKey: string, expire: number, videoId: string) => {
+    const message = `${libraryId}${apiKey}${expire}${videoId}`;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+  
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       if (isUploading && newOpen === false) {
-        // Prevent closing the dialog during upload
         return;
       }
       setOpen(newOpen);
