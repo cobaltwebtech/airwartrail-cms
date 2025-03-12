@@ -64,7 +64,7 @@ export function VideoUploadButton() {
       
       // 2. Get authentication token and other necessary headers for the upload
       console.log("Getting auth token for resumable upload");
-      const authResponse = await fetch('/api/auth/upload-token');
+      const authResponse = await fetch(`/api/auth/upload-token?videoId=${videoId}`);
       
       if (!authResponse.ok) {
         throw new Error("Failed to get authentication token for upload");
@@ -75,7 +75,7 @@ export function VideoUploadButton() {
       const apiKey = import.meta.env.BUNNY_API_KEY;
       
       // Generate signature and expire values
-      const expire = Math.floor(Date.now() / 1000) + 3600; // 1 hour expiration
+      const expire = Math.floor(Date.now() / 1000) + 86400; // 24 hours expiration
       const signature = await generateSignature(libraryId, apiKey, expire, videoId);
       
       console.log("Token received:", token);
@@ -86,14 +86,14 @@ export function VideoUploadButton() {
       // 3. Use the TUS client for resumable uploads
       return new Promise<void>((resolve, reject) => {
         const tusUpload = new tus.Upload(file, {
-          // This is the correct endpoint for Bunny.net Stream TUS uploads
+          // This is the endpoint for Bunny.net Stream TUS uploads
           endpoint: "https://video.bunnycdn.com/tusupload",
-          retryDelays: [0, 3000, 5000, 10000, 20000],
+          retryDelays: [0, 3000, 5000, 10000, 20000, 60000],
           headers: {
             "AuthorizationSignature": signature,
             "AuthorizationExpire": expire.toString(),
-            "LibraryId": libraryId,
-            "VideoId": videoId,
+            "LibraryId": libraryId.toString(),
+            "VideoId": videoId.toString(),
           },
           metadata: {
             filetype: file.type,
