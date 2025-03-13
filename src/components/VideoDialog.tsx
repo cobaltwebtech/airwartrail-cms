@@ -5,6 +5,7 @@ interface VideoDialogProps {
   video: Video;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isEditing: boolean;
 }
 
 export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {

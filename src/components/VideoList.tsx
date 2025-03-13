@@ -13,6 +13,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { VideoDialog } from "./VideoDialog";
+import { DeleteModal } from "./DeleteModal";
 import type { Video } from "../lib/bunny-api";
 import { CopyEmbed } from "./CopyEmbed";
 
@@ -23,6 +24,9 @@ interface VideoListProps {
 export function VideoList({ videos = [] }: VideoListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
   
   // Ensure videos is an array before filtering
   const videoArray = Array.isArray(videos) ? videos : [];
@@ -36,6 +40,34 @@ export function VideoList({ videos = [] }: VideoListProps) {
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
+
+  const handleEdit = (video: Video) => {
+    setSelectedVideo(video);
+    setIsEditing(true);
+  };
+
+  const handleDeleteRequest = (video: Video) => {
+    setVideoToDelete(video);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (videoToDelete) {
+      try {
+        const response = await fetch(`/api/videos/${videoToDelete.id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error("Failed to delete video");
+        }
+        window.location.reload();
+      } catch (error) {
+        console.error("Error deleting video:", error);
+      } finally {
+        setIsDeleteDialogOpen(false);
+      }
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -52,9 +84,19 @@ export function VideoList({ videos = [] }: VideoListProps) {
         <VideoDialog 
           video={selectedVideo} 
           open={!!selectedVideo} 
-          onOpenChange={() => setSelectedVideo(null)} 
+          onOpenChange={() => {
+            setSelectedVideo(null);
+            setIsEditing(false);
+          }} 
+          isEditing={isEditing}
         />
       )}
+
+      <DeleteModal
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+      />
       
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {filteredVideos.map((video) => (
@@ -106,12 +148,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
                         }
                       />
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEdit(video)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       <span>Edit</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteRequest(video)}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       <span>Delete</span>
                     </DropdownMenuItem>

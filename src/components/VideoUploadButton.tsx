@@ -70,13 +70,8 @@ export function VideoUploadButton() {
         throw new Error("Failed to get authentication token for upload");
       }
       
-      const { token } = await authResponse.json();
+      const { token, signature, expire } = await authResponse.json();
       const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-      const apiKey = import.meta.env.BUNNY_API_KEY;
-      
-      // Generate signature and expire values
-      const expire = Math.floor(Date.now() / 1000) + 86400; // 24 hours expiration
-      const signature = await generateSignature(libraryId, apiKey, expire, videoId);
       
       console.log("Token received:", token);
       console.log("Video ID:", videoId);
@@ -86,14 +81,14 @@ export function VideoUploadButton() {
       // 3. Use the TUS client for resumable uploads
       return new Promise<void>((resolve, reject) => {
         const tusUpload = new tus.Upload(file, {
-          // This is the endpoint for Bunny.net Stream TUS uploads
+          // This is the correct endpoint for Bunny.net Stream TUS uploads
           endpoint: "https://video.bunnycdn.com/tusupload",
-          retryDelays: [0, 3000, 5000, 10000, 20000, 60000],
+          retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
           headers: {
             "AuthorizationSignature": signature,
             "AuthorizationExpire": expire.toString(),
             "LibraryId": libraryId.toString(),
-            "VideoId": videoId.toString(),
+            "VideoId": videoId,
           },
           metadata: {
             filetype: file.type,
@@ -157,15 +152,7 @@ export function VideoUploadButton() {
       setUploadProgress(0);
     }
   };
-  
-  const generateSignature = async (libraryId: string, apiKey: string, expire: number, videoId: string) => {
-    const message = `${libraryId}${apiKey}${expire}${videoId}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-  };
-  
+
   return (
     <Dialog open={open} onOpenChange={(newOpen) => {
       if (isUploading && newOpen === false) {
