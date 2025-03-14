@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface EditTitleProps {
   videoId: string;
   initialTitle: string;
+  onTitleUpdate: (newTitle: string) => void; // Callback to update the parent state
 }
 
-const EditTitle: React.FC<EditTitleProps> = ({ videoId, initialTitle }) => {
+const EditTitle: React.FC<EditTitleProps> = ({ videoId, initialTitle, onTitleUpdate }) => {
   const [title, setTitle] = useState(initialTitle);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,27 +33,37 @@ const EditTitle: React.FC<EditTitleProps> = ({ videoId, initialTitle }) => {
       }
 
       setLoading(false);
+      toast.success("Title updated successfully!", {
+        description: "The video title has been updated.",
+      });
+      onTitleUpdate(title); // Update the parent state with the new title
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
+      toast.error("Failed to update title!", {
+        description: err.message,
+      });
     }
   };
 
   return (
-    <form onSubmit={handleTitleChange}>
-      <div>
-        <label htmlFor="title">Title:</label>
-        <input
-          type="text"
-          id="title"
-          name="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
-      <button type="submit" disabled={loading}>Save Title</button>
-      {error && <p className="error">{error}</p>}
-    </form>
+    <section>
+      <h2 className="text-2xl font-semibold mb-8">{initialTitle}</h2>
+      <form onSubmit={handleTitleChange}>
+        <div>
+          <label htmlFor="title">Edit Video Title</label>
+          <Input
+            type="text"
+            id="title"
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <Button type="submit" disabled={loading}>Save Title</Button>
+        {error && <p className="error">{error}</p>}
+      </form>
+    </section>
   );
 };
 

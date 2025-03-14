@@ -14,7 +14,7 @@ export interface Video {
 }
 
 // For server-side API calls
-const bunnyLibraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
+const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const bunnyCdn = import.meta.env.PUBLIC_BUNNY_STREAM_CDN;
 const apiKey = import.meta.env.BUNNY_API_KEY;
 
@@ -29,7 +29,7 @@ function getThumbnailUrl(video: Video): string {
 export async function getVideos(): Promise<Video[]> {
   try {
     // Make the API call to Bunny.net Stream service
-    const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
+    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
       headers: {
         "AccessKey": apiKey,
         "Content-Type": "application/json"
@@ -86,7 +86,7 @@ export async function getVideos(): Promise<Video[]> {
 
 export async function getVideo(videoId: string): Promise<Video | null> {
   try {
-    const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`, {
+    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
       headers: {
         "AccessKey": apiKey,
         "Content-Type": "application/json"
@@ -112,7 +112,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
 
 export async function updateVideoTitle(videoId: string, newTitle: string): Promise<void> {
   try {
-    const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`, {
+    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
       method: "POST",
       headers: {
         "AccessKey": apiKey,

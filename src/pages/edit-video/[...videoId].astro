@@ -1,9 +1,9 @@
 ---
-import DashboardLayout from "../../layouts/DashboardLayout.astro";
-import { DashboardNav } from "../../components/DashboardNav";
-import { DashboardHeader } from "../../components/DashboardHeader";
-import { getVideo } from "../../lib/bunny-api";
-import EditTitle from "../../components/video-editor/EditTitle";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DashboardNav } from "@/components/DashboardNav";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { getVideo } from "@/lib/bunny-api";
+import VideoEditor from "@/components/video-editor/VideoEditor";
 
 // Extract videoId from the URL
 const { videoId } = Astro.params;
@@ -12,16 +12,15 @@ const { videoId } = Astro.params;
 const video = videoId ? await getVideo(videoId) : null;
 ---
 
-<DashboardLayout title="Edit Video">
+<BaseLayout title="Video Details">
   <DashboardNav slot="sidebar" client:load />
-  <DashboardHeader heading="Edit Video" text={`Editing details for video: ${video ? video.title : 'Loading...'}`}>
-    <!-- Additional header content can go here -->
+  <DashboardHeader heading="Video Details">
   </DashboardHeader>
   <div class="grid gap-4">
     {video && videoId ? (
-      <EditTitle videoId={videoId} initialTitle={video.title} client:load />
+      <VideoEditor video={video} videoId={videoId} client:load />
     ) : (
       <p>Loading video details...</p>
     )}
   </div>
-</DashboardLayout>
+</BaseLayout>

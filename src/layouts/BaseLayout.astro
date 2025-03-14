@@ -1,7 +1,7 @@
 ---
-import "../styles/global.css";
+import "@/styles/global.css";
 import { ClientRouter } from "astro:transitions";
-import { Toaster } from "../components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
   title: string;
@@ -11,7 +11,7 @@ interface Props {
 const { title, description = "Manage your video content with Bunny.net Stream" } = Astro.props;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -19,16 +19,15 @@ const { title, description = "Manage your video content with Bunny.net Stream" }
     <title>{title} - Video Admin</title>
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <ClientRouter />
   </head>
   <body class="min-h-screen bg-background">
-    <div class="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
+    <div class="grid min-h-screen w-full lg:grid-cols-[200px_1fr]">
       <slot name="sidebar" />
       <main class="flex flex-col gap-6 p-6 md:gap-8 md:p-8">
         <slot />
       </main>
     </div>
-    <Toaster />
+    <Toaster position="top-right" client:load/>
   </body>
 </html>
 
