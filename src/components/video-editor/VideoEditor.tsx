@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import EditTitle from '@/components/video-editor/EditTitle';
+import EditTitle from './EditTitle';
+import CopyUrl from './CopyUrl';
 
 interface VideoEditorProps {
   video: { title: string; };
@@ -15,7 +16,9 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
 
   return (
     <>
+      <h1>{title}</h1>
       <EditTitle videoId={videoId} initialTitle={title} onTitleUpdate={handleTitleUpdate} />
+      <CopyUrl videoId={videoId} />
     </>
   );
 };
