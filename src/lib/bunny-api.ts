@@ -16,10 +16,10 @@ export interface Video {
 // For server-side API calls
 const bunnyLibraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const bunnyCdn = import.meta.env.PUBLIC_BUNNY_STREAM_CDN;
-const bunnyApiKey = import.meta.env.BUNNY_API_KEY;
+const apiKey = import.meta.env.BUNNY_API_KEY;
 
 // Helper function to generate thumbnail URL
-function getThumbnailUrl(video: any): string {
+function getThumbnailUrl(video: Video): string {
   if (video.thumbnailFileName && video.guid) {
     return `https://${bunnyCdn}/${video.guid}/${video.thumbnailFileName}`;
   }
@@ -28,10 +28,10 @@ function getThumbnailUrl(video: any): string {
 
 export async function getVideos(): Promise<Video[]> {
   try {
-    // Make the API call to Bunny.net
+    // Make the API call to Bunny.net Stream service
     const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`, {
       headers: {
-        "AccessKey": bunnyApiKey,
+        "AccessKey": apiKey,
         "Content-Type": "application/json"
       }
     });
@@ -42,7 +42,7 @@ export async function getVideos(): Promise<Video[]> {
     // Check the structure of the response
     if (Array.isArray(data)) {
       // If the response is already an array, map it to our Video interface
-      return data.map(video => ({
+      return data.map((video: any) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -53,7 +53,7 @@ export async function getVideos(): Promise<Video[]> {
       }));
     } else if (data.items && Array.isArray(data.items)) {
       // If the response has an items property that is an array
-      return data.items.map(video => ({
+      return data.items.map((video: any) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -64,7 +64,7 @@ export async function getVideos(): Promise<Video[]> {
       }));
     } else if (data.videos && Array.isArray(data.videos)) {
       // If the response has a videos property that is an array
-      return data.videos.map(video => ({
+      return data.videos.map((video: any) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -88,7 +88,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
   try {
     const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`, {
       headers: {
-        "AccessKey": bunnyApiKey,
+        "AccessKey": apiKey,
         "Content-Type": "application/json"
       }
     });
@@ -107,5 +107,26 @@ export async function getVideo(videoId: string): Promise<Video | null> {
   } catch (error) {
     console.error("Error fetching video:", error);
     return null;
+  }
+}
+
+export async function updateVideoTitle(videoId: string, newTitle: string): Promise<void> {
+  try {
+    const response = await fetch(`https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`, {
+      method: "POST",
+      headers: {
+        "AccessKey": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ title: newTitle })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update video title: ${errorText}`);
+    }
+  } catch (error) {
+    console.error("Error updating video title:", error);
+    throw error;
   }
 }
