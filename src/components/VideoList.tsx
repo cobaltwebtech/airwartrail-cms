@@ -148,9 +148,11 @@ export function VideoList({ videos = [] }: VideoListProps) {
                         }
                       />
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleEdit(video)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      <span>Edit</span>
+                    <DropdownMenuItem asChild>
+                      <a href={`/edit-video/${video.id}`} className="flex items-center px-2 py-1.5 text-sm cursor-pointer">
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Edit</span>
+                      </a>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteRequest(video)}>

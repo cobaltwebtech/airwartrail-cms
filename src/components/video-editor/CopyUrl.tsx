@@ -27,18 +27,15 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
   };
 
   return (
-    <Card className="w-[350px]">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>Video URL</CardTitle>
-        <CardDescription>Copy the URL of the video below.</CardDescription>
+        <CardDescription>Click the Copy URL button below to copy it to your clipboard. Then paste the URL to the video component on the front end.</CardDescription>
       </CardHeader>
       <CardContent>
-          <div className="grid w-full items-center gap-4">
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="URL">URL</Label>
-              <Input type="text" value={url} readOnly className="copy-url-input" />
-            </div>
-          </div>
+        <div className="flex flex-col space-y-1.5">
+          <pre className="text-xs">{url}</pre>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button onClick={handleCopy}>Copy URL</Button>
