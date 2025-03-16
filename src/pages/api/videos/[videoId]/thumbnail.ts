@@ -7,15 +7,15 @@ export const POST: APIRoute = async ({ params, request }) => {
   const { videoId } = params;
   const formData = new FormData();
 
-  const file = await request.formData().then(data => data.get('file'));
-
-  if (!file) {
-    return new Response(JSON.stringify({ message: 'No file uploaded' }), { status: 400 });
-  }
-
-  formData.append('file', file);
-
   try {
+    const file = await request.formData().then(data => data.get('file'));
+
+    if (!file) {
+      return new Response(JSON.stringify({ message: 'No file uploaded' }), { status: 400 });
+    }
+
+    formData.append('file', file);
+
     const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}/thumbnail`, {
       method: 'POST',
       headers: {
@@ -25,6 +25,8 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to upload thumbnail:', errorText);
       throw new Error('Failed to upload thumbnail');
     }
 

@@ -37,7 +37,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`/api/videos/thumbnail`, {
+      const response = await fetch(`/api/videos/${videoId}/thumbnail`, {
         method: 'POST',
         body: formData,
       });
