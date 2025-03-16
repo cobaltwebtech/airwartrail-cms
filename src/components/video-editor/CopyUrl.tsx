@@ -32,7 +32,7 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col space-y-1.5">
-          <pre className="text-xs">{url}</pre>
+          <pre className="text-[.675rem]">{url}</pre>
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">

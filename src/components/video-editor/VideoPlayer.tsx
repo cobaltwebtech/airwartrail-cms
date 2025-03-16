@@ -1,4 +1,3 @@
-import type { Video } from "@/lib/bunny-api";
 import {
   Card,
   CardContent,
@@ -17,19 +16,21 @@ export function VideoPlayer({ videoId }: VideoPlayerProps) {
   const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
   
   return (
-    <Card className="w-full col-span-2 row-span-2">
+    <Card className="w-full col-span-2 row-span-2 col-start-3">
       <CardHeader>
         <CardTitle>Video Preview</CardTitle>
         <CardDescription>Video will play in frame below.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="aspect-video w-full">
+          {/* Remove this commented iframe when ready for production
           <iframe
             src={videoUrl}
             className="w-full h-full"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
+          */}
         </div>
       </CardContent>
     </Card>

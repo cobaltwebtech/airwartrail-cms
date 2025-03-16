@@ -18,10 +18,10 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
 
   return (
     <div className="grid grid-cols-4 gap-4">
+      <CopyUrl videoId={videoId} />
+      <VideoPlayer videoId={videoId} />
       <TitleEditor videoId={videoId} initialTitle={title} onTitleUpdate={handleTitleUpdate} />
       <ThumbnailUpload videoId={videoId} />
-      <VideoPlayer videoId={videoId} />
-      <CopyUrl videoId={videoId} />
     </div>
   );
 };
