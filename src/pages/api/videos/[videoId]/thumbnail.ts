@@ -1,38 +1,105 @@
-import type { APIRoute } from 'astro';
-
-const libraryId = import.meta.env.BUNNY_LIBRARY_ID;
-const apiKey = import.meta.env.BUNNY_API_KEY;
+import type { APIRoute } from "astro"
 
 export const POST: APIRoute = async ({ params, request }) => {
-  const { videoId } = params;
-  const formData = new FormData();
+  const videoId = params.videoId
+
+  if (!videoId) {
+    return new Response(JSON.stringify({ success: false, message: "Video ID is required" }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    })
+  }
 
   try {
-    const file = await request.formData().then(data => data.get('file'));
+    // Get the API key and library ID from environment variables
+    const apiKey = import.meta.env.BUNNY_API_KEY
+    const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID
 
-    if (!file) {
-      return new Response(JSON.stringify({ message: 'No file uploaded' }), { status: 400 });
+    if (!apiKey || !libraryId) {
+      throw new Error("Missing Bunny.net API credentials")
     }
 
-    formData.append('file', file);
+    // Get the form data from the request
+    const formData = await request.formData()
+    const file = formData.get("file")
 
-    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}/thumbnail`, {
-      method: 'POST',
+    if (!file || !(file instanceof Blob)) {
+      return new Response(JSON.stringify({ success: false, message: "No file uploaded" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      })
+    }
+
+    // Check file type
+    if (!file.type.startsWith("image/")) {
+      return new Response(JSON.stringify({ success: false, message: "File must be an image" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      })
+    }
+
+    // Get file data as ArrayBuffer
+    const fileBuffer = await file.arrayBuffer()
+
+    // Upload the thumbnail to Bunny.net
+    const uploadResponse = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}/thumbnail`, {
+      method: "POST",
       headers: {
-        'AccessKey': apiKey,
+        AccessKey: apiKey,
+        "Content-Type": file.type,
       },
-      body: formData,
-    });
+      // Use the ArrayBuffer directly instead of converting to Buffer
+      body: fileBuffer,
+    })
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to upload thumbnail:', errorText);
-      throw new Error('Failed to upload thumbnail');
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text()
+      console.error("Bunny.net API error response:", errorText)
+      throw new Error(`Bunny.net API error: ${errorText}`)
     }
 
-    return new Response(JSON.stringify({ message: 'Thumbnail uploaded successfully' }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, message: "Thumbnail uploaded successfully" }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    })
   } catch (error) {
-    console.error('Error uploading thumbnail:', error);
-    return new Response(JSON.stringify({ message: 'Error uploading thumbnail' }), { status: 500 });
+    console.error("Error uploading thumbnail:", error)
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    )
   }
-};
+}
+
+// Add OPTIONS handler for CORS preflight requests
+export const OPTIONS: APIRoute = ({ request }) => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, AccessKey",
+    },
+  })
+}

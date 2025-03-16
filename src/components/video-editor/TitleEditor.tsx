@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 interface EditTitleProps {
@@ -47,23 +56,28 @@ const EditTitle: React.FC<EditTitleProps> = ({ videoId, initialTitle, onTitleUpd
   };
 
   return (
-    <section>
-      <h2 className="text-2xl font-semibold mb-8">{initialTitle}</h2>
-      <form onSubmit={handleTitleChange}>
-        <div>
-          <label htmlFor="title">Edit Video Title</label>
-          <Input
-            type="text"
-            id="title"
-            name="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <Button type="submit" disabled={loading}>Save Title</Button>
-        {error && <p className="error">{error}</p>}
-      </form>
-    </section>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Edit Video Title</CardTitle>
+        <CardDescription>Enter a new title below and click Save Title.</CardDescription>
+      </CardHeader>
+        <CardContent className="space-y-1.5">
+          <form onSubmit={handleTitleChange} className="space-y-1.5">
+            <Label htmlFor="title">{initialTitle}</Label>
+            <Input
+              type="text"
+              id="title"
+              name="title"
+              placeholder="Enter new video title"
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </form>
+        </CardContent>
+        <CardFooter className="">
+          <Button type="submit" disabled={loading}>Save Title</Button>
+          {error && <p className="error">{error}</p>}
+        </CardFooter>
+    </Card>
   );
 };
 

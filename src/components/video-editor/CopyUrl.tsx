@@ -25,7 +25,7 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full col-span-2">
       <CardHeader>
         <CardTitle>Video URL</CardTitle>
         <CardDescription>Click the Copy URL button below to copy it to your clipboard. Then paste the URL to the video component on the front end.</CardDescription>
@@ -39,7 +39,6 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
         <Button onClick={handleCopy}>Copy URL</Button>
       </CardFooter>
     </Card>
-    
   );
 };
 

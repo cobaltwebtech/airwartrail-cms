@@ -20,8 +20,7 @@ export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
           <iframe
             src={videoUrl}
             className="w-full h-full"
-            title={video.title}
-            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
         </div>

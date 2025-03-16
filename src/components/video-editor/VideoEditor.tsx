@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import EditTitle from '@/components/video-editor/EditTitle';
+import TitleEditor from '@/components/video-editor/TitleEditor';
 import CopyUrl from '@/components/video-editor/CopyUrl';
 import ThumbnailUpload from '@/components/video-editor/ThumbnailUpload';
+import { VideoPlayer } from '@/components/video-editor/VideoPlayer';
 
 interface VideoEditorProps {
   video: { title: string; };
@@ -16,11 +17,12 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
   };
 
   return (
-    <>
-      <EditTitle videoId={videoId} initialTitle={title} onTitleUpdate={handleTitleUpdate} />
-      <CopyUrl videoId={videoId} />
+    <div className="grid grid-cols-4 gap-4">
+      <TitleEditor videoId={videoId} initialTitle={title} onTitleUpdate={handleTitleUpdate} />
       <ThumbnailUpload videoId={videoId} />
-    </>
+      <VideoPlayer videoId={videoId} />
+      <CopyUrl videoId={videoId} />
+    </div>
   );
 };
 

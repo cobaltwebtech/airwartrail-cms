@@ -16,11 +16,9 @@ const video = videoId ? await getVideo(videoId) : null;
   <DashboardNav slot="sidebar" client:load />
   <DashboardHeader heading="Video Details">
   </DashboardHeader>
-  <div class="grid gap-4">
-    {video && videoId ? (
-      <VideoEditor video={video} videoId={videoId} client:load />
-    ) : (
-      <p>Loading video details...</p>
-    )}
-  </div>
+  {video && videoId ? ( // Video editor components are at src/components/video-editor
+    <VideoEditor video={video} videoId={videoId} client:load />
+  ) : (
+    <p>Loading video details...</p>
+  )}
 </BaseLayout>
