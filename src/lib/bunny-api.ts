@@ -8,7 +8,8 @@ export interface Video {
   thumbnailFileName?: string;
   collectionId?: string;
   duration: number;
-  status: string;
+  status: VideoStatus;
+  statusText: string;
   createdAt: string;
   dateUploaded?: string;
 }
@@ -17,6 +18,19 @@ export interface Video {
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const bunnyCdn = import.meta.env.PUBLIC_BUNNY_STREAM_CDN;
 const apiKey = import.meta.env.BUNNY_API_KEY;
+
+//Bunny Stream video status numbers referenced to text values
+const statusMap: Record<VideoStatus, string> = {
+  0: "Created",
+  1: "Uploaded",
+  2: "Processing",
+  3: "Transcoding",
+  4: "Finished",
+  5: "Error",
+  6: "UploadFailed",
+  7: "JitSegmenting",
+  8: "JitPlaylistsCreated"
+};
 
 // Helper function to generate thumbnail URL
 function getThumbnailUrl(video: Video): string {
@@ -42,35 +56,38 @@ export async function getVideos(): Promise<Video[]> {
     // Check the structure of the response
     if (Array.isArray(data)) {
       // If the response is already an array, map it to our Video interface
-      return data.map((video: any) => ({
+      return data.map((video) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
         thumbnail: getThumbnailUrl(video),
         duration: video.length || 0,
-        status: video.status || "unknown",
+        status: video.status as VideoStatus,
+        statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     } else if (data.items && Array.isArray(data.items)) {
       // If the response has an items property that is an array
-      return data.items.map((video: any) => ({
+      return data.items.map((video) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
         thumbnail: getThumbnailUrl(video),
         duration: video.length || 0,
-        status: video.status || "unknown",
+        status: video.status as VideoStatus,
+        statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     } else if (data.videos && Array.isArray(data.videos)) {
       // If the response has a videos property that is an array
-      return data.videos.map((video: any) => ({
+      return data.videos.map((video) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
         thumbnail: getThumbnailUrl(video),
         duration: video.length || 0,
-        status: video.status || "unknown",
+        status: video.status as VideoStatus,
+        statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     }
@@ -101,7 +118,8 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       title: video.title,
       thumbnail: getThumbnailUrl(video),
       duration: video.length || 0,
-      status: video.status || "unknown",
+      status: video.status as VideoStatus,
+      statusText: statusMap[video.status as VideoStatus] || "Unknown",
       createdAt: video.dateUploaded || new Date().toISOString()
     };
   } catch (error) {

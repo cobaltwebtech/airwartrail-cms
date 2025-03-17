@@ -27,7 +27,7 @@ export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
         <DialogHeader className="p-4">
           <DialogTitle>{video.title}</DialogTitle>
           <DialogDescription>
-            Status: <span className="capitalize">{video.status}</span>
+            Status: <span className="capitalize">{video.statusText}</span>
           </DialogDescription>
         </DialogHeader>
       </DialogContent>

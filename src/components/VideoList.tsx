@@ -122,7 +122,9 @@ export function VideoList({ videos = [] }: VideoListProps) {
             </div>
             <CardHeader className="p-4">
               <div className="flex justify-between items-start">
-                <CardTitle className="text-lg truncate">{video.title}</CardTitle>
+                <a href={`/edit-video/${video.id}`} className="cursor-pointer">
+                  <CardTitle className="text-base text-wrap">{video.title}</CardTitle>
+                </a>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
