@@ -1,26 +1,14 @@
 // This file contains functions to interact with the Bunny.net Stream API
 
-export interface Video {
-  id: string;
-  guid?: string;
-  title: string;
-  thumbnail?: string;
-  thumbnailFileName?: string;
-  collectionId?: string;
-  duration: number;
-  status: VideoStatus;
-  statusText: string;
-  createdAt: string;
-  dateUploaded?: string;
-}
+import type { Video, StatusMap, VideoStatus } from '@/types';
 
 // For server-side API calls
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const bunnyCdn = import.meta.env.PUBLIC_BUNNY_STREAM_CDN;
 const apiKey = import.meta.env.BUNNY_API_KEY;
 
-//Bunny Stream video status numbers referenced to text values
-const statusMap: Record<VideoStatus, string> = {
+// Bunny Stream video status numbers referenced to text values
+const statusMap: StatusMap = {
   0: "Created",
   1: "Uploaded",
   2: "Processing",
@@ -33,16 +21,29 @@ const statusMap: Record<VideoStatus, string> = {
 };
 
 // Helper function to generate thumbnail URL
-function getThumbnailUrl(video: Video): string {
+function getThumbnailUrl(video: { guid?: string; thumbnailFileName?: string }): string {
   if (video.thumbnailFileName && video.guid) {
     return `https://${bunnyCdn}/${video.guid}/${video.thumbnailFileName}`;
   }
   return "/placeholder.svg?height=720&width=1280";
 }
 
+interface BunnyApiResponseItem {
+  guid?: string;
+  id: string;
+  title: string;
+  length?: number;
+  status: number;
+  dateUploaded?: string;
+}
+
+interface BunnyApiResponse {
+  items?: BunnyApiResponseItem[];
+  videos?: BunnyApiResponseItem[];
+}
+
 export async function getVideos(): Promise<Video[]> {
   try {
-    // Make the API call to Bunny.net Stream service
     const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
       headers: {
         "AccessKey": apiKey,
@@ -50,13 +51,11 @@ export async function getVideos(): Promise<Video[]> {
       }
     });
     
-    const data = await response.json();
+    const data: BunnyApiResponse = await response.json();
     console.log("Bunny.net API response:", JSON.stringify(data, null, 2));
-    
-    // Check the structure of the response
+
     if (Array.isArray(data)) {
-      // If the response is already an array, map it to our Video interface
-      return data.map((video) => ({
+      return data.map((video: BunnyApiResponseItem) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -67,8 +66,7 @@ export async function getVideos(): Promise<Video[]> {
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     } else if (data.items && Array.isArray(data.items)) {
-      // If the response has an items property that is an array
-      return data.items.map((video) => ({
+      return data.items.map((video: BunnyApiResponseItem) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -79,8 +77,7 @@ export async function getVideos(): Promise<Video[]> {
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     } else if (data.videos && Array.isArray(data.videos)) {
-      // If the response has a videos property that is an array
-      return data.videos.map((video) => ({
+      return data.videos.map((video: BunnyApiResponseItem) => ({
         id: video.guid || video.id,
         guid: video.guid,
         title: video.title,
@@ -91,8 +88,7 @@ export async function getVideos(): Promise<Video[]> {
         createdAt: video.dateUploaded || new Date().toISOString()
       }));
     }
-    
-    // If we can't determine the structure, log it and return an empty array
+
     console.error("Unexpected API response structure:", data);
     return [];
   } catch (error) {
@@ -109,9 +105,9 @@ export async function getVideo(videoId: string): Promise<Video | null> {
         "Content-Type": "application/json"
       }
     });
-    
-    const video = await response.json();
-    
+
+    const video: BunnyApiResponseItem = await response.json();
+
     return {
       id: video.guid || video.id,
       guid: video.guid,

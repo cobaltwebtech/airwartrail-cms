@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import type { Video } from "../lib/bunny-api";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Video } from "@/types";
 
 interface VideoDialogProps {
   video: Video;

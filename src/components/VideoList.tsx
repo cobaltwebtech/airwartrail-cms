@@ -14,7 +14,7 @@ import {
 import { Input } from "./ui/input";
 import { VideoDialog } from "./VideoDialog";
 import { DeleteModal } from "./DeleteModal";
-import type { Video } from "../lib/bunny-api";
+import type { Video } from "@/types";
 import { CopyEmbed } from "./CopyEmbed";
 
 interface VideoListProps {
@@ -165,7 +165,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
                 </DropdownMenu>
               </div>
               <CardDescription>
-                Status: <span className="capitalize">{video.status}</span>
+                Status: <span className="capitalize">{video.statusText}</span>
               </CardDescription>
             </CardHeader>
             <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
