@@ -15,11 +15,11 @@ export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] p-0">
+      <DialogContent className="sm:max-w-screen-xl p-2">
         <div className="aspect-video w-full">
           <iframe
             src={videoUrl}
-            className="w-full h-full"
+            className="w-full h-full rounded-t-lg"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>

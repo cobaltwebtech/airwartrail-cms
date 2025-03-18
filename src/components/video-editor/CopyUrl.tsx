@@ -17,7 +17,7 @@ interface CopyUrlProps {
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 
 const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
-  const url = `https://iframe.mediadelivery.net/play/${libraryId}/${videoId}`;
+  const url = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);

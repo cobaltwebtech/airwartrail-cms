@@ -15,7 +15,7 @@ import { Input } from "./ui/input";
 import { VideoDialog } from "./VideoDialog";
 import { DeleteModal } from "./DeleteModal";
 import type { Video } from "@/types";
-import { CopyEmbed } from "./CopyEmbed";
+import { toast } from "sonner";
 
 interface VideoListProps {
   videos: Video[] | null | undefined;
@@ -27,7 +27,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
-  
+
   // Ensure videos is an array before filtering
   const videoArray = Array.isArray(videos) ? videos : [];
   
@@ -41,12 +41,15 @@ export function VideoList({ videos = [] }: VideoListProps) {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
-  const handleEdit = (video: Video) => {
-    setSelectedVideo(video);
-    setIsEditing(true);
+  const handleCopy = (video: Video) => {
+    //Get the actual video URL from Bunny.net using the public environment variable and selected video
+    const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
+    const url = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}`;
+    navigator.clipboard.writeText(url);
+    toast('URL copied to clipboard');
   };
 
-  const handleDeleteRequest = (video: Video) => {
+   const handleDeleteRequest = (video: Video) => {
     setVideoToDelete(video);
     setIsDeleteDialogOpen(true);
   };
@@ -128,37 +131,29 @@ export function VideoList({ videos = [] }: VideoListProps) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="size-4" />
                       <span className="sr-only">Open menu</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setSelectedVideo(video)}>
-                      <Eye className="mr-2 h-4 w-4" />
+                      <Eye className="mr-2 size-4" />
                       <span>Preview</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <CopyEmbed 
-                        videoId={video.id} 
-                        title={video.title}
-                        trigger={
-                          <div className="flex items-center px-2 py-1.5 text-sm cursor-pointer">
-                            <Copy className="mr-2 h-4 w-4" />
-                            <span>Copy Embed Code</span>
-                          </div>
-                        }
-                      />
+                    <DropdownMenuItem onClick={() => handleCopy(video)}>
+                      <Copy className="mr-2 size-4" />
+                      <span>Copy URL</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <a href={`/edit-video/${video.id}`} className="flex items-center px-2 py-1.5 text-sm cursor-pointer">
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="mr-2 size-4" />
                         <span>Edit</span>
                       </a>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteRequest(video)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-2 size-4" />
                       <span>Delete</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
