@@ -3,6 +3,7 @@ import TitleEditor from '@/components/video-editor/TitleEditor';
 import CopyUrl from '@/components/video-editor/CopyUrl';
 import ThumbnailUpload from '@/components/video-editor/ThumbnailUpload';
 import { VideoPlayer } from '@/components/video-editor/VideoPlayer';
+import CaptionEditor from './CaptionEditor';
 
 interface VideoEditorProps {
   video: { title: string; };
@@ -22,6 +23,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
       <VideoPlayer videoId={videoId} />
       <TitleEditor videoId={videoId} initialTitle={title} onTitleUpdate={handleTitleUpdate} />
       <ThumbnailUpload videoId={videoId} />
+      <CaptionEditor videoId={videoId} />
     </div>
   );
 };
