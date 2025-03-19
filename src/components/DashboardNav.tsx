@@ -1,30 +1,18 @@
-import { useState, useEffect } from "react";
-import { LayoutDashboard, Film, FolderOpen, Settings, BarChart3, LogOut, Sun, Moon } from 'lucide-react';
-import { Button } from "./ui/button";
-import { Switch } from "@/components/ui/switch";
+import { useState, useEffect } from "react"
+import { LayoutDashboard, Film, FolderOpen, Settings, BarChart3, LogOut, Sun, Moon } from "lucide-react"
+import { Button } from "./ui/button"
+import { Switch } from "@/components/ui/switch"
+import { ThemeToggle } from "./ThemeToggle"
 
 export function DashboardNav() {
+  // Initialize with an empty string instead of window.location.pathname
   const [activePath, setActivePath] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
+  
+  // Use useEffect to safely access window after component is mounted
   useEffect(() => {
+    // Now it's safe to access window
     setActivePath(window.location.pathname);
-
-    // Check localStorage for saved theme preference
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setIsDarkMode(true);
-    } else {
-      setIsDarkMode(false);
-    }
   }, []);
-
-  const handleThemeChange = () => {
-    const newTheme = !isDarkMode ? "dark" : "light";
-    setIsDarkMode(!isDarkMode);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", !isDarkMode);
-  };
 
   const navItems = [
     { title: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -32,7 +20,7 @@ export function DashboardNav() {
     { title: "Collections", href: "/collections", icon: FolderOpen },
     { title: "Analytics", href: "/analytics", icon: BarChart3 },
     { title: "Settings", href: "/settings", icon: Settings },
-  ];
+  ]
 
   return (
     <div className="flex h-full flex-col border-r bg-muted/40">
@@ -45,8 +33,8 @@ export function DashboardNav() {
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid items-start px-2 text-sm font-medium">
           {navItems.map((item, index) => {
-            const Icon = item.icon;
-            const isActive = activePath === item.href;
+            const Icon = item.icon
+            const isActive = activePath === item.href
             return (
               <a
                 key={index}
@@ -57,13 +45,11 @@ export function DashboardNav() {
                 <Icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>
               </a>
-            );
+            )
           })}
         </nav>
         <div className="flex flex-row gap-4 p-4">
-          <Sun className="size-4"/>
-          <Switch checked={isDarkMode} onCheckedChange={handleThemeChange} />
-          <Moon className="size-4"/>
+          <ThemeToggle />
         </div>
       </div>
       <div className="mt-auto p-4">
@@ -73,5 +59,5 @@ export function DashboardNav() {
         </Button>
       </div>
     </div>
-  );
+  )
 }
