@@ -10,7 +10,6 @@ interface Props {
 
 const { title, description = "Manage your video content with Bunny.net Stream" } = Astro.props;
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -19,6 +18,17 @@ const { title, description = "Manage your video content with Bunny.net Stream" }
     <title>{title} - Video Admin</title>
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script is:inline>
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
   </head>
   <body class="min-h-screen bg-background">
     <div class="grid min-h-screen w-full lg:grid-cols-[200px_1fr]">
@@ -30,4 +40,3 @@ const { title, description = "Manage your video content with Bunny.net Stream" }
     <Toaster position="top-right" client:load/>
   </body>
 </html>
-
