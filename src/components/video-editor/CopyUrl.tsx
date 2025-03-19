@@ -31,8 +31,8 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
         <CardDescription>Click the Copy URL button below to copy it to your clipboard. Then paste the URL to the video component on the front end.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col space-y-1.5">
-          <pre className="text-[.675rem]">{url}</pre>
+        <div className="space-y-1.5">
+          <code className="text-[.675rem] break-all">{url}</code>
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">

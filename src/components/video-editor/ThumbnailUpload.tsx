@@ -73,7 +73,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Upload Thumbnail</CardTitle>
+        <CardTitle>Edit Thumbnail</CardTitle>
         <CardDescription>Upload a custom thumbnail to the video.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -84,8 +84,8 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
           }}
         >
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="thumbnail">Upload</Label>
-            <Input id="thumbnail" type="file" accept="image/*" onChange={handleFileChange} />
+            <Label htmlFor="thumbnail">Thumbnail Upload</Label>
+            <Input id="thumbnail" className="border-0 shadow-none file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground" type="file" accept="image/*" onChange={handleFileChange} />
           </div>
           {preview && (
             <div className="mt-4">
