@@ -1,4 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "./ui/dialog";
 import { Button } from "./ui/button";
 
 interface ConfirmDeleteDialogProps {
@@ -7,14 +15,19 @@ interface ConfirmDeleteDialogProps {
   onConfirm: () => void;
 }
 
-export function DeleteModal({ open, onOpenChange, onConfirm }: ConfirmDeleteDialogProps) {
+export function DeleteModal({
+  open,
+  onOpenChange,
+  onConfirm,
+}: ConfirmDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Deletion</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this video? This action cannot be undone.
+            Are you sure you want to delete this video? This action cannot be
+            undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

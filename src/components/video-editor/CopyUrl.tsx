@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,7 +8,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 interface CopyUrlProps {
   videoId: string;
@@ -21,14 +21,20 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);
-    toast('URL copied to clipboard');
+    toast.success("URL copied to clipboard", {
+  duration: Infinity,
+});
+
   };
 
   return (
     <Card className="w-full col-span-2">
       <CardHeader>
         <CardTitle>Video URL</CardTitle>
-        <CardDescription>Click the Copy URL button below to copy it to your clipboard. Then paste the URL to the video component on the front end.</CardDescription>
+        <CardDescription>
+          Click the Copy URL button below to copy it to your clipboard. Then
+          paste the URL to the video component on the front end.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-1.5">

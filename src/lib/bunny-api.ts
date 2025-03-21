@@ -1,6 +1,6 @@
 // This file contains functions to interact with the Bunny.net Stream API
 
-import type { Video, StatusMap, VideoStatus } from '@/types';
+import type { Video, StatusMap, VideoStatus } from "@/types";
 
 // For server-side API calls
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
@@ -17,11 +17,14 @@ const statusMap: StatusMap = {
   5: "Error",
   6: "UploadFailed",
   7: "JitSegmenting",
-  8: "JitPlaylistsCreated"
+  8: "JitPlaylistsCreated",
 };
 
 // Helper function to generate thumbnail URL
-function getThumbnailUrl(video: { guid?: string; thumbnailFileName?: string }): string {
+function getThumbnailUrl(video: {
+  guid?: string;
+  thumbnailFileName?: string;
+}): string {
   if (video.thumbnailFileName && video.guid) {
     return `https://${bunnyCdn}/${video.guid}/${video.thumbnailFileName}`;
   }
@@ -44,13 +47,16 @@ interface BunnyApiResponse {
 
 export async function getVideos(): Promise<Video[]> {
   try {
-    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
-      headers: {
-        "AccessKey": apiKey,
-        "Content-Type": "application/json"
-      }
-    });
-    
+    const response = await fetch(
+      `https://video.bunnycdn.com/library/${libraryId}/videos`,
+      {
+        headers: {
+          AccessKey: apiKey,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
     const data: BunnyApiResponse = await response.json();
     console.log("Bunny.net API response:", JSON.stringify(data, null, 2));
 
@@ -63,7 +69,7 @@ export async function getVideos(): Promise<Video[]> {
         duration: video.length || 0,
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString()
+        createdAt: video.dateUploaded || new Date().toISOString(),
       }));
     } else if (data.items && Array.isArray(data.items)) {
       return data.items.map((video: BunnyApiResponseItem) => ({
@@ -74,7 +80,7 @@ export async function getVideos(): Promise<Video[]> {
         duration: video.length || 0,
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString()
+        createdAt: video.dateUploaded || new Date().toISOString(),
       }));
     } else if (data.videos && Array.isArray(data.videos)) {
       return data.videos.map((video: BunnyApiResponseItem) => ({
@@ -85,7 +91,7 @@ export async function getVideos(): Promise<Video[]> {
         duration: video.length || 0,
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString()
+        createdAt: video.dateUploaded || new Date().toISOString(),
       }));
     }
 
@@ -99,12 +105,15 @@ export async function getVideos(): Promise<Video[]> {
 
 export async function getVideo(videoId: string): Promise<Video | null> {
   try {
-    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
-      headers: {
-        "AccessKey": apiKey,
-        "Content-Type": "application/json"
-      }
-    });
+    const response = await fetch(
+      `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
+      {
+        headers: {
+          AccessKey: apiKey,
+          "Content-Type": "application/json",
+        },
+      },
+    );
 
     const video: BunnyApiResponseItem = await response.json();
 
@@ -116,7 +125,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       duration: video.length || 0,
       status: video.status as VideoStatus,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
-      createdAt: video.dateUploaded || new Date().toISOString()
+      createdAt: video.dateUploaded || new Date().toISOString(),
     };
   } catch (error) {
     console.error("Error fetching video:", error);
@@ -124,16 +133,22 @@ export async function getVideo(videoId: string): Promise<Video | null> {
   }
 }
 
-export async function updateVideoTitle(videoId: string, newTitle: string): Promise<void> {
+export async function updateVideoTitle(
+  videoId: string,
+  newTitle: string,
+): Promise<void> {
   try {
-    const response = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
-      method: "POST",
-      headers: {
-        "AccessKey": apiKey,
-        "Content-Type": "application/json"
+    const response = await fetch(
+      `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
+      {
+        method: "POST",
+        headers: {
+          AccessKey: apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: newTitle }),
       },
-      body: JSON.stringify({ title: newTitle })
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();

@@ -10,19 +10,19 @@ export function generateEmbedCode(
   videoId: string,
   title: string,
   width: number = 640,
-  height: number = 360
+  height: number = 360,
 ): string {
   const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-  
+
   // Base embed URL (without token - we'll get that from the server)
   const embedUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
-  
+
   // Generate the iframe HTML
   return `<iframe 
   src="${embedUrl}" 
   width="${width}" 
   height="${height}" 
-  title="${title.replace(/"/g, '&quot;')}" 
+  title="${title.replace(/"/g, "&quot;")}" 
   frameborder="0" 
   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
   allowfullscreen>
@@ -43,14 +43,14 @@ export function generateSecureEmbedCode(
   title: string,
   secureUrl: string,
   width: number = 640,
-  height: number = 360
+  height: number = 360,
 ): string {
   // Generate the iframe HTML with the secure URL
   return `<iframe 
   src="${secureUrl}" 
   width="${width}" 
   height="${height}" 
-  title="${title.replace(/"/g, '&quot;')}" 
+  title="${title.replace(/"/g, "&quot;")}" 
   frameborder="0" 
   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" 
   allowfullscreen>

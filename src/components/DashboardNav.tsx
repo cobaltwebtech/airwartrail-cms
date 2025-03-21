@@ -1,13 +1,19 @@
-import { useState, useEffect } from "react"
-import { LayoutDashboard, Film, FolderOpen, Settings, BarChart3, LogOut, Sun, Moon } from "lucide-react"
-import { Button } from "./ui/button"
-import { Switch } from "@/components/ui/switch"
-import { ThemeToggle } from "./ThemeToggle"
+import { useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  Film,
+  FolderOpen,
+  Settings,
+  BarChart3,
+  LogOut,
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function DashboardNav() {
   // Initialize with an empty string instead of window.location.pathname
   const [activePath, setActivePath] = useState("");
-  
+
   // Use useEffect to safely access window after component is mounted
   useEffect(() => {
     // Now it's safe to access window
@@ -20,7 +26,7 @@ export function DashboardNav() {
     { title: "Collections", href: "/collections", icon: FolderOpen },
     { title: "Analytics", href: "/analytics", icon: BarChart3 },
     { title: "Settings", href: "/settings", icon: Settings },
-  ]
+  ];
 
   return (
     <div className="flex h-full flex-col border-r bg-muted/40">
@@ -33,19 +39,19 @@ export function DashboardNav() {
       <div className="flex-1 overflow-auto py-2">
         <nav className="grid items-start px-2 text-sm font-medium">
           {navItems.map((item, index) => {
-            const Icon = item.icon
-            const isActive = activePath === item.href
+            const Icon = item.icon;
+            const isActive = activePath === item.href;
             return (
               <a
                 key={index}
                 href={item.href}
-                className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${isActive ? "bg-accent" : "transparent"}`}
+                className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-accent-foreground ${isActive ? "bg-sidebar-accent" : "transparent"}`}
                 onClick={() => setActivePath(item.href)}
               >
                 <Icon className="mr-2 h-4 w-4" />
                 <span>{item.title}</span>
               </a>
-            )
+            );
           })}
         </nav>
         <div className="flex flex-row gap-4 p-4">
@@ -59,5 +65,5 @@ export function DashboardNav() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

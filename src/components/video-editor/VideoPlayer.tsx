@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 interface VideoPlayerProps {
   videoId: string;
@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 export function VideoPlayer({ videoId }: VideoPlayerProps) {
   // Get the actual video URL from Bunny.net using the public environment variable
   const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`;
-  
+  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+
   return (
     <Card className="w-full col-span-2 row-span-2 col-start-3">
       <CardHeader>
@@ -23,7 +23,7 @@ export function VideoPlayer({ videoId }: VideoPlayerProps) {
       </CardHeader>
       <CardContent>
         <div className="aspect-video w-full">
-          {/* Remove this commented iframe when ready for production
+          {/* Remove this comment in production
           <iframe
             src={videoUrl}
             className="w-full h-full"

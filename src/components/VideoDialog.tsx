@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Video } from "@/types";
 
 interface VideoDialogProps {
@@ -12,7 +18,7 @@ export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
   // Get the actual video URL from Bunny.net using the public environment variable
   const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
   const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}`;
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-screen-xl p-2">

@@ -12,9 +12,9 @@ const { videoId } = Astro.params;
 const video = videoId ? await getVideo(videoId) : null;
 ---
 
-<BaseLayout title="Video Details">
+<BaseLayout title="Video Editor">
   <DashboardNav slot="sidebar" client:load />
-  <DashboardHeader heading="Video Details">
+  <DashboardHeader heading="Video Editor">
   </DashboardHeader>
   {video && videoId ? ( // Video editor components are at src/components/video-editor
     <VideoEditor video={video} videoId={videoId} client:load />

@@ -1,167 +1,225 @@
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { toast } from "sonner"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table"
-import { Trash2 } from "lucide-react"
-import DeleteCaption from "./DeleteCaption"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+import DeleteCaption from "./DeleteCaption";
 
 interface CaptionEditorProps {
-  videoId: string
+  videoId: string;
 }
 
 const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
-  const [file, setFile] = useState<File | null>(null)
-  const [captionLabel, setCaptionLabel] = useState<string>("")
-  const [languageCode, setLanguageCode] = useState<string>("")
-  const [loading, setLoading] = useState(false)
-  const [captions, setCaptions] = useState<{ label: string, srclang: string }[]>([])
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [captionToDelete, setCaptionToDelete] = useState<string | null>(null)
+  const [file, setFile] = useState<File | null>(null);
+  const [captionLabel, setCaptionLabel] = useState<string>("");
+  const [languageCode, setLanguageCode] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [captions, setCaptions] = useState<
+    { label: string; srclang: string }[]
+  >([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [captionToDelete, setCaptionToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch captions for the video
     const fetchCaptions = async () => {
       try {
-        const response = await fetch(`/api/videos/${videoId}`)
-        const data = await response.json()
-        setCaptions(data.captions || [])
+        const response = await fetch(`/api/videos/${videoId}`);
+        const data = await response.json();
+        setCaptions(data.captions || []);
       } catch (error) {
-        console.error("Error fetching captions:", error)
+        console.error("Error fetching captions:", error);
       }
-    }
+    };
 
-    fetchCaptions()
-  }, [videoId])
+    fetchCaptions();
+  }, [videoId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0]
+      const selectedFile = e.target.files[0];
 
       // Validate file type
-      const validExtensions = ['.srt', '.vtt']
-      const fileExtension = selectedFile.name.slice(selectedFile.name.lastIndexOf('.')).toLowerCase()
-      
+      const validExtensions = [".srt", ".vtt"];
+      const fileExtension = selectedFile.name
+        .slice(selectedFile.name.lastIndexOf("."))
+        .toLowerCase();
+
       if (!validExtensions.includes(fileExtension)) {
-        toast.error("File must be a .srt or .vtt file")
-        console.log("Invalid file type:", selectedFile.type, "or extension:", fileExtension)
-        return
+        toast.error("File must be a .srt or .vtt file");
+        console.log(
+          "Invalid file type:",
+          selectedFile.type,
+          "or extension:",
+          fileExtension,
+        );
+        return;
       }
 
-      setFile(selectedFile)
+      setFile(selectedFile);
     }
-  }
+  };
 
   const handleUpload = async () => {
     if (!file) {
-      toast.error("Please select a file to upload.")
-      return
+      toast.error("Please select a file to upload.");
+      return;
     }
 
     if (!captionLabel) {
-      toast.error("Please enter a label.")
-      return
+      toast.error("Please enter a label.");
+      return;
     }
 
     if (!languageCode) {
-      toast.error("Please enter a language code.")
-      return
+      toast.error("Please enter a language code.");
+      return;
     }
 
-    setLoading(true)
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("label", captionLabel)
-    formData.append("srclang", languageCode)
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("label", captionLabel);
+    formData.append("srclang", languageCode);
 
     try {
-      console.log(`Uploading caption for video ${videoId}...`)
+      console.log(`Uploading caption for video ${videoId}...`);
 
       const response = await fetch(`/api/videos/${videoId}/captions`, {
         method: "POST",
         body: formData,
-      })
+      });
 
-      console.log("Response status:", response.status)
+      console.log("Response status:", response.status);
 
-      let result
+      let result;
       try {
-        result = await response.json()
+        result = await response.json();
       } catch (e) {
-        console.error("Failed to parse response as JSON:", e)
-        throw new Error("Invalid response from server")
+        console.error("Failed to parse response as JSON:", e);
+        throw new Error("Invalid response from server");
       }
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to upload caption")
+        throw new Error(result.message || "Failed to upload caption");
       }
 
-      toast.success("Caption uploaded successfully!")
-      setCaptions([...captions, { label: captionLabel, srclang: languageCode }]) // Add new caption to the table
+      toast.success("Caption uploaded successfully!");
+      setCaptions([
+        ...captions,
+        { label: captionLabel, srclang: languageCode },
+      ]); // Add new caption to the table
     } catch (error) {
-      console.error("Error uploading caption:", error)
-      toast.error(error instanceof Error ? error.message : "Error uploading caption")
+      console.error("Error uploading caption:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Error uploading caption",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteRequest = (srclang: string) => {
-    setCaptionToDelete(srclang)
-    setIsDeleteDialogOpen(true)
-  }
+    setCaptionToDelete(srclang);
+    setIsDeleteDialogOpen(true);
+  };
 
   const handleDeleteConfirm = async () => {
     if (captionToDelete) {
       try {
-        const response = await fetch(`/api/videos/${videoId}/captions?srclang=${captionToDelete}`, {
-          method: "DELETE",
-        })
+        const response = await fetch(
+          `/api/videos/${videoId}/captions?srclang=${captionToDelete}`,
+          {
+            method: "DELETE",
+          },
+        );
 
         if (!response.ok) {
-          throw new Error("Failed to delete caption")
+          throw new Error("Failed to delete caption");
         }
 
-        setCaptions(captions.filter(caption => caption.srclang !== captionToDelete))
-        toast.success("Caption deleted successfully!")
+        setCaptions(
+          captions.filter((caption) => caption.srclang !== captionToDelete),
+        );
+        toast.success("Caption deleted successfully!");
       } catch (error) {
-        console.error("Error deleting caption:", error)
-        toast.error(error instanceof Error ? error.message : "Error deleting caption")
+        console.error("Error deleting caption:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Error deleting caption",
+        );
       } finally {
-        setIsDeleteDialogOpen(false)
+        setIsDeleteDialogOpen(false);
       }
     }
-  }
+  };
 
   return (
     <Card className="w-full col-span-2">
       <CardHeader>
-        <CardTitle>Upload Caption</CardTitle>
-        <CardDescription>Upload a caption file to the video.</CardDescription>
+        <CardTitle>Edit Captions</CardTitle>
+        <CardDescription>Upload caption files to the video.</CardDescription>
       </CardHeader>
       <CardContent>
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            handleUpload()
+            e.preventDefault();
+            handleUpload();
           }}
         >
           <div className="flex flex-col space-y-4">
             <div className="space-y-2">
               <Label htmlFor="caption">Upload Caption File</Label>
-              <Input id="caption" className="border-0 shadow-none file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground" type="file" accept=".vtt,.srt" onChange={handleFileChange} />
+              <CardDescription className="text-xs">
+                Caption files must be .srt or .vtt format.
+              </CardDescription>
+              <Input
+                id="caption"
+                className="border-0 shadow-none bg-transparent file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground"
+                type="file"
+                accept=".vtt,.srt"
+                onChange={handleFileChange}
+              />
             </div>
             <div className="space-y-2">
-            <Label htmlFor="label">Caption Label</Label>
-            <Input id="label" type="text" placeholder="Caption Language" value={captionLabel} onChange={(e) => setCaptionLabel(e.target.value)} />
+              <Label htmlFor="label">Caption Label</Label>
+              <Input
+                id="label"
+                type="text"
+                placeholder="Caption Language"
+                value={captionLabel}
+                onChange={(e) => setCaptionLabel(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="srclang">Language Code</Label>
-              <Input id="srclang" type="text" placeholder="Enter two letter language code" value={languageCode} onChange={(e) => setLanguageCode(e.target.value)} />
-              <CardDescription>For example use "en" for English, "es" for Spanish, etc.</CardDescription>
+              <Input
+                id="srclang"
+                type="text"
+                placeholder="Enter two letter language code"
+                value={languageCode}
+                onChange={(e) => setLanguageCode(e.target.value)}
+              />
+              <CardDescription className="text-xs">
+                For example use "en" for English, "es" for Spanish, etc.
+              </CardDescription>
             </div>
           </div>
         </form>
@@ -186,7 +244,10 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
                 <TableCell>{caption.label}</TableCell>
                 <TableCell>{caption.srclang}</TableCell>
                 <TableCell className="text-right">
-                  <Button onClick={() => handleDeleteRequest(caption.srclang)} variant="destructive">
+                  <Button
+                    onClick={() => handleDeleteRequest(caption.srclang)}
+                    variant="destructive"
+                  >
                     <Trash2 className="size-4" />
                     <span className="sr-only">Delete</span>
                   </Button>
@@ -202,7 +263,7 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
         onConfirm={handleDeleteConfirm}
       />
     </Card>
-  )
-}
+  );
+};
 
-export default CaptionEditor
+export default CaptionEditor;
