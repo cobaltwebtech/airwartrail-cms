@@ -1,22 +1,19 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DashboardNav } from "../components/DashboardNav";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { VideoUpload } from "../components/VideoUpload";
 import { VideoList } from "../components/VideoList";
-import { getVideos } from "../lib/bunny-api";
+import { getVideos } from "../lib/bunnyStream";
 
-// Fetch videos on the server
+// Fetch videos using the Bunny.net Stream API
 const videos = await getVideos();
 ---
 
 <BaseLayout title="Dashboard">
-  <DashboardNav slot="sidebar" client:load />
-  <DashboardHeader heading="Videos" text="Manage your video library hosted on Bunny.net Stream.">
+  <DashboardHeader heading="Videos" text="Manage your streaming video library.">
     <VideoUpload client:load />
   </DashboardHeader>
   <div class="grid gap-4">
     <VideoList videos={videos} client:load />
   </div>
 </BaseLayout>
-

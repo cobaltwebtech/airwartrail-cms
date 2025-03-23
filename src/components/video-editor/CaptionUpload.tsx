@@ -20,14 +20,14 @@ import {
   TableCell,
   TableHead,
 } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
-import DeleteCaption from "./DeleteCaption";
+import { Trash2, Upload } from "lucide-react";
+import DeleteCaption from "./CaptionDelete";
 
-interface CaptionEditorProps {
+interface CaptionUploadProps {
   videoId: string;
 }
 
-const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
+const CaptionUpload: React.FC<CaptionUploadProps> = ({ videoId }) => {
   const [file, setFile] = useState<File | null>(null);
   const [captionLabel, setCaptionLabel] = useState<string>("");
   const [languageCode, setLanguageCode] = useState<string>("");
@@ -172,7 +172,7 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
   };
 
   return (
-    <Card className="w-full col-span-2">
+    <Card className="col-span-2 w-full">
       <CardHeader>
         <CardTitle>Edit Captions</CardTitle>
         <CardDescription>Upload caption files to the video.</CardDescription>
@@ -192,7 +192,7 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
               </CardDescription>
               <Input
                 id="caption"
-                className="border-0 shadow-none bg-transparent file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground"
+                className="file:bg-primary file:text-primary-foreground border-0 bg-transparent shadow-none file:rounded-sm file:px-4"
                 type="file"
                 accept=".vtt,.srt"
                 onChange={handleFileChange}
@@ -226,6 +226,7 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button onClick={handleUpload} disabled={loading || !file}>
+          <Upload className="size-4" />
           {loading ? "Uploading..." : "Upload Caption"}
         </Button>
       </CardFooter>
@@ -266,4 +267,4 @@ const CaptionEditor: React.FC<CaptionEditorProps> = ({ videoId }) => {
   );
 };
 
-export default CaptionEditor;
+export default CaptionUpload;

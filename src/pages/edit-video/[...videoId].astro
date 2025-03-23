@@ -1,8 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DashboardNav } from "@/components/DashboardNav";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { getVideo } from "@/lib/bunny-api";
+import { getVideo } from "@/lib/bunnyStream";
 import VideoEditor from "@/components/video-editor/VideoEditor";
 
 // Extract videoId from the URL
@@ -13,12 +12,12 @@ const video = videoId ? await getVideo(videoId) : null;
 ---
 
 <BaseLayout title="Video Editor">
-  <DashboardNav slot="sidebar" client:load />
-  <DashboardHeader heading="Video Editor">
-  </DashboardHeader>
-  {video && videoId ? ( // Video editor components are at src/components/video-editor
-    <VideoEditor video={video} videoId={videoId} client:load />
-  ) : (
-    <p>Loading video details...</p>
-  )}
+  <DashboardHeader heading="Video Editor" />
+  {
+    video && videoId ? ( // Video editor components are at src/components/video-editor
+      <VideoEditor video={video} videoId={videoId} client:load />
+    ) : (
+      <p>Loading video details...</p>
+    )
+  }
 </BaseLayout>

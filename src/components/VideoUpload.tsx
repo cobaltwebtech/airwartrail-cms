@@ -48,7 +48,7 @@ export function VideoUpload() {
 
       // 1. Create video in Bunny.net Stream
       console.log("Creating video with title:", title);
-      const createResponse = await fetch("/api/videos", {
+      const createResponse = await fetch("/api/videos/uploadVideo", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,10 +72,10 @@ export function VideoUpload() {
         throw new Error("No valid video ID returned from API");
       }
 
-      // 2. Get authentication token and other necessary headers for the upload
+      // 2. Get authorization signature and other necessary headers for the upload
       console.log("Getting auth token for resumable upload");
       const authResponse = await fetch(
-        `/api/auth/upload-token?videoId=${videoId}`,
+        `/api/videos/uploadVideo?videoId=${videoId}`,
       );
 
       if (!authResponse.ok) {
@@ -208,7 +208,7 @@ export function VideoUpload() {
               <Label htmlFor="file">Video File</Label>
               <Input
                 id="file"
-                className="border-0 px-0 shadow-none bg-transparent file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground"
+                className="file:bg-primary file:text-primary-foreground border-0 bg-transparent px-0 shadow-none file:rounded-sm file:px-4"
                 type="file"
                 accept="video/*"
                 onChange={handleFileChange}
@@ -216,7 +216,7 @@ export function VideoUpload() {
                 required
               />
               {file && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Selected: {file.name} (
                   {(file.size / (1024 * 1024)).toFixed(2)} MB)
                 </p>
@@ -225,17 +225,18 @@ export function VideoUpload() {
 
             {isUploading && (
               <div className="space-y-2">
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
                   <div
-                    className="h-full bg-primary transition-all duration-300 ease-in-out"
+                    className="bg-primary h-full transition-all duration-300 ease-in-out"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
-                <p className="text-sm text-center text-muted-foreground">
+                <p className="text-muted-foreground text-center text-sm">
                   Uploading: {uploadProgress}%
                 </p>
-                <p className="text-sm text-center text-foreground">
-                  Do not close this window or refresh the page until the upload is complete.
+                <p className="text-foreground text-center text-sm">
+                  Do not close this window or refresh the page until the upload
+                  is complete.
                 </p>
               </div>
             )}

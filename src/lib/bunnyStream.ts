@@ -38,6 +38,7 @@ interface BunnyApiResponseItem {
   length?: number;
   status: number;
   dateUploaded?: string;
+  collectionId?: string;
 }
 
 interface BunnyApiResponse {
@@ -70,6 +71,7 @@ export async function getVideos(): Promise<Video[]> {
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString(),
+        collectionId: video.collectionId || "",
       }));
     } else if (data.items && Array.isArray(data.items)) {
       return data.items.map((video: BunnyApiResponseItem) => ({
@@ -81,6 +83,7 @@ export async function getVideos(): Promise<Video[]> {
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString(),
+        collectionId: video.collectionId || "",
       }));
     } else if (data.videos && Array.isArray(data.videos)) {
       return data.videos.map((video: BunnyApiResponseItem) => ({
@@ -92,6 +95,7 @@ export async function getVideos(): Promise<Video[]> {
         status: video.status as VideoStatus,
         statusText: statusMap[video.status as VideoStatus] || "Unknown",
         createdAt: video.dateUploaded || new Date().toISOString(),
+        collectionId: video.collectionId || "",
       }));
     }
 
@@ -126,6 +130,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       status: video.status as VideoStatus,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
       createdAt: video.dateUploaded || new Date().toISOString(),
+      collectionId: video.collectionId || "",
     };
   } catch (error) {
     console.error("Error fetching video:", error);

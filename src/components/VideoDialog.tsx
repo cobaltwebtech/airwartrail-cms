@@ -17,15 +17,15 @@ interface VideoDialogProps {
 export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
   // Get the actual video URL from Bunny.net using the public environment variable
   const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}`;
+  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-screen-xl p-2">
+      <DialogContent className="p-2 sm:max-w-screen-lg">
         <div className="aspect-video w-full">
           <iframe
             src={videoUrl}
-            className="w-full h-full rounded-t-lg"
+            className="h-full w-full rounded-t-lg"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>

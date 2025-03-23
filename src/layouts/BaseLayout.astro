@@ -1,6 +1,7 @@
 ---
 import "@/styles/global.css";
-import { ClientRouter } from "astro:transitions";
+import { DashboardNav } from "@/components/DashboardNav";
+import { DashboardFooter } from "@/components/DashboardFooter";
 import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
@@ -8,8 +9,12 @@ interface Props {
   description?: string;
 }
 
-const { title, description = "Manage your video content with Bunny.net Stream" } = Astro.props;
+const {
+  title,
+  description = "Manage your video content with Bunny.net Stream",
+} = Astro.props;
 ---
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -20,30 +25,39 @@ const { title, description = "Manage your video content with Bunny.net Stream" }
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script is:inline>
       const getThemePreference = () => {
-        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-          return localStorage.getItem('theme');
+        if (
+          typeof localStorage !== "undefined" &&
+          localStorage.getItem("theme")
+        ) {
+          return localStorage.getItem("theme");
         }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
       };
-      const isDark = getThemePreference() === 'dark';
-      document.documentElement.classList[isDark ? 'add' : 'remove']('dark');
-     
-      if (typeof localStorage !== 'undefined') {
+      const isDark = getThemePreference() === "dark";
+      document.documentElement.classList[isDark ? "add" : "remove"]("dark");
+
+      if (typeof localStorage !== "undefined") {
         const observer = new MutationObserver(() => {
-          const isDark = document.documentElement.classList.contains('dark');
-          localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          const isDark = document.documentElement.classList.contains("dark");
+          localStorage.setItem("theme", isDark ? "dark" : "light");
         });
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
       }
     </script>
   </head>
-  <body class="min-h-screen bg-background">
+  <body class="bg-background min-h-screen">
     <div class="grid min-h-screen w-full lg:grid-cols-[200px_1fr]">
-      <slot name="sidebar" />
-      <main class="flex flex-col gap-6 p-6 md:gap-8 md:p-8">
+      <DashboardNav client:load />
+      <main class="flex flex-col gap-4 p-4 md:gap-8 md:p-8">
         <slot />
       </main>
+      <DashboardFooter />
     </div>
-    <Toaster position="top-right" client:load/>
+    <Toaster position="top-right" client:load />
   </body>
 </html>

@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Upload } from "lucide-react";
 
 interface ThumbnailUploadProps {
   videoId: string;
@@ -96,7 +97,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
         >
           <Input
             id="thumbnail"
-            className="border-0 shadow-none bg-transparent file:bg-primary file:rounded-sm file:px-4 file:text-primary-foreground"
+            className="file:bg-primary file:text-primary-foreground border-0 bg-transparent shadow-none file:rounded-sm file:px-4"
             type="file"
             accept="image/*"
             onChange={handleFileChange}
@@ -104,11 +105,11 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
           {preview && (
             <div className="mt-4">
               <Label>Preview</Label>
-              <div className="mt-2 rounded-md overflow-hidden border border-gray-200">
+              <div className="mt-2 overflow-hidden rounded-md border border-gray-200">
                 <img
                   src={preview || "/placeholder.svg"}
                   alt="Thumbnail preview"
-                  className="w-full h-auto object-cover"
+                  className="h-auto w-full object-cover"
                 />
               </div>
             </div>
@@ -117,6 +118,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
       </CardContent>
       <CardFooter className="">
         <Button onClick={handleUpload} disabled={loading || !file}>
+          <Upload className="size-4" />
           {loading ? "Uploading..." : "Upload Thumbnail"}
         </Button>
       </CardFooter>

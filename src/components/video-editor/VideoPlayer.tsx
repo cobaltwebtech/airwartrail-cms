@@ -9,14 +9,13 @@ import {
 interface VideoPlayerProps {
   videoId: string;
 }
-
-export function VideoPlayer({ videoId }: VideoPlayerProps) {
-  // Get the actual video URL from Bunny.net using the public environment variable
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
+  // Construct the video URL using the public environment variable
   const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
   const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
 
   return (
-    <Card className="w-full col-span-2 row-span-2 col-start-3">
+    <Card className="col-span-2 col-start-3 row-span-2 w-full">
       <CardHeader>
         <CardTitle>Video Preview</CardTitle>
         <CardDescription>Video will play in frame below.</CardDescription>
@@ -35,4 +34,5 @@ export function VideoPlayer({ videoId }: VideoPlayerProps) {
       </CardContent>
     </Card>
   );
-}
+};
+export default VideoPlayer;

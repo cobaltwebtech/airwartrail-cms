@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { updateVideoTitle } from "@/lib/bunny-api";
+import { updateVideoTitle } from "@/lib/bunnyStream";
 
 export const POST: APIRoute = async ({ request }) => {
   const { videoId, newTitle } = await request.json();

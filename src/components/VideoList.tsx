@@ -8,7 +8,6 @@ import {
   Film,
   Copy,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -30,6 +29,7 @@ import { VideoDialog } from "./VideoDialog";
 import { DeleteModal } from "./DeleteModal";
 import type { Video } from "@/types";
 import { toast } from "sonner";
+import { formatDate, formatDuration, copyVideoUrl } from "@/lib/videoData";
 
 interface VideoListProps {
   videos: Video[] | null | undefined;
@@ -49,18 +49,9 @@ export function VideoList({ videos = [] }: VideoListProps) {
     video.title.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  function formatDuration(seconds: number) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  }
-
   const handleCopy = (video: Video) => {
-    //Get the actual video URL from Bunny.net using the public environment variable and selected video
-    const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-    const url = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}`;
-    navigator.clipboard.writeText(url);
-    toast("URL copied to clipboard");
+    copyVideoUrl(video.guid || video.id)();
+    toast.success("URL copied to clipboard");
   };
 
   const handleDeleteRequest = (video: Video) => {
@@ -117,16 +108,16 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {filteredVideos.map((video) => (
-          <Card key={video.id} className="overflow-hidden">
+          <Card key={video.id} className="gap-2 overflow-hidden py-4">
             <div className="relative">
               <img
                 src={
                   video.thumbnail || "/placeholder.svg?height=720&width=1280"
                 }
                 alt={video.title}
-                className="object-cover aspect-video"
+                className="aspect-video object-cover"
               />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
                 <Button
                   variant="secondary"
                   size="icon"
@@ -135,12 +126,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
                   <Play className="h-6 w-6" />
                 </Button>
               </div>
-              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1 rounded">
+              <div className="absolute right-2 bottom-2 rounded bg-black/70 px-1 text-xs text-white">
                 {formatDuration(video.duration)}
               </div>
             </div>
             <CardHeader className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <a href={`/edit-video/${video.id}`} className="cursor-pointer">
                   <CardTitle className="text-base text-wrap">
                     {video.title}
@@ -166,7 +157,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
                     <DropdownMenuItem asChild>
                       <a
                         href={`/edit-video/${video.id}`}
-                        className="flex items-center px-2 py-1.5 text-sm cursor-pointer"
+                        className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
                       >
                         <Pencil className="mr-2 size-4" />
                         <span>Edit</span>
@@ -176,7 +167,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
                     <DropdownMenuItem
                       onClick={() => handleDeleteRequest(video)}
                     >
-                      <Trash2 className="mr-2 size-4 text-destructive-foreground" />
+                      <Trash2 className="text-destructive-foreground mr-2 size-4" />
                       <span className="text-destructive">Delete</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -186,8 +177,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
                 Status: <span className="capitalize">{video.statusText}</span>
               </CardDescription>
             </CardHeader>
-            <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
-              Added {formatDistanceToNow(new Date(video.createdAt))} ago
+            <CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
+              Uploaded on {formatDate(video.createdAt)}
             </CardFooter>
           </Card>
         ))}
@@ -195,7 +186,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
       {filteredVideos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Film className="h-12 w-12 text-muted-foreground mb-4" />
+          <Film className="text-muted-foreground mb-4 h-12 w-12" />
           <h3 className="text-lg font-medium">No videos found</h3>
           <p className="text-muted-foreground">
             {searchTerm

@@ -29,7 +29,7 @@ export function DashboardNav() {
   ];
 
   return (
-    <div className="flex h-full flex-col border-r bg-muted/40">
+    <div className="bg-muted row-span-2 flex h-full flex-col border-r">
       <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
         <a href="/" className="flex items-center gap-2 font-semibold">
           <Film className="h-6 w-6" />
@@ -45,7 +45,7 @@ export function DashboardNav() {
               <a
                 key={index}
                 href={item.href}
-                className={`group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-accent-foreground ${isActive ? "bg-sidebar-accent" : "transparent"}`}
+                className={`group hover:bg-sidebar-accent hover:text-accent-foreground flex items-center rounded-md px-3 py-2 text-sm font-medium ${isActive ? "bg-sidebar-accent" : "transparent"}`}
                 onClick={() => setActivePath(item.href)}
               >
                 <Icon className="mr-2 h-4 w-4" />

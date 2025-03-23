@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Save } from "lucide-react";
 
 interface EditTitleProps {
   videoId: string;
@@ -45,7 +46,7 @@ const EditTitle: React.FC<EditTitleProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/videos/update-title", {
+      const response = await fetch(`/api/videos/${videoId}/titleUpdate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +85,7 @@ const EditTitle: React.FC<EditTitleProps> = ({
         <form onSubmit={handleTitleChange} className="space-y-4">
           <div className="space-y-2">
             <p className="text-sm">Current Title</p>
-            <p className="text-lg font-semibold text-accent">
+            <p className="text-accent text-lg font-semibold">
               {initialTitle || "No title set"}
             </p>
           </div>
@@ -100,9 +101,10 @@ const EditTitle: React.FC<EditTitleProps> = ({
             disabled={loading || isButtonDisabled}
             className="mt-2"
           >
+            <Save className="size-4" />
             {loading ? "Saving..." : "Save Title"}
           </Button>
-          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+          {error && <p className="text-destructive mt-2 text-sm">{error}</p>}
         </form>
       </CardContent>
     </Card>
