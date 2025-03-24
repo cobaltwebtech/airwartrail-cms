@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as tus from "tus-js-client";
@@ -24,6 +24,16 @@ export function VideoUpload() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [upload, setUpload] = useState<tus.Upload | null>(null);
 
+  useEffect(() => {
+    // Check if the upload flag is set in localStorage
+    if (localStorage.getItem("videoUploaded") === "true") {
+      toast.success("Video uploaded successfully", {
+        description: "Your video is now processing and will be available soon.",
+      });
+      localStorage.removeItem("videoUploaded");
+    }
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -47,8 +57,7 @@ export function VideoUpload() {
       setUploadProgress(0);
 
       // 1. Create video in Bunny.net Stream
-      console.log("Creating video with title:", title);
-      const createResponse = await fetch("/api/videos/uploadVideo", {
+      const createResponse = await fetch("/api/videos/upload", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,19 +73,13 @@ export function VideoUpload() {
       }
 
       const video = await createResponse.json();
-      console.log("Video created:", video);
-
-      // Make sure we have a valid video ID
       const videoId = video.guid || video.id;
       if (!videoId) {
         throw new Error("No valid video ID returned from API");
       }
 
       // 2. Get authorization signature and other necessary headers for the upload
-      console.log("Getting auth token for resumable upload");
-      const authResponse = await fetch(
-        `/api/videos/uploadVideo?videoId=${videoId}`,
-      );
+      const authResponse = await fetch(`/api/videos/upload?videoId=${videoId}`);
 
       if (!authResponse.ok) {
         throw new Error("Failed to get authentication token for upload");
@@ -85,15 +88,9 @@ export function VideoUpload() {
       const { token, signature, expire } = await authResponse.json();
       const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 
-      console.log("Token received:", token);
-      console.log("Video ID:", videoId);
-      console.log("Signature:", signature);
-      console.log("Expire:", expire);
-
       // 3. Use the TUS client for resumable uploads
       return new Promise<void>((resolve, reject) => {
         const tusUpload = new tus.Upload(file, {
-          // This is the correct endpoint for Bunny.net Stream TUS uploads
           endpoint: "https://video.bunnycdn.com/tusupload",
           retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
           headers: {
@@ -107,7 +104,6 @@ export function VideoUpload() {
             title: title,
           },
           onError: function (error) {
-            console.error("Failed because: " + error);
             toast.error("Upload failed", {
               description: error.message || "An unexpected error occurred",
             });
@@ -117,46 +113,33 @@ export function VideoUpload() {
           },
           onProgress: function (bytesUploaded, bytesTotal) {
             const percentage = Math.round((bytesUploaded / bytesTotal) * 100);
-            console.log(bytesUploaded, bytesTotal, percentage + "%");
             setUploadProgress(percentage);
           },
           onSuccess: function () {
-            console.log("Upload successful!");
-            toast.success("Video uploaded successfully", {
-              description:
-                "Your video is now processing and will be available soon.",
-            });
             setTitle("");
             setFile(null);
             setOpen(false);
             setIsUploading(false);
             setUploadProgress(0);
 
-            // Refresh the page to show the new video
-            setTimeout(() => {
-              window.location.reload();
-            }, 1500);
-
+            // Set a flag in localStorage to indicate the video was uploaded successfully
+            localStorage.setItem("videoUploaded", "true");
+            window.location.reload();
             resolve();
           },
         });
 
-        // Store the upload instance to allow cancellation
         setUpload(tusUpload);
 
-        // Check if there are any previous uploads to continue
         tusUpload.findPreviousUploads().then(function (previousUploads) {
-          // Found previous uploads so we select the first one
           if (previousUploads.length) {
             tusUpload.resumeFromPreviousUpload(previousUploads[0]);
           }
 
-          // Start the upload
           tusUpload.start();
         });
       });
     } catch (error) {
-      console.error("Upload failed:", error);
       toast.error("Upload failed", {
         description:
           error instanceof Error

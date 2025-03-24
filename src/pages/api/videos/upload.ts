@@ -113,8 +113,8 @@ export const GET: APIRoute = async ({ request }) => {
       );
     }
 
-    // Calculate expiration time (24 hours from now)
-    const expire = Math.floor(Date.now() / 1000) + 86400;
+    // Calculate expiration time (6 hours)
+    const expire = Math.floor(Date.now() / 1000) + 21600;
 
     if (!videoId) {
       return new Response(

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MoreHorizontal,
   Pencil,
@@ -26,7 +26,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { VideoDialog } from "./VideoDialog";
-import { DeleteModal } from "./DeleteModal";
+import { VideoDelete } from "./VideoDelete";
 import type { Video } from "@/types";
 import { toast } from "sonner";
 import { formatDate, formatDuration, copyVideoUrl } from "@/lib/videoData";
@@ -41,6 +41,19 @@ export function VideoList({ videos = [] }: VideoListProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
+
+  useEffect(() => {
+    // Check if the deletion flag is set in localStorage
+    if (localStorage.getItem("videoDeleted") === "true") {
+      toast.success("Video deleted successfully");
+      localStorage.removeItem("videoDeleted");
+    }
+    // Check if the upload flag is set in localStorage
+    if (localStorage.getItem("videoUploaded") === "true") {
+      toast.success("Video uploaded successfully");
+      localStorage.removeItem("videoUploaded");
+    }
+  }, []);
 
   // Ensure videos is an array before filtering
   const videoArray = Array.isArray(videos) ? videos : [];
@@ -68,9 +81,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
         if (!response.ok) {
           throw new Error("Failed to delete video");
         }
+        // Set a flag in localStorage to indicate the video was deleted successfully
+        localStorage.setItem("videoDeleted", "true");
         window.location.reload();
       } catch (error) {
         console.error("Error deleting video:", error);
+        toast.error("Failed to delete video");
       } finally {
         setIsDeleteDialogOpen(false);
       }
@@ -100,7 +116,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
         />
       )}
 
-      <DeleteModal
+      <VideoDelete
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteConfirm}

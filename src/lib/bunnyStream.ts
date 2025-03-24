@@ -1,5 +1,4 @@
 // This file contains functions to interact with the Bunny.net Stream API
-
 import type { Video, StatusMap, VideoStatus } from "@/types";
 
 // For server-side API calls
@@ -135,32 +134,5 @@ export async function getVideo(videoId: string): Promise<Video | null> {
   } catch (error) {
     console.error("Error fetching video:", error);
     return null;
-  }
-}
-
-export async function updateVideoTitle(
-  videoId: string,
-  newTitle: string,
-): Promise<void> {
-  try {
-    const response = await fetch(
-      `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
-      {
-        method: "POST",
-        headers: {
-          AccessKey: apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title: newTitle }),
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to update video title: ${errorText}`);
-    }
-  } catch (error) {
-    console.error("Error updating video title:", error);
-    throw error;
   }
 }

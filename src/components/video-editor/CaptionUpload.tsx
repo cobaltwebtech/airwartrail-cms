@@ -42,7 +42,7 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({ videoId }) => {
     // Fetch captions for the video
     const fetchCaptions = async () => {
       try {
-        const response = await fetch(`/api/videos/${videoId}`);
+        const response = await fetch(`/api/videos/${videoId}/getVideo`);
         const data = await response.json();
         setCaptions(data.captions || []);
       } catch (error) {

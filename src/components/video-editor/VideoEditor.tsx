@@ -5,6 +5,7 @@ import ThumbnailUpload from "@/components/video-editor/ThumbnailUpload";
 import VideoPlayer from "@/components/video-editor/VideoPlayer";
 import CaptionUpload from "./CaptionUpload";
 import VideoInfo from "@/components/video-editor/VideoInfo";
+import ChapterEditor from "./ChapterEditor";
 
 interface VideoEditorProps {
   video: {
@@ -46,6 +47,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
       <ThumbnailUpload videoId={videoId} />
       <VideoPlayer videoId={videoId} />
       <CaptionUpload videoId={videoId} />
+      <ChapterEditor videoId={videoId} />
     </div>
   );
 };
