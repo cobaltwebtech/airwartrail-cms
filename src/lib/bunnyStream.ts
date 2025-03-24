@@ -58,7 +58,6 @@ export async function getVideos(): Promise<Video[]> {
     );
 
     const data: BunnyApiResponse = await response.json();
-    console.log("Bunny.net API response:", JSON.stringify(data, null, 2));
 
     if (Array.isArray(data)) {
       return data.map((video: BunnyApiResponseItem) => ({

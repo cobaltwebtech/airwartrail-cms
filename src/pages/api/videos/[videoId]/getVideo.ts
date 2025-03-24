@@ -18,6 +18,7 @@ export const GET: APIRoute = async ({ params }) => {
     );
 
     const data = await response.json();
+    console.log("Bunny.net API response:", JSON.stringify(data, null, 2));
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: {
