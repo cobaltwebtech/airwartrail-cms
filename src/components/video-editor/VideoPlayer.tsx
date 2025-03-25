@@ -15,7 +15,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
   const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
 
   return (
-    <Card className="col-span-2 col-start-3 row-span-2 w-full">
+    <Card className="col-span-4 col-start-5 row-span-2 w-full">
       <CardHeader>
         <CardTitle>Video Preview</CardTitle>
         <CardDescription>Video will play in frame below.</CardDescription>

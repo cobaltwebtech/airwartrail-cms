@@ -74,7 +74,7 @@ const EditTitle: React.FC<EditTitleProps> = ({
   };
 
   return (
-    <Card className="w-full justify-between">
+    <Card className="col-span-2 w-full justify-between">
       <CardHeader>
         <CardTitle>Edit Video Title</CardTitle>
         <CardDescription>

@@ -14,6 +14,9 @@ export interface Video {
   statusText: string;
   createdAt: string;
   dateUploaded?: string;
+  captions?: { label: string; srclang: string }[];
+  chapters?: { title: string; start: number; end: number }[];
+  moments?: { label: string; timestamp: number }[];
 }
 
 export type StatusMap = Record<VideoStatus, string>;

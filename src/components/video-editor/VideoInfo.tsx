@@ -17,7 +17,7 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
   collectionId,
 }) => {
   return (
-    <div className="col-span-2">
+    <div className="col-span-3">
       <h3 className="text-lg font-bold">{initialTitle}</h3>
       <div className="grid grid-cols-2 gap-x-4">
         <p className="text-muted-foreground text-sm">

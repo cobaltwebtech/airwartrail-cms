@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -25,33 +25,20 @@ import DeleteCaption from "./CaptionDelete";
 
 interface CaptionUploadProps {
   videoId: string;
+  initialCaptions: { label: string; srclang: string }[];
 }
 
-const CaptionUpload: React.FC<CaptionUploadProps> = ({ videoId }) => {
+const CaptionUpload: React.FC<CaptionUploadProps> = ({
+  videoId,
+  initialCaptions,
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [captionLabel, setCaptionLabel] = useState<string>("");
   const [languageCode, setLanguageCode] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [captions, setCaptions] = useState<
-    { label: string; srclang: string }[]
-  >([]);
+  const [captions, setCaptions] = useState(initialCaptions);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [captionToDelete, setCaptionToDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch captions for the video
-    const fetchCaptions = async () => {
-      try {
-        const response = await fetch(`/api/videos/${videoId}/getVideo`);
-        const data = await response.json();
-        setCaptions(data.captions || []);
-      } catch (error) {
-        console.error("Error fetching captions:", error);
-      }
-    };
-
-    fetchCaptions();
-  }, [videoId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -172,7 +159,7 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({ videoId }) => {
   };
 
   return (
-    <Card className="col-span-2 w-full">
+    <Card className="col-span-4 w-full">
       <CardHeader>
         <CardTitle>Edit Captions</CardTitle>
         <CardDescription>Upload caption files to the video.</CardDescription>

@@ -38,6 +38,9 @@ interface BunnyApiResponseItem {
   status: number;
   dateUploaded?: string;
   collectionId?: string;
+  captions?: { label: string; srclang: string }[];
+  chapters?: { title: string; start: number; end: number }[];
+  moments?: { label: string; timestamp: number }[];
 }
 
 interface BunnyApiResponse {
@@ -59,42 +62,26 @@ export async function getVideos(): Promise<Video[]> {
 
     const data: BunnyApiResponse = await response.json();
 
+    const mapVideoResponse = (video: BunnyApiResponseItem) => ({
+      id: video.guid || video.id,
+      guid: video.guid,
+      title: video.title,
+      thumbnail: getThumbnailUrl(video),
+      duration: video.length || 0,
+      status: video.status as VideoStatus,
+      statusText: statusMap[video.status as VideoStatus] || "Unknown",
+      createdAt: video.dateUploaded || new Date().toISOString(),
+      collectionId: video.collectionId || "",
+      captions: video.captions || [],
+      chapters: video.chapters || [],
+    });
+
     if (Array.isArray(data)) {
-      return data.map((video: BunnyApiResponseItem) => ({
-        id: video.guid || video.id,
-        guid: video.guid,
-        title: video.title,
-        thumbnail: getThumbnailUrl(video),
-        duration: video.length || 0,
-        status: video.status as VideoStatus,
-        statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString(),
-        collectionId: video.collectionId || "",
-      }));
+      return data.map(mapVideoResponse);
     } else if (data.items && Array.isArray(data.items)) {
-      return data.items.map((video: BunnyApiResponseItem) => ({
-        id: video.guid || video.id,
-        guid: video.guid,
-        title: video.title,
-        thumbnail: getThumbnailUrl(video),
-        duration: video.length || 0,
-        status: video.status as VideoStatus,
-        statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString(),
-        collectionId: video.collectionId || "",
-      }));
+      return data.items.map(mapVideoResponse);
     } else if (data.videos && Array.isArray(data.videos)) {
-      return data.videos.map((video: BunnyApiResponseItem) => ({
-        id: video.guid || video.id,
-        guid: video.guid,
-        title: video.title,
-        thumbnail: getThumbnailUrl(video),
-        duration: video.length || 0,
-        status: video.status as VideoStatus,
-        statusText: statusMap[video.status as VideoStatus] || "Unknown",
-        createdAt: video.dateUploaded || new Date().toISOString(),
-        collectionId: video.collectionId || "",
-      }));
+      return data.videos.map(mapVideoResponse);
     }
 
     console.error("Unexpected API response structure:", data);
@@ -118,6 +105,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
     );
 
     const video: BunnyApiResponseItem = await response.json();
+    console.log("Bunny Stream video data:", JSON.stringify(video, null, 2));
 
     return {
       id: video.guid || video.id,
@@ -129,6 +117,9 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
       createdAt: video.dateUploaded || new Date().toISOString(),
       collectionId: video.collectionId || "",
+      captions: video.captions || [],
+      chapters: video.chapters || [],
+      moments: video.moments || [],
     };
   } catch (error) {
     console.error("Error fetching video:", error);

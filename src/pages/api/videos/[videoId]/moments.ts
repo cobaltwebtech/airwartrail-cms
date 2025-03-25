@@ -5,7 +5,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
     const apiKey = import.meta.env.BUNNY_API_KEY;
     const videoId = params.videoId;
-    const { chapters } = await request.json();
+    const { moments } = await request.json();
 
     const response = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
@@ -15,14 +15,14 @@ export const POST: APIRoute = async ({ params, request }) => {
           AccessKey: apiKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ chapters }),
+        body: JSON.stringify({ moments }),
       },
     );
 
     const data = await response.json();
     if (response.ok) {
       return new Response(
-        JSON.stringify({ message: "Chapters updated successfully", data }),
+        JSON.stringify({ message: "Moments updated successfully", data }),
         {
           status: 200,
           headers: {
@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ params, request }) => {
       );
     } else {
       return new Response(
-        JSON.stringify({ error: "Failed to update chapters", data }),
+        JSON.stringify({ error: "Failed to update moments", data }),
         {
           status: response.status,
           headers: {
@@ -42,9 +42,9 @@ export const POST: APIRoute = async ({ params, request }) => {
       );
     }
   } catch (error) {
-    console.error("Error updating chapters:", error);
+    console.error("Error updating moments:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to update chapters" }),
+      JSON.stringify({ error: "Failed to update moments" }),
       {
         status: 500,
         headers: {

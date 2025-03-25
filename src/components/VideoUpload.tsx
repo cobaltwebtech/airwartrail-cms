@@ -85,7 +85,7 @@ export function VideoUpload() {
         throw new Error("Failed to get authentication token for upload");
       }
 
-      const { token, signature, expire } = await authResponse.json();
+      const { signature, expire } = await authResponse.json();
       const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 
       // 3. Use the TUS client for resumable uploads
