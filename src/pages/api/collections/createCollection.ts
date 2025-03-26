@@ -1,4 +1,4 @@
-import type { APIRoute } from 'astro';
+import type { APIRoute } from "astro";
 
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const apiKey = import.meta.env.BUNNY_API_KEY;
@@ -38,7 +38,9 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Server error" }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Server error",
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },

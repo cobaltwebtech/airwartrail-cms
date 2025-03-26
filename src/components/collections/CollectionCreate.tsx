@@ -38,7 +38,7 @@ export default function CollectionCreate() {
 
       // Set a flag in localStorage to show the toast message after reload
       localStorage.setItem("collectionCreated", "true");
-      
+
       setOpen(false);
       setName("");
       window.location.reload();
@@ -54,7 +54,10 @@ export default function CollectionCreate() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><CirclePlus />Create Collection</Button>
+        <Button>
+          <CirclePlus />
+          Create Collection
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>

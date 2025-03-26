@@ -43,14 +43,11 @@ export const POST: APIRoute = async ({ params, request }) => {
     }
   } catch (error) {
     console.error("Error updating moments:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to update moments" }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
+    return new Response(JSON.stringify({ error: "Failed to update moments" }), {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+    });
   }
 };

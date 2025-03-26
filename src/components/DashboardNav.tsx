@@ -41,7 +41,7 @@ export function DashboardNav() {
         <div className="flex-1 overflow-auto py-2">
           <div className="flex flex-col gap-4 p-4">
             <VideoUpload />
-          </div>          
+          </div>
           <nav className="grid items-start px-2 text-sm font-medium">
             {navItems.map((item, index) => {
               const Icon = item.icon;

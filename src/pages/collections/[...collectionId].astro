@@ -9,9 +9,11 @@ const collectionId = Astro.params.collectionId;
 
 // Fetch collections and videos on the server
 const collections = await getCollections();
-const collection = collections.find(col => col.guid === collectionId);
+const collection = collections.find((col) => col.guid === collectionId);
 const videos = await getVideos();
-const collectionVideos = videos.filter(video => video.collectionId === collectionId);
+const collectionVideos = videos.filter(
+  (video) => video.collectionId === collectionId,
+);
 
 // If collection not found, return a 404 page
 if (!collection) {
@@ -20,6 +22,9 @@ if (!collection) {
 ---
 
 <BaseLayout title={collection.name}>
-  <DashboardHeader heading={collection.name} text="List of videos in collection." />
+  <DashboardHeader
+    heading={collection.name}
+    text="List of videos in collection."
+  />
   <VideoList videos={collectionVideos} client:load />
 </BaseLayout>

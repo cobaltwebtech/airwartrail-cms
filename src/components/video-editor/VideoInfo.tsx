@@ -29,7 +29,7 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
         <p className="text-muted-foreground text-sm">
           Upload Date: {formatDate(dateUploaded)}
         </p>
-        <p className="text-muted-foreground text-nowrap text-sm">
+        <p className="text-muted-foreground text-sm text-nowrap">
           Collection: {collectionId}
         </p>
       </div>

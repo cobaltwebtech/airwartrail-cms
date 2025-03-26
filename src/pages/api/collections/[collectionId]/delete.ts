@@ -31,11 +31,14 @@ export const DELETE: APIRoute = async ({ params }) => {
     });
   } catch (error) {
     console.error("Error deleting collection:", error);
-    return new Response(JSON.stringify({ error: "Failed to delete collection" }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
+    return new Response(
+      JSON.stringify({ error: "Failed to delete collection" }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
   }
 };

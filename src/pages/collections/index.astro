@@ -11,7 +11,7 @@ const collections = await getCollections();
 
 <BaseLayout title="Collections">
   <DashboardHeader heading="Collections" text="Manage your video collections.">
-    <CollectionCreate client:load/>
+    <CollectionCreate client:load />
   </DashboardHeader>
   <div class="grid gap-4">
     <CollectionsList collections={collections} client:load />

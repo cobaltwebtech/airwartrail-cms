@@ -127,7 +127,10 @@ export async function getVideo(videoId: string): Promise<Video | null> {
 }
 
 // Function to retrieve the Collections
-export async function getCollections(page: number = 1, perPage: number = 50): Promise<Collection[]> {
+export async function getCollections(
+  page: number = 1,
+  perPage: number = 50,
+): Promise<Collection[]> {
   try {
     const response = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/collections?page=${page}&perPage=${perPage}`,
@@ -143,23 +146,25 @@ export async function getCollections(page: number = 1, perPage: number = 50): Pr
     console.log("Bunny Stream video data:", JSON.stringify(data, null, 2));
 
     if (data.items && Array.isArray(data.items)) {
-      return data.items.map((item: {
-        videoLibraryId: string;
-        guid: string;
-        name: string;
-        videoCount: number;
-        totalSize: number;
-        previewVideoIds: string[];
-        previewImageUrls: string[];
-      }) => ({
-        videoLibraryId: item.videoLibraryId,
-        guid: item.guid,
-        name: item.name,
-        videoCount: item.videoCount,
-        totalSize: item.totalSize,
-        previewVideoIds: item.previewVideoIds,
-        previewImageUrls: item.previewImageUrls,
-      }));
+      return data.items.map(
+        (item: {
+          videoLibraryId: string;
+          guid: string;
+          name: string;
+          videoCount: number;
+          totalSize: number;
+          previewVideoIds: string[];
+          previewImageUrls: string[];
+        }) => ({
+          videoLibraryId: item.videoLibraryId,
+          guid: item.guid,
+          name: item.name,
+          videoCount: item.videoCount,
+          totalSize: item.totalSize,
+          previewVideoIds: item.previewVideoIds,
+          previewImageUrls: item.previewImageUrls,
+        }),
+      );
     }
 
     console.error("Unexpected API response structure:", data);

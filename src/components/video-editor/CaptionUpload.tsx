@@ -185,7 +185,7 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({
                 onChange={handleFileChange}
               />
             </div>
-            <div className="flex flex-row gap-x-2 justify-between">
+            <div className="flex flex-row justify-between gap-x-2">
               <div className="space-y-2">
                 <Label htmlFor="label">Caption Label</Label>
                 <Input

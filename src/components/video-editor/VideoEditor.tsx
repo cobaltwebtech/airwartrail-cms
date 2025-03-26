@@ -60,7 +60,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
         initialChapters={chapters}
         videoDuration={duration}
       />
-      <MomentsEditor 
+      <MomentsEditor
         videoId={videoId}
         initialMoments={moments}
         videoDuration={duration}

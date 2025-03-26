@@ -74,20 +74,26 @@ const isValidDuration = (duration: string): boolean => {
   return false;
 };
 
-const isWithinVideoDuration = (duration: string, videoDuration: number): boolean => {
+const isWithinVideoDuration = (
+  duration: string,
+  videoDuration: number,
+): boolean => {
   return parseDuration(duration) <= videoDuration;
 };
 
-const MomentsEditor: React.FC<MomentsEditorProps> = ({ videoId, initialMoments, videoDuration }) => {
+const MomentsEditor: React.FC<MomentsEditorProps> = ({
+  videoId,
+  initialMoments,
+  videoDuration,
+}) => {
   const [moments, setMoments] = useState<Moment[]>(
     initialMoments.map((moment) => ({
       title: moment.label,
       time: formatDuration(moment.timestamp),
-    }))
+    })),
   );
 
-  useEffect(() => {
-  }, [initialMoments, moments]);
+  useEffect(() => {}, [initialMoments, moments]);
 
   const handleInputChange = (
     index: number,
@@ -117,10 +123,7 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({ videoId, initialMoments, 
   };
 
   const addMoment = () => {
-    setMoments([
-      ...moments,
-      { title: "", time: "00:00:00" },
-    ]);
+    setMoments([...moments, { title: "", time: "00:00:00" }]);
   };
 
   const deleteMoment = (index: number) => {
@@ -157,7 +160,8 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({ videoId, initialMoments, 
       <CardHeader>
         <CardTitle>Edit Moments</CardTitle>
         <CardDescription>
-          Moments are specific points in the video that you want to highlight. Specify the time and title. Time should be formatted in hh:mm:ss
+          Moments are specific points in the video that you want to highlight.
+          Specify the time and title. Time should be formatted in hh:mm:ss
         </CardDescription>
       </CardHeader>
       <CardContent>
