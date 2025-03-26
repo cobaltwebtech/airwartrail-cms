@@ -1,0 +1,25 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { VideoList } from "@/components/VideoList";
+import { getCollections, getVideos } from "../../lib/bunnyStream";
+
+// Extract collectionId from the URL
+const collectionId = Astro.params.collectionId;
+
+// Fetch collections and videos on the server
+const collections = await getCollections();
+const collection = collections.find(col => col.guid === collectionId);
+const videos = await getVideos();
+const collectionVideos = videos.filter(video => video.collectionId === collectionId);
+
+// If collection not found, return a 404 page
+if (!collection) {
+  throw new Error(`Collection with ID ${collectionId} not found`);
+}
+---
+
+<BaseLayout title={collection.name}>
+  <DashboardHeader heading={collection.name} text="List of videos in collection." />
+  <VideoList videos={collectionVideos} client:load />
+</BaseLayout>

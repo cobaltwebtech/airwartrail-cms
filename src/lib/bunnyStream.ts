@@ -1,5 +1,5 @@
 // This file contains functions to interact with the Bunny.net Stream API
-import type { Video, StatusMap, VideoStatus } from "@/types";
+import type { Video, StatusMap, VideoStatus, Collection } from "@/types";
 
 // For server-side API calls
 const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
@@ -105,7 +105,6 @@ export async function getVideo(videoId: string): Promise<Video | null> {
     );
 
     const video: BunnyApiResponseItem = await response.json();
-    console.log("Bunny Stream video data:", JSON.stringify(video, null, 2));
 
     return {
       id: video.guid || video.id,
@@ -124,5 +123,49 @@ export async function getVideo(videoId: string): Promise<Video | null> {
   } catch (error) {
     console.error("Error fetching video:", error);
     return null;
+  }
+}
+
+// Function to retrieve the Collections
+export async function getCollections(page: number = 1, perPage: number = 50): Promise<Collection[]> {
+  try {
+    const response = await fetch(
+      `https://video.bunnycdn.com/library/${libraryId}/collections?page=${page}&perPage=${perPage}`,
+      {
+        headers: {
+          AccessKey: apiKey,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const data = await response.json();
+    console.log("Bunny Stream video data:", JSON.stringify(data, null, 2));
+
+    if (data.items && Array.isArray(data.items)) {
+      return data.items.map((item: {
+        videoLibraryId: string;
+        guid: string;
+        name: string;
+        videoCount: number;
+        totalSize: number;
+        previewVideoIds: string[];
+        previewImageUrls: string[];
+      }) => ({
+        videoLibraryId: item.videoLibraryId,
+        guid: item.guid,
+        name: item.name,
+        videoCount: item.videoCount,
+        totalSize: item.totalSize,
+        previewVideoIds: item.previewVideoIds,
+        previewImageUrls: item.previewImageUrls,
+      }));
+    }
+
+    console.error("Unexpected API response structure:", data);
+    return [];
+  } catch (error) {
+    console.error("Error fetching collections:", error);
+    return [];
   }
 }

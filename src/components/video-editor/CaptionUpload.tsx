@@ -185,28 +185,34 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({
                 onChange={handleFileChange}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="label">Caption Label</Label>
-              <Input
-                id="label"
-                type="text"
-                placeholder="Caption Language"
-                value={captionLabel}
-                onChange={(e) => setCaptionLabel(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="srclang">Language Code</Label>
-              <Input
-                id="srclang"
-                type="text"
-                placeholder="Enter two letter language code"
-                value={languageCode}
-                onChange={(e) => setLanguageCode(e.target.value)}
-              />
-              <CardDescription className="text-xs">
-                For example use "en" for English, "es" for Spanish, etc.
-              </CardDescription>
+            <div className="flex flex-row gap-x-2 justify-between">
+              <div className="space-y-2">
+                <Label htmlFor="label">Caption Label</Label>
+                <Input
+                  id="label"
+                  type="text"
+                  placeholder="Caption Language"
+                  value={captionLabel}
+                  onChange={(e) => setCaptionLabel(e.target.value)}
+                />
+                <CardDescription className="text-xs">
+                  Specify the language of the caption.
+                </CardDescription>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="srclang">Language Short Code</Label>
+                <Input
+                  id="srclang"
+                  type="text"
+                  className="w-fit"
+                  placeholder="Language Code"
+                  value={languageCode}
+                  onChange={(e) => setLanguageCode(e.target.value)}
+                />
+                <CardDescription className="text-xs">
+                  For example use "en" for English, "es" for Spanish, etc.
+                </CardDescription>
+              </div>
             </div>
           </div>
         </form>

@@ -15,7 +15,7 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
   };
 
   return (
-    <div className="col-span-1 col-end-9 flex items-center justify-end gap-2">
+    <div className="col-span-1 col-end-9 flex justify-end gap-2">
       <Button onClick={handleCopy}>
         <Copy className="size-4" />
         Copy Video URL
