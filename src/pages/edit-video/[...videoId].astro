@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { getVideo } from "@/lib/bunnyStream";
+import { getVideo, getCollections } from "@/lib/bunnyStream";
 import VideoEditor from "@/components/video-editor/VideoEditor";
 
 // Extract videoId from the URL
@@ -9,13 +9,15 @@ const { videoId } = Astro.params;
 
 // Fetch video details on the server
 const video = videoId ? await getVideo(videoId) : null;
+// Fetch collections on the server
+const collections = await getCollections();
 ---
 
 <BaseLayout title="Video Editor">
   <DashboardHeader heading="Video Editor" />
   {
     video && videoId ? ( // Video editor components are at src/components/video-editor
-      <VideoEditor video={video} videoId={videoId} client:load />
+      <VideoEditor video={video} videoId={videoId} collections={collections} client:load />
     ) : (
       <p>Loading video details...</p>
     )

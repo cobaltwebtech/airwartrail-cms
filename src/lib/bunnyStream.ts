@@ -143,10 +143,6 @@ export async function getCollections(
     );
 
     const data = await response.json();
-    console.log(
-      "Bunny Stream Collections data:",
-      JSON.stringify(data, null, 2),
-    );
 
     if (data.items && Array.isArray(data.items)) {
       return data.items.map(

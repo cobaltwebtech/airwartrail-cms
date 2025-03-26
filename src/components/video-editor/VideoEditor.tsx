@@ -21,22 +21,31 @@ interface VideoEditorProps {
     chapters?: { title: string; start: number; end: number }[];
     moments?: { label: string; timestamp: number }[];
   } | null;
+  collections: { guid: string; name: string }[];
 }
 
-const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
+const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId, collections }) => {
   const [title, setTitle] = useState(video?.title || "");
+  const [collectionId, setCollectionId] = useState(video?.collectionId);
   const duration = video?.duration || 0;
   const dateUploaded = video?.createdAt || "";
   const statusText = video?.statusText || "";
-  const collectionId = video?.collectionId || "";
   const captions = video?.captions || [];
   const chapters = video?.chapters || [];
   const moments = video?.moments || [];
 
+  interface HandleUpdateCollectionId {
+    (newCollectionId: string | undefined): void;
+  }
+
+  const handleUpdateCollectionId: HandleUpdateCollectionId = (newCollectionId) => {
+    setCollectionId(newCollectionId);
+  };
+
   const handleTitleUpdate = (newTitle: string) => {
     setTitle(newTitle);
   };
-  console.log("Video editor data:", JSON.stringify(video, null, 2));
+  console.log("Collection data:", JSON.stringify(collections, null, 2));
 
   return (
     <div className="grid grid-cols-8 gap-4">
@@ -49,7 +58,9 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
       />
       <CopyUrl videoId={videoId} />
       <CollectionEditor
-        collectionId={collectionId}
+        collectionId={collectionId || ""}
+        onUpdateCollectionId={handleUpdateCollectionId}
+        collections={collections}
       />
       <VideoPlayer videoId={videoId} />
       <TitleEditor

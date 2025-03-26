@@ -1,43 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import {   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger, } from '@/components/ui/dialog';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectGroup, SelectLabel, SelectContent, SelectItem } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { getCollections } from '@/lib/bunnyStream';
 import { Pencil } from "lucide-react";
 
 interface CollectionEditorProps {
   collectionId: string;
   onUpdateCollectionId: (newCollectionId: string) => void;
+  collections: { guid: string; name: string }[];
 }
 
-const CollectionEditor: React.FC<CollectionEditorProps> = ({ collectionId, onUpdateCollectionId }) => {
-  const [collections, setCollections] = useState<{ guid: string; name: string }[]>([]);
+const CollectionEditor: React.FC<CollectionEditorProps> = ({ collectionId, onUpdateCollectionId, collections }) => {
   const [selectedCollectionId, setSelectedCollectionId] = useState(collectionId);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  useEffect(() => {
-    // Fetch collections from the Bunny API
-    const fetchCollections = async () => {
-      const collectionsData = await getCollections();
-      setCollections(collectionsData);
-    };
-
-    fetchCollections();
-  }, []);
 
   const handleSave = () => {
     onUpdateCollectionId(selectedCollectionId);
