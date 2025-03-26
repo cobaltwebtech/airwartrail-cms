@@ -7,6 +7,7 @@ import CaptionUpload from "./CaptionUpload";
 import VideoInfo from "@/components/video-editor/VideoInfo";
 import ChapterEditor from "@/components/video-editor/ChapterEditor";
 import MomentsEditor from "./MomentsEditor";
+import CollectionEditor from "./CollectionEditor";
 
 interface VideoEditorProps {
   videoId: string;
@@ -47,22 +48,25 @@ const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId }) => {
         collectionId={collectionId}
       />
       <CopyUrl videoId={videoId} />
+      <CollectionEditor
+        collectionId={collectionId}
+      />
+      <VideoPlayer videoId={videoId} />
       <TitleEditor
         videoId={videoId}
         initialTitle={title}
         onTitleUpdate={handleTitleUpdate}
       />
       <ThumbnailUpload videoId={videoId} />
-      <VideoPlayer videoId={videoId} />
+      <MomentsEditor
+        videoId={videoId}
+        initialMoments={moments}
+        videoDuration={duration}
+      />
       <CaptionUpload videoId={videoId} initialCaptions={captions} />
       <ChapterEditor
         videoId={videoId}
         initialChapters={chapters}
-        videoDuration={duration}
-      />
-      <MomentsEditor
-        videoId={videoId}
-        initialMoments={moments}
         videoDuration={duration}
       />
     </div>

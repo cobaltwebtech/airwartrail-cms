@@ -177,7 +177,7 @@ const ChapterEditor: React.FC<ChapterEditorProps> = ({
   };
 
   return (
-    <Card className="col-span-5 w-full justify-between">
+    <Card className="col-span-full w-full justify-between">
       <CardHeader>
         <CardTitle>Edit Chapters</CardTitle>
         <CardDescription>

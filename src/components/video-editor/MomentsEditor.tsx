@@ -156,7 +156,7 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({
   };
 
   return (
-    <Card className="col-span-3 w-full justify-between">
+    <Card className="col-span-4 w-full justify-between">
       <CardHeader>
         <CardTitle>Edit Moments</CardTitle>
         <CardDescription>
