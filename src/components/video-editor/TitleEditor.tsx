@@ -76,7 +76,7 @@ const EditTitle: React.FC<EditTitleProps> = ({
   return (
     <Card className="col-span-2 w-full justify-between">
       <CardHeader>
-        <CardTitle>Edit Video Title</CardTitle>
+        <CardTitle>Edit Title</CardTitle>
         <CardDescription>
           Enter a new title below and click Save Title.
         </CardDescription>

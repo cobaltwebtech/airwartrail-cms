@@ -3,10 +3,10 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { DashboardHeader } from "../../components/DashboardHeader";
 import { VideoUpload } from "../../components/VideoUpload";
 import { VideoList } from "../../components/VideoList";
-import { getVideos } from "../../lib/bunnyStream";
+import { getAllVideos } from "../../lib/bunnyStream";
 
 // Fetch videos on the server
-const videos = await getVideos();
+const videos = await getAllVideos();
 ---
 
 <BaseLayout title="Videos">

@@ -124,7 +124,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {filteredVideos.map((video) => (
-          <Card key={video.id} className="gap-2 overflow-hidden py-4">
+          <Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
             <div className="relative">
               <img
                 src={
@@ -190,11 +190,14 @@ export function VideoList({ videos = [] }: VideoListProps) {
                 </DropdownMenu>
               </div>
               <CardDescription>
-                Status: <span className="capitalize">{video.statusText}</span>
+                Views:{" "}
+                <span className="text-primary bg-secondary rounded-sm px-2 py-1 font-bold">
+                  {video.views}
+                </span>
               </CardDescription>
             </CardHeader>
             <CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-              Uploaded on {formatDate(video.createdAt)}
+              Uploaded on {formatDate(video.dateUploaded)}
             </CardFooter>
           </Card>
         ))}

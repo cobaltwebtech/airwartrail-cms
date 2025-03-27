@@ -2,7 +2,7 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { VideoList } from "@/components/VideoList";
-import { getCollections, getVideos } from "../../lib/bunnyStream";
+import { getCollections, getAllVideos } from "../../lib/bunnyStream";
 
 // Extract collectionId from the URL
 const collectionId = Astro.params.collectionId;
@@ -10,7 +10,7 @@ const collectionId = Astro.params.collectionId;
 // Fetch collections and videos on the server
 const collections = await getCollections();
 const collection = collections.find((col) => col.guid === collectionId);
-const videos = await getVideos();
+const videos = await getAllVideos();
 const collectionVideos = videos.filter(
   (video) => video.collectionId === collectionId,
 );

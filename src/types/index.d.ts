@@ -11,9 +11,9 @@ export interface Video {
   collectionId?: string;
   duration: number;
   status: VideoStatus;
+  views: number;
   statusText: string;
-  createdAt: string;
-  dateUploaded?: string;
+  dateUploaded: string;
   captions?: { label: string; srclang: string }[];
   chapters?: { title: string; start: number; end: number }[];
   moments?: { label: string; timestamp: number }[];

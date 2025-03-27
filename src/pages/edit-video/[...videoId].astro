@@ -17,7 +17,12 @@ const collections = await getCollections();
   <DashboardHeader heading="Video Editor" />
   {
     video && videoId ? ( // Video editor components are at src/components/video-editor
-      <VideoEditor video={video} videoId={videoId} collections={collections} client:load />
+      <VideoEditor
+        video={video}
+        videoId={videoId}
+        collections={collections}
+        client:load
+      />
     ) : (
       <p>Loading video details...</p>
     )

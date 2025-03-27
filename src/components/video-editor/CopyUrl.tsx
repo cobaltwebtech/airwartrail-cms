@@ -22,20 +22,18 @@ const CopyUrl: React.FC<CopyUrlProps> = ({ videoId }) => {
   };
 
   return (
-  <Card className="col-span-2 w-full justify-between">
-    <CardHeader>
-      <CardTitle>Copy Video URL</CardTitle>
-      <CardDescription>
-        Click button below to copy the URL.
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <Button onClick={handleCopy}>
-        <Copy className="size-4" />
-        Copy Video URL
-      </Button>
-    </CardContent>
-  </Card>
+    <Card className="col-span-2 w-full justify-between">
+      <CardHeader>
+        <CardTitle>Copy Video URL</CardTitle>
+        <CardDescription>Click button below to copy the URL.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button onClick={handleCopy}>
+          <Copy className="size-4" />
+          Copy Video URL
+        </Button>
+      </CardContent>
+    </Card>
   );
 };
 

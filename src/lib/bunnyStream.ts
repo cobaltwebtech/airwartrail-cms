@@ -36,6 +36,7 @@ interface BunnyApiResponseItem {
   title: string;
   length?: number;
   status: number;
+  views: number;
   dateUploaded?: string;
   collectionId?: string;
   captions?: { label: string; srclang: string }[];
@@ -48,7 +49,7 @@ interface BunnyApiResponse {
   videos?: BunnyApiResponseItem[];
 }
 
-export async function getVideos(): Promise<Video[]> {
+export async function getAllVideos(): Promise<Video[]> {
   try {
     const response = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos`,
@@ -69,8 +70,9 @@ export async function getVideos(): Promise<Video[]> {
       thumbnail: getThumbnailUrl(video),
       duration: video.length || 0,
       status: video.status as VideoStatus,
+      views: video.views || 0,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
-      createdAt: video.dateUploaded || new Date().toISOString(),
+      dateUploaded: video.dateUploaded || new Date().toISOString(),
       collectionId: video.collectionId || "",
       captions: video.captions || [],
       chapters: video.chapters || [],
@@ -112,9 +114,10 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       title: video.title,
       thumbnail: getThumbnailUrl(video),
       duration: video.length || 0,
+      views: video.views || 0,
       status: video.status as VideoStatus,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
-      createdAt: video.dateUploaded || new Date().toISOString(),
+      dateUploaded: video.dateUploaded || new Date().toISOString(),
       collectionId: video.collectionId || "",
       captions: video.captions || [],
       chapters: video.chapters || [],

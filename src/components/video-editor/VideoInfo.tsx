@@ -5,16 +5,16 @@ interface VideoInfoProps {
   initialTitle: string;
   duration: number;
   statusText: string;
+  views: number;
   dateUploaded?: string;
-  collectionId?: string;
 }
 
 const VideoInfo: React.FC<VideoInfoProps> = ({
   initialTitle,
   duration,
   statusText,
+  views,
   dateUploaded,
-  collectionId,
 }) => {
   return (
     <div className="col-span-full">
@@ -24,13 +24,13 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
           Duration: {formatDuration(duration)}
         </p>
         <p className="text-muted-foreground text-sm">
+          Views: <span className="capitalize">{views}</span>
+        </p>
+        <p className="text-muted-foreground text-sm">
           Status: <span className="capitalize">{statusText}</span>
         </p>
         <p className="text-muted-foreground text-sm">
           Upload Date: {formatDate(dateUploaded)}
-        </p>
-        <p className="text-muted-foreground text-sm text-nowrap">
-          Collection: {collectionId}
         </p>
       </div>
     </div>

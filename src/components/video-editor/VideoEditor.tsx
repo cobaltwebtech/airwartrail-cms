@@ -15,7 +15,8 @@ interface VideoEditorProps {
     title: string;
     duration: number;
     statusText: string;
-    createdAt: string;
+    views: number;
+    dateUploaded: string;
     collectionId?: string;
     captions?: { label: string; srclang: string }[];
     chapters?: { title: string; start: number; end: number }[];
@@ -24,43 +25,52 @@ interface VideoEditorProps {
   collections: { guid: string; name: string }[];
 }
 
-const VideoEditor: React.FC<VideoEditorProps> = ({ video, videoId, collections }) => {
+const VideoEditor: React.FC<VideoEditorProps> = ({
+  video,
+  videoId,
+  collections,
+}) => {
   const [title, setTitle] = useState(video?.title || "");
-  const [collectionId, setCollectionId] = useState(video?.collectionId);
+  const [collectionId, setCollectionId] = useState<string | null>(
+    video?.collectionId || null,
+  );
   const duration = video?.duration || 0;
-  const dateUploaded = video?.createdAt || "";
+  const dateUploaded = video?.dateUploaded || "";
+  const views = video?.views || 0;
   const statusText = video?.statusText || "";
   const captions = video?.captions || [];
   const chapters = video?.chapters || [];
   const moments = video?.moments || [];
 
   interface HandleUpdateCollectionId {
-    (newCollectionId: string | undefined): void;
+    (newCollectionId: string | null): void;
   }
 
-  const handleUpdateCollectionId: HandleUpdateCollectionId = (newCollectionId) => {
+  const handleUpdateCollectionId: HandleUpdateCollectionId = (
+    newCollectionId,
+  ) => {
     setCollectionId(newCollectionId);
   };
 
   const handleTitleUpdate = (newTitle: string) => {
     setTitle(newTitle);
   };
-  console.log("Collection data:", JSON.stringify(collections, null, 2));
 
   return (
     <div className="grid grid-cols-8 gap-4">
       <VideoInfo
         duration={duration}
+        views={views}
         initialTitle={title}
         dateUploaded={dateUploaded}
         statusText={statusText}
-        collectionId={collectionId}
       />
       <CopyUrl videoId={videoId} />
       <CollectionEditor
         collectionId={collectionId || ""}
         onUpdateCollectionId={handleUpdateCollectionId}
         collections={collections}
+        videoId={videoId}
       />
       <VideoPlayer videoId={videoId} />
       <TitleEditor

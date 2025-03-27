@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  LayoutDashboard,
-  Film,
-  FolderOpen,
-  Settings,
-  BarChart3,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, Film, FolderOpen, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { VideoUpload } from "./VideoUpload";
@@ -25,8 +18,6 @@ export function DashboardNav() {
     { title: "Dashboard", href: "/", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
-    { title: "Analytics", href: "/analytics", icon: BarChart3 },
-    { title: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
@@ -34,8 +25,7 @@ export function DashboardNav() {
       <div className="sticky top-0">
         <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
           <a href="/" className="flex items-center gap-2 font-semibold">
-            <Film className="h-6 w-6" />
-            <span>Video Admin</span>
+            <h1>Airwar Trail Videos</h1>
           </a>
         </div>
         <div className="flex-1 overflow-auto py-2">
@@ -59,15 +49,15 @@ export function DashboardNav() {
               );
             })}
           </nav>
-          <div className="flex flex-col gap-4 p-4">
-            <ThemeToggle />
-          </div>
         </div>
         <div className="mt-auto p-4">
           <Button variant="outline" className="w-full justify-start" size="sm">
             <LogOut className="mr-2 h-4 w-4" />
             Log out
           </Button>
+        </div>
+        <div className="flex flex-col gap-4 p-4">
+          <ThemeToggle />
         </div>
       </div>
     </div>
