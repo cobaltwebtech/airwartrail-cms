@@ -21,21 +21,36 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
   return (
     <div className="col-span-full">
       <h3 className="text-lg font-bold">{initialTitle}</h3>
-      <div className="grid grid-cols-5 gap-x-4 mt-4">
+      <div className="mt-4 grid grid-cols-5 gap-x-4">
         <p className="text-muted-foreground text-sm">
-          Duration: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{formatDuration(duration)}</span>
+          Duration:{" "}
+          <span className="text-primary bg-secondary rounded-sm px-2 py-1">
+            {formatDuration(duration)}
+          </span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Views: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{views}</span>
+          Views:{" "}
+          <span className="text-primary bg-secondary rounded-sm px-2 py-1">
+            {views}
+          </span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Status: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{statusText}</span>
+          Status:{" "}
+          <span className="text-primary bg-secondary rounded-sm px-2 py-1">
+            {statusText}
+          </span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Uploaded: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{formatDate(dateUploaded)}</span>
+          Uploaded:{" "}
+          <span className="text-primary bg-secondary rounded-sm px-2 py-1">
+            {formatDate(dateUploaded)}
+          </span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Storage Size: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{convertToGb(storageSize)}GB</span>
+          Storage Size:{" "}
+          <span className="text-primary bg-secondary rounded-sm px-2 py-1">
+            {convertToGb(storageSize)}GB
+          </span>
         </p>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import {
+  ArrowUp,
+  ArrowDown,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -24,6 +26,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "./ui/select";
 import { Input } from "./ui/input";
 import { VideoDialog } from "./VideoDialog";
 import { VideoDelete } from "./VideoDelete";
@@ -41,6 +50,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
+  const [sortCriteria, setSortCriteria] = useState("date");
+  const [sortDirection, setSortDirection] = useState("desc");
 
   useEffect(() => {
     // Check if the deletion flag is set in localStorage
@@ -58,9 +69,27 @@ export function VideoList({ videos = [] }: VideoListProps) {
   // Ensure videos is an array before filtering
   const videoArray = Array.isArray(videos) ? videos : [];
 
-  const filteredVideos = videoArray.filter((video) =>
-    video.title.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredVideos = videoArray
+    .filter((video) =>
+      video.title.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    .sort((a, b) => {
+      if (sortCriteria === "title") {
+        return sortDirection === "asc"
+          ? a.title.localeCompare(b.title)
+          : b.title.localeCompare(a.title);
+      } else {
+        return sortDirection === "asc"
+          ? new Date(a.dateUploaded).getTime() -
+              new Date(b.dateUploaded).getTime()
+          : new Date(b.dateUploaded).getTime() -
+              new Date(a.dateUploaded).getTime();
+      }
+    });
+
+  const toggleSortDirection = () => {
+    setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
 
   const handleCopy = (video: Video) => {
     copyVideoUrl(video.guid || video.id)();
@@ -95,13 +124,27 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex justify-between gap-2">
         <Input
           placeholder="Search videos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        <div className="flex gap-x-4">
+          <Select value={sortCriteria} onValueChange={setSortCriteria}>
+            <SelectTrigger className="max-w-sm">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Sort by Date</SelectItem>
+              <SelectItem value="title">Sort by Title</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={toggleSortDirection}>
+            {sortDirection === "asc" ? <ArrowUp /> : <ArrowDown />}
+          </Button>
+        </div>
       </div>
 
       {selectedVideo && (

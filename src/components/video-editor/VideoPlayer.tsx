@@ -23,7 +23,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
         <div className="aspect-video w-full">
           <iframe
             src={videoUrl}
-            className="w-full h-full"
+            className="h-full w-full"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>

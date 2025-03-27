@@ -182,7 +182,9 @@ export function CollectionsList({ collections = [] }: CollectionsListProps) {
                 </DropdownMenu>
               </div>
               <CardDescription>Videos: {collection.videoCount}</CardDescription>
-              <CardDescription>Storage Size: {convertToGb(collection.totalSize)}GB</CardDescription>
+              <CardDescription>
+                Storage Size: {convertToGb(collection.totalSize)}GB
+              </CardDescription>
             </CardContent>
           </Card>
         ))}
