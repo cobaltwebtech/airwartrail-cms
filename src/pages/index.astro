@@ -2,18 +2,36 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { DashboardHeader } from "../components/DashboardHeader";
 import { VideoUpload } from "../components/VideoUpload";
-import { VideoList } from "../components/VideoList";
-import { getAllVideos } from "../lib/bunnyStream";
-
-// Fetch videos using the Bunny.net Stream API
-const videos = await getAllVideos();
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { TvMinimalPlay, FolderOpenDot } from "lucide-react";
 ---
 
-<BaseLayout title="Dashboard">
-  <DashboardHeader heading="Videos" text="Manage your streaming video library.">
+<BaseLayout title="Video Management Dashboard">
+  <DashboardHeader heading="Video Management Dashboard" text="Manage your streaming video library.">
     <VideoUpload client:load />
   </DashboardHeader>
-  <div class="grid gap-4">
-    <VideoList videos={videos} client:load />
+  <div class="grid grid-cols-4 gap-4">
+    <a href="/videos">
+      <Card className="col-span-1 text-center hover:bg-secondary transition-colors">
+        <CardHeader>
+          <TvMinimalPlay className="size-12 mx-auto" />
+          <CardTitle>Videos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardDescription>View and manage all videos in the library.</CardDescription>
+        </CardContent>
+      </Card>
+    </a>
+    <a href="/collections">
+      <Card className="col-span-1 text-center hover:bg-secondary transition-colors">
+        <CardHeader>
+          <FolderOpenDot className="size-12 mx-auto" />
+          <CardTitle>Collections</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardDescription>View and manage all collections in the library.</CardDescription>
+        </CardContent>
+      </Card>
+    </a>
   </div>
 </BaseLayout>

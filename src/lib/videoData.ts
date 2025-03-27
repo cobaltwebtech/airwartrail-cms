@@ -22,3 +22,7 @@ export function copyVideoUrl(videoId: string) {
   };
   return handleCopy;
 }
+
+export const convertToGb = (sizeInBytes: number): string => {
+  return (sizeInBytes / (1024 ** 3)).toFixed(2);
+};

@@ -1,11 +1,12 @@
 import type React from "react";
-import { formatDuration, formatDate } from "@/lib/videoData";
+import { formatDuration, formatDate, convertToGb } from "@/lib/videoData";
 
 interface VideoInfoProps {
   initialTitle: string;
   duration: number;
   statusText: string;
   views: number;
+  storageSize: number;
   dateUploaded?: string;
 }
 
@@ -14,23 +15,27 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
   duration,
   statusText,
   views,
+  storageSize,
   dateUploaded,
 }) => {
   return (
     <div className="col-span-full">
       <h3 className="text-lg font-bold">{initialTitle}</h3>
-      <div className="grid grid-cols-6 gap-x-4">
+      <div className="grid grid-cols-5 gap-x-4 mt-4">
         <p className="text-muted-foreground text-sm">
-          Duration: {formatDuration(duration)}
+          Duration: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{formatDuration(duration)}</span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Views: <span className="capitalize">{views}</span>
+          Views: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{views}</span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Status: <span className="capitalize">{statusText}</span>
+          Status: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{statusText}</span>
         </p>
         <p className="text-muted-foreground text-sm">
-          Upload Date: {formatDate(dateUploaded)}
+          Uploaded: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{formatDate(dateUploaded)}</span>
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Storage Size: <span className="rounded-sm text-primary bg-secondary px-2 py-1">{convertToGb(storageSize)}GB</span>
         </p>
       </div>
     </div>

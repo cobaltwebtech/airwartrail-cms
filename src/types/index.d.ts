@@ -12,6 +12,7 @@ export interface Video {
   duration: number;
   status: VideoStatus;
   views: number;
+  storageSize: number;
   statusText: string;
   dateUploaded: string;
   captions?: { label: string; srclang: string }[];

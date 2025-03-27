@@ -16,6 +16,7 @@ interface VideoEditorProps {
     duration: number;
     statusText: string;
     views: number;
+    storageSize: number;
     dateUploaded: string;
     collectionId?: string;
     captions?: { label: string; srclang: string }[];
@@ -37,6 +38,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
   const duration = video?.duration || 0;
   const dateUploaded = video?.dateUploaded || "";
   const views = video?.views || 0;
+  const storageSize = video?.storageSize || 0;
   const statusText = video?.statusText || "";
   const captions = video?.captions || [];
   const chapters = video?.chapters || [];
@@ -61,6 +63,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
       <VideoInfo
         duration={duration}
         views={views}
+        storageSize={storageSize}
         initialTitle={title}
         dateUploaded={dateUploaded}
         statusText={statusText}

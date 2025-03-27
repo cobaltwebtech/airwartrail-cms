@@ -37,6 +37,7 @@ interface BunnyApiResponseItem {
   length?: number;
   status: number;
   views: number;
+  storageSize: number;
   dateUploaded?: string;
   collectionId?: string;
   captions?: { label: string; srclang: string }[];
@@ -71,6 +72,7 @@ export async function getAllVideos(): Promise<Video[]> {
       duration: video.length || 0,
       status: video.status as VideoStatus,
       views: video.views || 0,
+      storageSize: video.storageSize || 0,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
       dateUploaded: video.dateUploaded || new Date().toISOString(),
       collectionId: video.collectionId || "",
@@ -115,6 +117,7 @@ export async function getVideo(videoId: string): Promise<Video | null> {
       thumbnail: getThumbnailUrl(video),
       duration: video.length || 0,
       views: video.views || 0,
+      storageSize: video.storageSize || 0,
       status: video.status as VideoStatus,
       statusText: statusMap[video.status as VideoStatus] || "Unknown",
       dateUploaded: video.dateUploaded || new Date().toISOString(),

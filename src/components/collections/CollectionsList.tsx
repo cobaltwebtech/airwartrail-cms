@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardTitle,
 } from "@/components/ui/card";
 import {
@@ -21,6 +20,7 @@ import type { Collection } from "@/types";
 import { toast } from "sonner";
 import { CollectionDelete } from "./CollectionDelete";
 import { CollectionTitle } from "./CollectionTitle";
+import { convertToGb } from "@/lib/videoData";
 
 interface CollectionsListProps {
   collections: Collection[] | null | undefined;
@@ -182,10 +182,8 @@ export function CollectionsList({ collections = [] }: CollectionsListProps) {
                 </DropdownMenu>
               </div>
               <CardDescription>Videos: {collection.videoCount}</CardDescription>
+              <CardDescription>Storage Size: {convertToGb(collection.totalSize)}GB</CardDescription>
             </CardContent>
-            <CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-              Placeholder text here
-            </CardFooter>
           </Card>
         ))}
       </div>

@@ -18,18 +18,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
     <Card className="col-span-4 col-start-5 row-span-2 w-full">
       <CardHeader>
         <CardTitle>Video Preview</CardTitle>
-        <CardDescription>Video will play in frame below.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="aspect-video w-full">
-          {/* Remove this comment in production
           <iframe
             src={videoUrl}
             className="w-full h-full"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           ></iframe>
-          */}
         </div>
       </CardContent>
     </Card>
