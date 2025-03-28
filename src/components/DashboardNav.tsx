@@ -15,7 +15,7 @@ export function DashboardNav() {
   }, []);
 
   const navItems = [
-    { title: "Dashboard", href: "/", icon: LayoutDashboard },
+    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
   ];

@@ -1,5 +1,12 @@
 //Custom type declarations go here
 
+declare namespace App {
+  export interface Locals {
+    user: import("better-auth").User | null;
+    session: import("better-auth").Session | null;
+  }
+}
+
 export type VideoStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface Video {
