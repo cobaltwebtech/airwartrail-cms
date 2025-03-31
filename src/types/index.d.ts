@@ -1,4 +1,7 @@
 //Custom type declarations go here
+import type { $Infer } from "./auth-client";
+
+export type ActiveSession = typeof $Infer.Session;
 
 declare namespace App {
   export interface Locals {

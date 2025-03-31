@@ -2,9 +2,16 @@ import { betterAuth } from "better-auth";
 import { passkey } from "better-auth/plugins/passkey";
 import { twoFactor } from "better-auth/plugins";
 import Database from "better-sqlite3";
+import path from "path";
+
+// Define the database path
+const dbPath = path.resolve("./db.sqlite");
+
+// Create a new database connection
+const db = new Database(dbPath);
 
 export const auth = betterAuth({
-  database: new Database("./db.sqlite"),
+  database: db,
   emailAndPassword: {
     enabled: true,
   },

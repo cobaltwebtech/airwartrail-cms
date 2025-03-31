@@ -3,14 +3,19 @@ import { LayoutDashboard, Film, FolderOpen, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { VideoUpload } from "./VideoUpload";
+import { useSession, signOut } from "@/lib/auth-client";
+import type { ActiveSession } from "@/types";
 
-export function DashboardNav() {
-  // Initialize with an empty string instead of window.location.pathname
+interface DashboardNavProps {
+  initialSession: ActiveSession | null;
+}
+
+export function DashboardNav({ initialSession }: DashboardNavProps) {
+  const { data: clientSession, isPending: loading } = useSession();
   const [activePath, setActivePath] = useState("");
+  const session = clientSession || initialSession;
 
-  // Use useEffect to safely access window after component is mounted
   useEffect(() => {
-    // Now it's safe to access window
     setActivePath(window.location.pathname);
   }, []);
 
@@ -18,6 +23,8 @@ export function DashboardNav() {
     { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
+    { title: "Login", href: "/login", icon: FolderOpen },
+    { title: "Sign Up", href: "/signup", icon: FolderOpen },
   ];
 
   return (
@@ -50,10 +57,31 @@ export function DashboardNav() {
             })}
           </nav>
         </div>
-        <div className="mt-auto p-4">
-          <Button variant="outline" className="w-full justify-start" size="sm">
+        <div className="flex flex-col gap-2 border-t border-b p-4">
+          {loading && !initialSession ? (
+            <p className="text-muted-foreground text-sm">
+              Loading user data...
+            </p>
+          ) : session?.user ? (
+            <>
+              <p className="font-medium">{session.user.name || "User"}</p>
+              <p className="text-muted-foreground text-sm">
+                {session.user.email}
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm">Not signed in</p>
+          )}
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await signOut();
+              window.location.reload();
+            }}
+            className="w-full justify-start"
+          >
             <LogOut className="mr-2 h-4 w-4" />
-            Log out
+            Log Out
           </Button>
         </div>
         <div className="flex flex-col gap-4 p-4">

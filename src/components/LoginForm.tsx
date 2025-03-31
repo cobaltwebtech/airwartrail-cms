@@ -1,3 +1,6 @@
+import type React from "react";
+import { useState, useEffect } from "react";
+import { signIn } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,14 +9,98 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Check for error query parameter on load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get("error");
+    if (error) {
+      setErrorMessage(decodeURIComponent(error));
+      toast.error(decodeURIComponent(error));
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!email || !password) {
+      setErrorMessage("Email and password are required");
+      toast.error("Email and password are required");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      console.log("Attempting login with:", { email });
+
+      // Using the exact structure from Better Auth documentation
+      const response = await signIn.email({
+        email,
+        password,
+        callbackURL: "/dashboard",
+        rememberMe: true,
+      });
+
+      console.log("Login response:", response);
+
+      const { data, error } = response;
+
+      if (error) {
+        setErrorMessage(error.message || "Login failed. Please try again.");
+        toast.error(error.message || "Login failed");
+      } else if (data) {
+        toast.success("Login successful!");
+
+        // Check if we need to handle redirection manually
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.redirect) {
+          window.location.href = data.url || "/dashboard";
+        } else {
+          window.location.href = "/dashboard";
+        }
+      } else {
+        // If we don't have data or error, something unexpected happened
+        setErrorMessage("An unexpected error occurred. Please try again.");
+        toast.error("An unexpected error occurred");
+      }
+    } catch (error) {
+      console.error("Login failed", error);
+
+      // Provide user-friendly error message
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please check your credentials and try again.";
+
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
@@ -26,7 +113,7 @@ export function LoginForm({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="flex flex-col gap-6">
                   <div className="grid gap-3">
                     <Label htmlFor="email">Email</Label>
@@ -35,37 +122,64 @@ export function LoginForm({
                       type="email"
                       placeholder="m@example.com"
                       required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="grid gap-3">
                     <div className="flex items-center">
                       <Label htmlFor="password">Password</Label>
                       <a
-                        href="#"
+                        href="/forgot-password"
                         className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                       >
                         Forgot your password?
                       </a>
                     </div>
-                    <Input id="password" type="password" required />
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
                   </div>
+
+                  {errorMessage && (
+                    <div className="text-destructive text-sm">
+                      {errorMessage}
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-3">
-                    <Button type="submit" className="w-full">
-                      Login
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Login with Google
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Login"
+                      )}
                     </Button>
                   </div>
-                </div>
-                <div className="mt-4 text-center text-sm">
-                  Don&apos;t have an account?{" "}
-                  <a href="/signup" className="underline underline-offset-4">
-                    Sign up
-                  </a>
                 </div>
               </form>
             </CardContent>
+            <CardFooter className="flex justify-center">
+              <div className="text-center text-sm">
+                Don&apos;t have an account?{" "}
+                <a href="/signup" className="underline underline-offset-4">
+                  Sign up
+                </a>
+              </div>
+            </CardFooter>
           </Card>
         </div>
       </div>

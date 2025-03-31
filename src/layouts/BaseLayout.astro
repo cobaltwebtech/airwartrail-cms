@@ -3,6 +3,13 @@ import "@/styles/global.css";
 import { DashboardNav } from "@/components/DashboardNav";
 import { DashboardFooter } from "@/components/DashboardFooter";
 import { Toaster } from "@/components/ui/sonner";
+import { auth } from "@/lib/auth-server";
+
+const session = await auth.api
+  .getSession({
+    headers: Astro.request.headers,
+  })
+  .catch(() => null);
 
 interface Props {
   title: string;
@@ -52,7 +59,7 @@ const {
   </head>
   <body class="bg-background min-h-screen">
     <div class="grid min-h-screen w-full lg:grid-cols-[200px_1fr]">
-      <DashboardNav client:load />
+      <DashboardNav initialSession={session} client:load />
       <main class="flex flex-col gap-4 p-4 md:gap-8 md:p-8">
         <slot />
       </main>
