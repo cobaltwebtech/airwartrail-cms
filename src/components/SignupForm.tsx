@@ -9,7 +9,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -244,23 +243,13 @@ export function SignupForm({
 
                   <p className="text-center text-sm">
                     Already have an account?{" "}
-                    <a href="/sign-in" className="text-blue-500">
-                      Sign In
+                    <a href="/login" className="text-blue-500">
+                      Login Here
                     </a>
                   </p>
                 </form>
               </Form>
             </CardContent>
-            <CardFooter className="flex-col">
-              <div className="flex w-full justify-center border-t py-4">
-                <p className="text-center text-xs text-neutral-500">
-                  Secured by{" "}
-                  <span className="text-orange-900 dark:text-orange-200">
-                    better-auth.
-                  </span>
-                </p>
-              </div>
-            </CardFooter>
           </Card>
         </div>
       </div>

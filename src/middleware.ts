@@ -1,16 +1,19 @@
 import { auth } from "@/lib/auth-server";
 import { defineMiddleware } from "astro:middleware";
 
-// `context` and `next` are automatically typed
 export const onRequest = defineMiddleware(async (context, next) => {
-  const isAuthed = await auth.api
-    .getSession({
-      headers: context.request.headers,
-    })
-    .catch((e) => {
-      return null;
-    });
-  if (context.url.pathname === "/dashboard" && !isAuthed) {
+  // Define public paths that don't require authentication
+  const publicPaths = ["/prelogin", "/login", "/signup", "/forgot-password"];
+  const isPublicPath = publicPaths.includes(context.url.pathname);
+  const isApiRoute = context.url.pathname.startsWith("/api/auth");
+
+  const isAuthed = await auth.api.getSession({
+    headers: context.request.headers,
+  });
+  if (!isPublicPath && !isAuthed && !isApiRoute) {
+    return context.redirect("/prelogin");
+  }
+  if (isPublicPath && isAuthed) {
     return context.redirect("/");
   }
   return next();

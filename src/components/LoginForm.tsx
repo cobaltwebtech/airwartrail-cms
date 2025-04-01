@@ -52,9 +52,6 @@ export function LoginForm({
     setErrorMessage("");
 
     try {
-      console.log("Attempting login with:", { email });
-
-      // Using the exact structure from Better Auth documentation
       const response = await signIn.email({
         email,
         password,
@@ -62,38 +59,27 @@ export function LoginForm({
         rememberMe: true,
       });
 
-      console.log("Login response:", response);
-
-      const { data, error } = response;
-
-      if (error) {
-        setErrorMessage(error.message || "Login failed. Please try again.");
-        toast.error(error.message || "Login failed");
-      } else if (data) {
+      // Handle successful login
+      if (response && !response.error) {
         toast.success("Login successful!");
+        window.location.href = "/dashboard";
+        return;
+      }
 
-        // Check if we need to handle redirection manually
-        if (data.url) {
-          window.location.href = data.url;
-        } else if (data.redirect) {
-          window.location.href = data.url || "/dashboard";
-        } else {
-          window.location.href = "/dashboard";
-        }
-      } else {
-        // If we don't have data or error, something unexpected happened
-        setErrorMessage("An unexpected error occurred. Please try again.");
-        toast.error("An unexpected error occurred");
+      // Handle error case
+      if (response.error) {
+        const errorMsg =
+          response.error.message || "Login failed. Please try again.";
+        setErrorMessage(errorMsg);
+        toast.error(errorMsg);
+        return;
       }
     } catch (error) {
       console.error("Login failed", error);
-
-      // Provide user-friendly error message
       const errorMsg =
         error instanceof Error
           ? error.message
           : "Login failed. Please check your credentials and try again.";
-
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -125,6 +111,7 @@ export function LoginForm({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       disabled={isLoading}
+                      autoComplete="email"
                     />
                   </div>
                   <div className="grid gap-3">
@@ -144,6 +131,7 @@ export function LoginForm({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={isLoading}
+                      autoComplete="current-password"
                     />
                   </div>
 

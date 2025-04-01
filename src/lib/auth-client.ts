@@ -24,10 +24,4 @@ export const {
       },
     }),
   ],
-  // Add this to ensure proper redirection
-  redirects: {
-    afterSignIn: "/dashboard",
-    afterSignUp: "/dashboard",
-    afterSignOut: "/login",
-  },
 });
