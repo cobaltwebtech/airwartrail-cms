@@ -6,7 +6,6 @@ import VideoEditor from "@/components/video-editor/VideoEditor";
 
 // Extract videoId from the URL
 const { videoId } = Astro.params;
-
 // Fetch video details on the server
 const video = videoId ? await getVideo(videoId) : null;
 // Fetch collections on the server

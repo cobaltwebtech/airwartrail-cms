@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 
 export function LoginForm({
   className,
@@ -159,6 +159,27 @@ export function LoginForm({
                   </div>
                 </div>
               </form>
+              <div className="flex flex-col gap-2 pt-4">
+                <Button
+                  className="gap-2"
+                  variant="outline"
+                  onClick={async () => {
+                    await signIn.passkey({
+                      fetchOptions: {
+                        onError(context) {
+                          alert(context.error.message);
+                        },
+                        onSuccess(context) {
+                          window.location.href = "/dashboard";
+                        },
+                      },
+                    });
+                  }}
+                >
+                  <KeyRound />
+                  Login with Passkey
+                </Button>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-center">
               <div className="text-center text-sm">

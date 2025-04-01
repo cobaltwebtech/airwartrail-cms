@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Film, FolderOpen, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Film,
+  FolderOpen,
+  LogOut,
+  LogIn,
+  Pencil,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { VideoUpload } from "./VideoUpload";
@@ -23,8 +30,6 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
     { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
-    { title: "Login", href: "/login", icon: FolderOpen },
-    { title: "Sign Up", href: "/signup", icon: FolderOpen },
   ];
 
   return (
@@ -35,10 +40,10 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
             <h1>Airwar Trail Videos</h1>
           </a>
         </div>
+        <div className="flex flex-col gap-4 border-b p-4">
+          <VideoUpload />
+        </div>
         <div className="flex-1 overflow-auto py-2">
-          <div className="flex flex-col gap-4 p-4">
-            <VideoUpload />
-          </div>
           <nav className="grid items-start px-2 text-sm font-medium">
             {navItems.map((item, index) => {
               const Icon = item.icon;
@@ -57,14 +62,18 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
             })}
           </nav>
         </div>
-        <div className="flex flex-col gap-2 border-t border-b p-4">
+        <div className="flex flex-col gap-2 border-y p-4">
           {loading && !initialSession ? (
             <p className="text-muted-foreground text-sm">
               Loading user data...
             </p>
           ) : session?.user ? (
             <>
-              <p className="font-medium">{session.user.name || "User"}</p>
+              <p className="font-medium">
+                <a href={`/user/${session.user.id}`}>
+                  {session.user.name || "User"}
+                </a>
+              </p>
               <p className="text-muted-foreground text-sm">
                 {session.user.email}
               </p>
@@ -72,6 +81,12 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
           ) : (
             <p className="text-muted-foreground text-sm">Not signed in</p>
           )}
+          <Button asChild variant="link" className="justify-start">
+            <a href={`/user/${session.user.id}`}>
+              <Pencil className="mr-2 size-4" />
+              Edit Profile
+            </a>
+          </Button>
           <Button
             variant="secondary"
             onClick={async () => {
@@ -80,7 +95,7 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
             }}
             className="w-full justify-start"
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2 size-4" />
             Log Out
           </Button>
         </div>
