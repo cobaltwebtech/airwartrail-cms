@@ -15,7 +15,7 @@ export const {
   revokeSession,
   revokeSessions,
 } = createAuthClient({
-  baseURL: "http://localhost:4321",
+  baseURL: import.meta.env.BETTER_AUTH_URL,
   plugins: [
     passkeyClient(),
     twoFactorClient({

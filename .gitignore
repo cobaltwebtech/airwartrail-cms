@@ -4,6 +4,7 @@ dist/
 .idea
 .vercel
 .yarn
+.wrangler
 
 # dependencies
 node_modules/

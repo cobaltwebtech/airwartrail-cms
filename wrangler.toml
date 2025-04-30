@@ -1,0 +1,14 @@
+name = "airwartrail-video-manager"
+main = "./dist/_worker.js/index.js"
+compatibility_date = "2025-04-29"
+compatibility_flags = [ "nodejs_compat" ]
+
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+
+[observability]
+enabled = true
+
+[vars]
+TURNSTILE_PUBLIC_KEY = "3x00000000000000000000FF"

@@ -1,17 +1,28 @@
 import { betterAuth } from "better-auth";
 import { passkey } from "better-auth/plugins/passkey";
 import { twoFactor } from "better-auth/plugins";
-import Database from "better-sqlite3";
-import path from "path";
+import { LibsqlDialect } from "@libsql/kysely-libsql";
+import { createClient } from "@libsql/client";
 
-// Define the database path
-const dbPath = path.resolve("./db.sqlite");
+// Create a new Turso database connection
+const client = createClient({
+  url: import.meta.env.TURSO_DB_URL,
+  authToken: import.meta.env.TURSO_DB_TOKEN,
+});
 
-// Create a new database connection
-const db = new Database(dbPath);
+// Create Kysely instance with Turso dialect
+const dialect = new LibsqlDialect({ client });
 
 export const auth = betterAuth({
-  database: db,
+  secret: import.meta.env.BETTER_AUTH_SECRET,
+  database: {
+    dialect,
+    type: "sqlite",
+  },
+  session: {
+    expiresIn: 60 * 60 * 24, // Session expires in 1 day
+    updateAge: 60 * 60, // Every 1 hour the session expiration is updated
+  },
   emailAndPassword: {
     enabled: true,
   },
