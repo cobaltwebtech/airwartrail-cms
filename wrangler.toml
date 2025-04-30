@@ -11,4 +11,7 @@ directory = "./dist"
 enabled = true
 
 [vars]
+BETTER_AUTH_URL = "https://video.airwartrail.com"
+PUBLIC_BUNNY_LIBRARY_ID = "416789"
+PUBLIC_BUNNY_STREAM_CDN = "vz-91a12c63-3f2.b-cdn.net"
 TURNSTILE_PUBLIC_KEY = "3x00000000000000000000FF"
