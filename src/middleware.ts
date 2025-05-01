@@ -3,7 +3,7 @@ import { defineMiddleware } from "astro:middleware";
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Define public paths that don't require authentication
-  const publicPaths = ["/welcome", "/login", "/signup", "/forgot-password"];
+  const publicPaths = ["/welcome", "/login"];
   const isPublicPath = publicPaths.includes(context.url.pathname);
   const isApiRoute = context.url.pathname.startsWith("/api/auth");
 

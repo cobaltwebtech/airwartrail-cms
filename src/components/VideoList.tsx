@@ -104,9 +104,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
   const handleDeleteConfirm = async () => {
     if (videoToDelete) {
       try {
-        const response = await fetch(`/api/videos/${videoToDelete.id}`, {
-          method: "DELETE",
-        });
+        const response = await fetch(
+          `/api/videos/${videoToDelete.id}/deleteVideo`,
+          {
+            method: "DELETE",
+          },
+        );
         if (!response.ok) {
           throw new Error("Failed to delete video");
         }
