@@ -1,18 +1,33 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface VideoPlayerProps {
   videoId: string;
 }
+
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
-  // Construct the video URL using the public environment variable
-  const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/videos/${videoId}/videoToken`);
+        if (!res.ok) throw new Error("Failed to fetch signed URL");
+        const data = (await res.json()) as { url: string };
+        setSignedUrl(data.url);
+      } catch {
+        setSignedUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (videoId) {
+      fetchSignedUrl();
+    }
+  }, [videoId]);
 
   return (
     <Card className="col-span-4 col-start-5 row-span-2 w-full">
@@ -21,15 +36,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId }) => {
       </CardHeader>
       <CardContent>
         <div className="aspect-video w-full">
-          <iframe
-            src={videoUrl}
-            className="h-full w-full"
-            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+          {loading ? (
+            <div>Loading video...</div>
+          ) : signedUrl ? (
+            <iframe
+              src={signedUrl}
+              className="h-full w-full"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          ) : (
+            <div>Failed to load video.</div>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 };
+
 export default VideoPlayer;

@@ -4,7 +4,6 @@ import {
   Film,
   FolderOpen,
   LogOut,
-  LogIn,
   Pencil,
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -37,7 +36,7 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
       <div className="sticky top-0">
         <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
           <a href="/" className="flex items-center gap-2 font-semibold">
-            <h1>Airwar Trail Videos</h1>
+            <h1>Air War Trail Videos</h1>
           </a>
         </div>
         <div className="flex flex-col gap-4 border-b p-4">

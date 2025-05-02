@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,21 +19,50 @@ interface VideoDialogProps {
   isEditing: boolean;
 }
 
-export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
-  // Get the actual video URL from Bunny.net using the public environment variable
-  const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
-  const videoUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${video.id}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+export const VideoDialog: React.FC<VideoDialogProps> = ({
+  video,
+  open,
+  onOpenChange,
+}) => {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/videos/${video.id}/videoToken`);
+        if (!res.ok) throw new Error("Failed to fetch signed URL");
+        const data = (await res.json()) as { url: string };
+        setSignedUrl(data.url);
+      } catch {
+        setSignedUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (video.id) {
+      fetchSignedUrl();
+    }
+  }, [video.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-2 sm:max-w-screen-lg">
         <div className="aspect-video w-full">
-          <iframe
-            src={videoUrl}
-            className="h-full w-full rounded-t-lg"
-            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+          {loading ? (
+            <div>Loading video...</div>
+          ) : signedUrl ? (
+            <iframe
+              src={signedUrl}
+              className="h-full w-full"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          ) : (
+            <div>Failed to load video.</div>
+          )}
         </div>
         <div className="flex flex-row justify-between">
           <DialogHeader className="p-4">
@@ -63,4 +93,4 @@ export function VideoDialog({ video, open, onOpenChange }: VideoDialogProps) {
       </DialogContent>
     </Dialog>
   );
-}
+};

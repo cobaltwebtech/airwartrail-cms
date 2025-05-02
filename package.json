@@ -1,7 +1,7 @@
 {
   "name": "airwartrail-video-manager",
   "type": "module",
-  "version": "0.52.1",
+  "version": "0.53.1",
   "private": true,
   "scripts": {
     "dev": "astro dev",
