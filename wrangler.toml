@@ -7,6 +7,11 @@ compatibility_flags = [ "nodejs_compat" ]
 binding = "ASSETS"
 directory = "./dist"
 
+[[r2_buckets]]
+bucket_name = "airwartrail-assets"
+preview_bucket_name = "airwartrail-assets-dev"
+binding = "airwartrail_assets"
+
 [observability]
 enabled = true
 

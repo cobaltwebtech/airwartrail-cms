@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "dev:remote": "astro build && npx wrangler dev --remote",
     "migrate:auth": "npx @better-auth/cli migrate --config src/lib/auth-server.ts",
     "format": "prettier . --write",
     "lint": "eslint .",
@@ -31,7 +32,7 @@
     "@radix-ui/react-switch": "^1.2.2",
     "@tailwindcss/vite": "^4.1.5",
     "@types/better-sqlite3": "^7.6.13",
-    "astro": "5.7.10",
+    "astro": "5.7.12",
     "better-auth": "^1.2.7",
     "better-sqlite3": "^11.9.1",
     "class-variance-authority": "^0.7.1",
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.2.7",
+    "@cloudflare/workers-types": "^4.20250510.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@typescript-eslint/parser": "^8.31.1",

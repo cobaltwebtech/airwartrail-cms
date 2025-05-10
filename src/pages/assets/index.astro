@@ -1,0 +1,15 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { DashboardHeader } from "../../components/DashboardHeader";
+import { VideoUpload } from "../../components/VideoUpload";
+import { FileList } from "@/components/r2-assets/FileList";
+---
+
+<BaseLayout title="Videos">
+  <DashboardHeader heading="Videos" text="Manage your streaming video library.">
+    <VideoUpload client:load />
+  </DashboardHeader>
+  <div class="grid gap-4">
+    <FileList client:load />
+  </div>
+</BaseLayout>
