@@ -8,16 +8,20 @@ import {
   Eye,
   Copy,
   FileIcon,
+  FolderOpen,
   Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,16 +40,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { DialogClose } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 
-// Define the type for R2 file objects
+interface R2Directory {
+  name: string;
+  path: string;
+  isDirectory: true;
+  children: (R2File | R2Directory)[];
+}
+
 interface R2File {
   name: string;
   size: number;
@@ -53,8 +63,78 @@ interface R2File {
   etag: string;
   httpEtag: string;
   url: string;
+  path: string;
+  isDirectory: false;
   contentType?: string;
 }
+
+type R2Item = R2File | R2Directory;
+
+// Add this function to organize files into a directory structure
+const organizeFilesIntoStructure = (files: R2File[]): R2Item[] => {
+  const structure: Record<string, R2Directory> = {};
+  const root: R2Item[] = [];
+
+  // First pass: create all directory objects
+  files.forEach((file) => {
+    const pathParts = file.name.split("/");
+
+    // Skip empty parts (happens with trailing slashes)
+    const filteredParts = pathParts.filter((part) => part !== "");
+
+    let currentPath = "";
+
+    // Create directory entries for each level
+    for (let i = 0; i < filteredParts.length - 1; i++) {
+      const part = filteredParts[i];
+      const parentPath = currentPath;
+
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      if (!structure[currentPath]) {
+        structure[currentPath] = {
+          name: part,
+          path: currentPath,
+          isDirectory: true,
+          children: [],
+        };
+
+        // Add to parent or root
+        if (parentPath) {
+          if (structure[parentPath]) {
+            structure[parentPath].children.push(structure[currentPath]);
+          }
+        } else {
+          root.push(structure[currentPath]);
+        }
+      }
+    }
+  });
+
+  // Second pass: add files to their parent directories or root
+  files.forEach((file) => {
+    const pathParts = file.name.split("/").filter((part) => part !== "");
+    const fileName = pathParts[pathParts.length - 1];
+    const parentPath =
+      pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "";
+
+    const fileObj: R2File = {
+      ...file,
+      name: fileName,
+      path: file.name,
+      isDirectory: false,
+    };
+
+    if (parentPath && structure[parentPath]) {
+      structure[parentPath].children.push(fileObj);
+    } else if (pathParts.length === 1) {
+      // This is a file at the root level
+      root.push(fileObj);
+    }
+  });
+
+  return root;
+};
 
 export function FileList() {
   const [files, setFiles] = useState<R2File[]>([]);
@@ -68,6 +148,9 @@ export function FileList() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [currentPath, setCurrentPath] = useState<string>("");
+  const [fileStructure, setFileStructure] = useState<R2Item[]>([]);
+  const [currentView, setCurrentView] = useState<R2Item[]>([]);
 
   // Fetch files on component mount
   useEffect(() => {
@@ -82,14 +165,68 @@ export function FileList() {
         throw new Error("Failed to fetch files");
       }
       const data = await response.json();
-      // Assert the type of data to ensure it has a 'files' property
-      setFiles((data as { files: R2File[] }).files);
+      const fileList = (data as { files: R2File[] }).files;
+
+      // Organize into directory structure
+      const structure = organizeFilesIntoStructure(fileList);
+      setFileStructure(structure);
+
+      // Initially view root items
+      updateCurrentView(structure, "");
+
+      setFiles(fileList); // Keep original flat list for compatibility
     } catch (error) {
       console.error("Error fetching files:", error);
       toast.error("Failed to load files");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const updateCurrentView = (structure: R2Item[], path: string) => {
+    if (!path) {
+      // At root, show top-level items
+      setCurrentView(structure);
+      return;
+    }
+
+    // Find the directory at the specified path
+    const findDirectory = (
+      items: R2Item[],
+      searchPath: string,
+    ): R2Directory | null => {
+      for (const item of items) {
+        if (item.isDirectory && item.path === searchPath) {
+          return item;
+        }
+        if (item.isDirectory) {
+          const found = findDirectory(item.children, searchPath);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const directory = findDirectory(structure, path);
+    if (directory) {
+      setCurrentView(directory.children);
+    } else {
+      // Fallback to root if directory not found
+      setCurrentView(structure);
+    }
+  };
+
+  const navigateToDirectory = (dirPath: string) => {
+    setCurrentPath(dirPath);
+    updateCurrentView(fileStructure, dirPath);
+  };
+
+  const navigateUp = () => {
+    const pathParts = currentPath.split("/");
+    pathParts.pop();
+    const parentPath = pathParts.join("/");
+    setCurrentPath(parentPath);
+    updateCurrentView(fileStructure, parentPath);
   };
 
   const handleFileUpload = async () => {
@@ -153,7 +290,9 @@ export function FileList() {
   };
 
   const handleCopy = (file: R2File) => {
-    navigator.clipboard.writeText(`${window.location.origin}/api/r2/file/${encodeURIComponent(file.name)}`);
+    navigator.clipboard.writeText(
+      `https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(file.name)}`,
+    );
     toast.success("URL copied to clipboard");
   };
 
@@ -178,13 +317,16 @@ export function FileList() {
   };
 
   const isImageFile = (file: R2File) => {
-    return file.contentType?.startsWith("image/") || 
-           /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name);
+    const fileName = file.path || file.name;
+    return (
+      file.contentType?.startsWith("image/") ||
+      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName)
+    );
   };
 
   const filteredFiles = files
     .filter((file) =>
-      file.name.toLowerCase().includes(searchTerm.toLowerCase())
+      file.name.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => {
       if (sortCriteria === "name") {
@@ -192,9 +334,7 @@ export function FileList() {
           ? a.name.localeCompare(b.name)
           : b.name.localeCompare(a.name);
       } else if (sortCriteria === "size") {
-        return sortDirection === "asc"
-          ? a.size - b.size
-          : b.size - a.size;
+        return sortDirection === "asc" ? a.size - b.size : b.size - a.size;
       } else {
         return sortDirection === "asc"
           ? new Date(a.uploaded).getTime() - new Date(b.uploaded).getTime()
@@ -232,97 +372,162 @@ export function FileList() {
         </div>
       </div>
 
-      {/* File Grid */}
+      {/* R2 Objects Table */}
       {isLoading ? (
         <div className="flex items-center justify-center py-10">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <div className="border-primary h-10 w-10 animate-spin rounded-full border-4 border-t-transparent"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredFiles.map((file) => (
-            <Card key={file.name} className="overflow-hidden">
-              <div className="relative">
-                {isImageFile(file) ? (
-                  <div className="aspect-video bg-secondary">
-                    <img
-                      src={`/api/r2/file/${encodeURIComponent(file.name)}`}
-                      alt={file.name}
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex aspect-video items-center justify-center bg-secondary">
-                    <FileIcon className="h-16 w-16" />
-                  </div>
-                )}
-              </div>
-              <CardHeader className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="truncate">
-                    <CardTitle className="truncate text-base">
-                      {file.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {formatFileSize(file.size)}
-                    </CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
+        <div className="max-w-full">
+          <Table className="mb-4">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Name</TableHead>
+                <TableHead className="w-[100px]">Size</TableHead>
+                <TableHead className="w-[100px]">Uploaded</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Add breadcrumb navigation */}
+              {currentPath && (
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigateToDirectory("")}
+                        className="px-2"
+                      >
+                        Home
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem 
+                      {currentPath.split("/").map((part, index, array) => {
+                        const pathToThis = array.slice(0, index + 1).join("/");
+                        return (
+                          <div key={pathToThis} className="flex items-center">
+                            <span>/</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigateToDirectory(pathToThis)}
+                              className="px-2"
+                            >
+                              {part}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {/* Show current directory items */}
+              {currentView.map((item) => (
+                <TableRow key={item.path}>
+                  <TableCell>
+                    {item.isDirectory ? (
+                      <div
+                        className="hover:text-primary flex cursor-pointer items-center gap-2"
+                        onClick={() => navigateToDirectory(item.path)}
+                      >
+                        <FolderOpen className="size-5 text-yellow-500" />
+                        {item.name}
+                      </div>
+                    ) : (
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
                         onClick={() => {
-                          setSelectedFile(file);
-                          setIsPreviewOpen(true);
+                          // Find the original file object with all properties
+                          const fullFile = files.find(
+                            (f) => f.name === item.path,
+                          );
+                          if (fullFile) {
+                            setSelectedFile(fullFile);
+                            setIsPreviewOpen(true);
+                          }
                         }}
                       >
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>Preview</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleCopy(file)}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        <span>Copy URL</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <a
-                          href={`/api/r2/file/${encodeURIComponent(file.name)}`}
-                          download={file.name}
-                          className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          <span>Download</span>
-                        </a>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteRequest(file)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                        <span className="text-destructive">Delete</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
-                Uploaded on {formatDate(file.uploaded)}
-              </CardFooter>
-            </Card>
-          ))}
+                        <FileIcon className="size-5" />
+                        {item.name}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {item.isDirectory ? (
+                      <span className="text-muted-foreground">Directory</span>
+                    ) : (
+                      formatFileSize(item.size)
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {item.isDirectory ? (
+                      <span className="text-muted-foreground">-</span>
+                    ) : (
+                      formatDate(item.uploaded)
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {!item.isDirectory && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleCopy(
+                                files.find((f) => f.name === item.path)!,
+                              )
+                            }
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy URL
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              // Find the original file object with all properties
+                              const fullFile = files.find(
+                                (f) => f.name === item.path,
+                              );
+                              if (fullFile) {
+                                setSelectedFile(fullFile);
+                                setIsPreviewOpen(true);
+                              }
+                            }}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleDeleteRequest(
+                                files.find((f) => f.name === item.path)!,
+                              )
+                            }
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
       {!isLoading && filteredFiles.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileIcon className="mb-4 h-12 w-12 text-muted-foreground" />
+          <FileIcon className="text-muted-foreground mb-4 h-12 w-12" />
           <h3 className="text-lg font-medium">No files found</h3>
           <p className="text-muted-foreground">
             {searchTerm
@@ -348,9 +553,9 @@ export function FileList() {
               onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
             />
             {uploadFile && (
-              <div className="rounded-md bg-secondary p-2 text-sm">
+              <div className="bg-secondary rounded-md p-2 text-sm">
                 <p className="font-semibold">{uploadFile.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {formatFileSize(uploadFile.size)}
                 </p>
               </div>
@@ -360,30 +565,30 @@ export function FileList() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
-              onClick={handleFileUpload} 
-              disabled={!uploadFile}
-            >
+            <Button onClick={handleFileUpload} disabled={!uploadFile}>
               Upload
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         {selectedFile && (
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="sm:max-w-screen-xl">
             <DialogHeader>
-              <DialogTitle className="truncate">{selectedFile.name}</DialogTitle>
+              <DialogTitle className="truncate">
+                {selectedFile.name}
+              </DialogTitle>
               <DialogDescription>
-                {formatFileSize(selectedFile.size)} • Uploaded on {formatDate(selectedFile.uploaded)}
+                {formatFileSize(selectedFile.size)} | Uploaded on{" "}
+                {formatDate(selectedFile.uploaded)}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex h-96 items-center justify-center overflow-hidden rounded-md bg-secondary">
+            <div className="bg-secondary flex h-96 items-center justify-center overflow-hidden rounded-md">
               {isImageFile(selectedFile) ? (
                 <img
-                  src={`/api/r2/file/${encodeURIComponent(selectedFile.name)}`}
+                  src={`https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(selectedFile.name)}`}
                   alt={selectedFile.name}
                   className="h-full max-h-full object-contain"
                 />
@@ -404,8 +609,8 @@ export function FileList() {
               </Button>
               <Button asChild>
                 <a
-                  href={`/api/r2/file/${encodeURIComponent(selectedFile.name)}`}
-                  download={selectedFile.name}
+                  href={`https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(selectedFile.name)}`}
+                  download
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download
@@ -422,13 +627,14 @@ export function FileList() {
           <DialogHeader>
             <DialogTitle>Delete File</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this file? This action cannot be undone.
+              Are you sure you want to delete this file? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           {fileToDelete && (
-            <div className="rounded-md bg-secondary p-3">
+            <div className="bg-secondary rounded-md p-3">
               <p className="font-medium">{fileToDelete.name}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {formatFileSize(fileToDelete.size)}
               </p>
             </div>
@@ -437,10 +643,7 @@ export function FileList() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-            >
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
               Delete
             </Button>
           </DialogFooter>

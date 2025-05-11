@@ -5,8 +5,11 @@ import { VideoUpload } from "../../components/VideoUpload";
 import { FileList } from "@/components/r2-assets/FileList";
 ---
 
-<BaseLayout title="Videos">
-  <DashboardHeader heading="Videos" text="Manage your streaming video library.">
+<BaseLayout title="Other Content">
+  <DashboardHeader
+    heading="Other Content"
+    text="Manage other files such as images, zip archives, large files, etc."
+  >
     <VideoUpload client:load />
   </DashboardHeader>
   <div class="grid gap-4">

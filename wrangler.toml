@@ -8,9 +8,9 @@ binding = "ASSETS"
 directory = "./dist"
 
 [[r2_buckets]]
+binding = "AIRWARTRAIL_ASSETS"
 bucket_name = "airwartrail-assets"
 preview_bucket_name = "airwartrail-assets-dev"
-binding = "airwartrail_assets"
 
 [observability]
 enabled = true

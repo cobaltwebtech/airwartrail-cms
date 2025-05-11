@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Film,
   FolderOpen,
+  Files,
   LogOut,
   Pencil,
 } from "lucide-react";
@@ -29,6 +30,7 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
     { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
+    { title: "Other Content", href: "/assets", icon: Files },
   ];
 
   return (
