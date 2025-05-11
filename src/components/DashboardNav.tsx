@@ -36,9 +36,9 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
   return (
     <div className="bg-muted row-span-2 flex h-full flex-col border-r">
       <div className="sticky top-0">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-          <a href="/" className="flex items-center gap-2 font-semibold">
-            <h1>Air War Trail Videos</h1>
+        <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
+          <a href="/">
+            <h1 className="text-center font-semibold">Air War Trail</h1>
           </a>
         </div>
         <div className="flex flex-col gap-4 border-b p-4">

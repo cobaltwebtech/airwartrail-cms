@@ -1,53 +1,12 @@
 import { useState, useEffect } from "react";
-import {
-  ArrowUp,
-  ArrowDown,
-  MoreHorizontal,
-  Trash2,
-  Download,
-  Eye,
-  Copy,
-  FileIcon,
-  FolderOpen,
-  Upload,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { DialogClose } from "@/components/ui/dialog";
+import { FileHeader } from "./FileHeader";
+import { FileUpload } from "./FileUpload";
+import { FilePreview } from "./FilePreview";
+import { FileDelete } from "./FileDelete";
+import { FileTable } from "./FileTable";
+import { DragDropUploader } from "./DragDropUploader";
+import { FileIcon } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 interface R2Directory {
   name: string;
@@ -147,10 +106,10 @@ export function FileList() {
   const [selectedFile, setSelectedFile] = useState<R2File | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [currentPath, setCurrentPath] = useState<string>("");
   const [fileStructure, setFileStructure] = useState<R2Item[]>([]);
   const [currentView, setCurrentView] = useState<R2Item[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
 
   // Fetch files on component mount
   useEffect(() => {
@@ -221,40 +180,98 @@ export function FileList() {
     updateCurrentView(fileStructure, dirPath);
   };
 
-  const navigateUp = () => {
-    const pathParts = currentPath.split("/");
-    pathParts.pop();
-    const parentPath = pathParts.join("/");
-    setCurrentPath(parentPath);
-    updateCurrentView(fileStructure, parentPath);
-  };
-
-  const handleFileUpload = async () => {
-    if (!uploadFile) {
-      toast.error("No file selected");
-      return;
-    }
-
+  const handleUploadFile = async (file: File) => {
     const formData = new FormData();
-    formData.append("file", uploadFile);
+    formData.append("file", file);
 
     try {
+      console.log(`Uploading file: ${file.name}, size: ${file.size}`);
+
       const response = await fetch("/api/r2/upload", {
         method: "POST",
+        credentials: "same-origin",
+        headers: {
+          // Important header that helps bypass CSRF protection
+          "X-Requested-With": "XMLHttpRequest",
+        },
         body: formData,
       });
 
+      console.log("Upload response status:", response.status);
+
+      // Get response text for better error messages
+      const responseText = await response.text();
+      console.log("Response body:", responseText);
+
       if (!response.ok) {
-        throw new Error("Upload failed");
+        throw new Error(
+          `Upload failed: ${responseText || response.statusText}`,
+        );
       }
 
       toast.success("File uploaded successfully");
       setIsUploadDialogOpen(false);
-      setUploadFile(null);
       fetchFiles(); // Refresh the file list
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast.error("Failed to upload file");
+      toast.error(
+        `Upload failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  };
+
+  // New function for handling multiple file uploads
+  const handleUploadMultiple = async (files: File[]) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    const uploadPromises = files.map(async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("/api/r2/upload", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            // Important header that helps bypass CSRF protection
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error);
+        failCount++;
+      }
+    });
+
+    // Show uploading progress toast
+    const uploadingToast = toast.loading(`Uploading ${files.length} files...`);
+
+    try {
+      await Promise.all(uploadPromises);
+
+      toast.dismiss(uploadingToast);
+
+      if (successCount > 0) {
+        toast.success(`${successCount} files uploaded successfully`);
+      }
+      if (failCount > 0) {
+        toast.error(`${failCount} files failed to upload`);
+      }
+
+      fetchFiles(); // Refresh the file list
+    } catch {
+      toast.dismiss(uploadingToast);
+      toast.error("Error uploading files");
     }
   };
 
@@ -289,9 +306,44 @@ export function FileList() {
     }
   };
 
+  const handleDeleteMultipleRequest = (paths: string[]) => {
+    setFilesToDelete(paths);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteMultipleConfirm = async (paths: string[]) => {
+    try {
+      const response = await fetch("/api/r2/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileNames: paths }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete files");
+      }
+
+      const data = (await response.json()) as { message?: string };
+      toast.success(
+        data.message || `${paths.length} files deleted successfully`,
+      );
+      fetchFiles(); // Refresh the file list
+    } catch (error) {
+      console.error("Error deleting files:", error);
+      toast.error("Failed to delete files");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setFilesToDelete([]);
+    }
+  };
+
+  const r2BucketUrl = import.meta.env.PUBLIC_R2_BUCKET_URL;
+
   const handleCopy = (file: R2File) => {
     navigator.clipboard.writeText(
-      `https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(file.name)}`,
+      `${r2BucketUrl}/${encodeURIComponent(file.name)}`,
     );
     toast.success("URL copied to clipboard");
   };
@@ -316,339 +368,81 @@ export function FileList() {
     });
   };
 
-  const isImageFile = (file: R2File) => {
-    const fileName = file.path || file.name;
-    return (
-      file.contentType?.startsWith("image/") ||
-      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName)
-    );
+  const handlePreview = (file: R2File) => {
+    setSelectedFile(file);
+    setIsPreviewOpen(true);
   };
 
-  const filteredFiles = files
-    .filter((file) =>
-      file.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    .sort((a, b) => {
-      if (sortCriteria === "name") {
-        return sortDirection === "asc"
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
-      } else if (sortCriteria === "size") {
-        return sortDirection === "asc" ? a.size - b.size : b.size - a.size;
-      } else {
-        return sortDirection === "asc"
-          ? new Date(a.uploaded).getTime() - new Date(b.uploaded).getTime()
-          : new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime();
-      }
-    });
-
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between gap-2">
-        <Input
-          placeholder="Search files..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+    <DragDropUploader
+      onUpload={handleUploadFile}
+      onMultipleUpload={handleUploadMultiple}
+    >
+      <div className="space-y-4">
+        <FileHeader
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          sortCriteria={sortCriteria}
+          setSortCriteria={setSortCriteria}
+          sortDirection={sortDirection}
+          toggleSortDirection={toggleSortDirection}
+          onUploadClick={() => setIsUploadDialogOpen(true)}
         />
-        <div className="flex gap-x-4">
-          <Button variant="outline" onClick={() => setIsUploadDialogOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload File
-          </Button>
-          <Select value={sortCriteria} onValueChange={setSortCriteria}>
-            <SelectTrigger className="max-w-sm">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Sort by Date</SelectItem>
-              <SelectItem value="name">Sort by Name</SelectItem>
-              <SelectItem value="size">Sort by Size</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={toggleSortDirection}>
-            {sortDirection === "asc" ? <ArrowUp /> : <ArrowDown />}
-          </Button>
-        </div>
-      </div>
 
-      {/* R2 Objects Table */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-10">
-          <div className="border-primary h-10 w-10 animate-spin rounded-full border-4 border-t-transparent"></div>
-        </div>
-      ) : (
-        <div className="max-w-full">
-          <Table className="mb-4">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">Name</TableHead>
-                <TableHead className="w-[100px]">Size</TableHead>
-                <TableHead className="w-[100px]">Uploaded</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Add breadcrumb navigation */}
-              {currentPath && (
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigateToDirectory("")}
-                        className="px-2"
-                      >
-                        Home
-                      </Button>
-                      {currentPath.split("/").map((part, index, array) => {
-                        const pathToThis = array.slice(0, index + 1).join("/");
-                        return (
-                          <div key={pathToThis} className="flex items-center">
-                            <span>/</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigateToDirectory(pathToThis)}
-                              className="px-2"
-                            >
-                              {part}
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+        {/* R2 Objects Table */}
+        <FileTable
+          currentView={currentView}
+          currentPath={currentPath}
+          isLoading={isLoading}
+          files={files}
+          formatFileSize={formatFileSize}
+          formatDate={formatDate}
+          navigateToDirectory={navigateToDirectory}
+          handleCopy={handleCopy}
+          handleDeleteRequest={handleDeleteRequest}
+          handlePreview={handlePreview}
+          onDeleteMultipleRequest={handleDeleteMultipleRequest}
+        />
 
-              {/* Show current directory items */}
-              {currentView.map((item) => (
-                <TableRow key={item.path}>
-                  <TableCell>
-                    {item.isDirectory ? (
-                      <div
-                        className="hover:text-primary flex cursor-pointer items-center gap-2"
-                        onClick={() => navigateToDirectory(item.path)}
-                      >
-                        <FolderOpen className="size-5 text-yellow-500" />
-                        {item.name}
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => {
-                          // Find the original file object with all properties
-                          const fullFile = files.find(
-                            (f) => f.name === item.path,
-                          );
-                          if (fullFile) {
-                            setSelectedFile(fullFile);
-                            setIsPreviewOpen(true);
-                          }
-                        }}
-                      >
-                        <FileIcon className="size-5" />
-                        {item.name}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.isDirectory ? (
-                      <span className="text-muted-foreground">Directory</span>
-                    ) : (
-                      formatFileSize(item.size)
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.isDirectory ? (
-                      <span className="text-muted-foreground">-</span>
-                    ) : (
-                      formatDate(item.uploaded)
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {!item.isDirectory && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleCopy(
-                                files.find((f) => f.name === item.path)!,
-                              )
-                            }
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            Copy URL
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              // Find the original file object with all properties
-                              const fullFile = files.find(
-                                (f) => f.name === item.path,
-                              );
-                              if (fullFile) {
-                                setSelectedFile(fullFile);
-                                setIsPreviewOpen(true);
-                              }
-                            }}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleDeleteRequest(
-                                files.find((f) => f.name === item.path)!,
-                              )
-                            }
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {!isLoading && filteredFiles.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileIcon className="text-muted-foreground mb-4 h-12 w-12" />
-          <h3 className="text-lg font-medium">No files found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm
-              ? "Try a different search term"
-              : "Upload your first file to get started"}
-          </p>
-        </div>
-      )}
-
-      {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upload File</DialogTitle>
-            <DialogDescription>
-              Select a file to upload to your R2 storage
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Input
-              id="file-upload"
-              type="file"
-              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-            />
-            {uploadFile && (
-              <div className="bg-secondary rounded-md p-2 text-sm">
-                <p className="font-semibold">{uploadFile.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {formatFileSize(uploadFile.size)}
-                </p>
-              </div>
-            )}
+        {!isLoading && files.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <FileIcon className="text-muted-foreground mb-4 h-12 w-12" />
+            <h3 className="text-lg font-medium">No files found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm
+                ? "Try a different search term"
+                : "Upload your first file to get started"}
+            </p>
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleFileUpload} disabled={!uploadFile}>
-              Upload
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        {selectedFile && (
-          <DialogContent className="sm:max-w-screen-xl">
-            <DialogHeader>
-              <DialogTitle className="truncate">
-                {selectedFile.name}
-              </DialogTitle>
-              <DialogDescription>
-                {formatFileSize(selectedFile.size)} | Uploaded on{" "}
-                {formatDate(selectedFile.uploaded)}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="bg-secondary flex h-96 items-center justify-center overflow-hidden rounded-md">
-              {isImageFile(selectedFile) ? (
-                <img
-                  src={`https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(selectedFile.name)}`}
-                  alt={selectedFile.name}
-                  className="h-full max-h-full object-contain"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <FileIcon className="h-24 w-24" />
-                  <p>Preview not available</p>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => handleCopy(selectedFile)}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy URL
-              </Button>
-              <Button asChild>
-                <a
-                  href={`https://pub-86eb8ad6a19944efb996fc447640b752.r2.dev/${encodeURIComponent(selectedFile.name)}`}
-                  download
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </a>
-              </Button>
-            </DialogFooter>
-          </DialogContent>
         )}
-      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete File</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this file? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          {fileToDelete && (
-            <div className="bg-secondary rounded-md p-3">
-              <p className="font-medium">{fileToDelete.name}</p>
-              <p className="text-muted-foreground text-sm">
-                {formatFileSize(fileToDelete.size)}
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Dialogs */}
+        <FileUpload
+          isOpen={isUploadDialogOpen}
+          onOpenChange={setIsUploadDialogOpen}
+          onUpload={handleUploadFile}
+          formatFileSize={formatFileSize}
+        />
+
+        <FilePreview
+          isOpen={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          selectedFile={selectedFile}
+          handleCopy={handleCopy}
+          formatFileSize={formatFileSize}
+          formatDate={formatDate}
+        />
+
+        <FileDelete
+          isOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          fileToDelete={fileToDelete}
+          filesToDelete={filesToDelete}
+          onConfirm={handleDeleteConfirm}
+          onConfirmMultiple={handleDeleteMultipleConfirm}
+          formatFileSize={formatFileSize}
+        />
+      </div>
+    </DragDropUploader>
   );
 }
