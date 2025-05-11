@@ -1,7 +1,10 @@
 import type { APIRoute } from "astro";
 
 export const POST: APIRoute = async ({ request }) => {
-  const { videoId, newCollection } = await request.json();
+  const { videoId, newCollection } = (await request.json()) as {
+    videoId: string;
+    newCollection: string;
+  };
 
   try {
     const apiKey = import.meta.env.BUNNY_API_KEY;

@@ -14,7 +14,7 @@ export function DashboardFooter() {
         &copy;<span id="current-year"></span> Air War Trail
       </h6>
       <p className="text-muted-foreground content-end text-sm">
-        Custom video management dashboard built by{" "}
+        Custom digital asset management dashboard built by{" "}
         <a
           href="https://www.cobaltweb.tech/"
           className="text-accent font-semibold"

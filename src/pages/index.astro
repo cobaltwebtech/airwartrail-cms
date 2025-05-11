@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { VideoUpload } from "@/components/VideoUpload";
 import {
   Card,
   CardHeader,
@@ -9,20 +8,18 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { TvMinimalPlay, FolderOpenDot } from "lucide-react";
+import { TvMinimalPlay, FolderOpenDot, Files } from "lucide-react";
 ---
 
 <BaseLayout title="Video Management Dashboard">
   <DashboardHeader
-    heading="Video Management Dashboard"
-    text="Manage your streaming video library."
-  >
-    <VideoUpload client:load />
-  </DashboardHeader>
-  <div class="grid grid-cols-4 gap-4">
+    heading="Digital Asset Management Dashboard"
+    text="Manage your digital assets and streaming video library."
+  />
+  <div class="grid gap-8 md:grid-cols-3">
     <a href="/videos">
       <Card
-        className="hover:bg-secondary col-span-1 text-center transition-colors"
+        className="hover:bg-secondary col-span-1 h-full text-center transition-colors"
       >
         <CardHeader>
           <TvMinimalPlay className="mx-auto size-12" />
@@ -37,7 +34,7 @@ import { TvMinimalPlay, FolderOpenDot } from "lucide-react";
     </a>
     <a href="/collections">
       <Card
-        className="hover:bg-secondary col-span-1 text-center transition-colors"
+        className="hover:bg-secondary col-span-1 h-full text-center transition-colors"
       >
         <CardHeader>
           <FolderOpenDot className="mx-auto size-12" />
@@ -45,7 +42,23 @@ import { TvMinimalPlay, FolderOpenDot } from "lucide-react";
         </CardHeader>
         <CardContent>
           <CardDescription
-            >View and manage all collections in the library.</CardDescription
+            >View and manage all collections in the video library.</CardDescription
+          >
+        </CardContent>
+      </Card>
+    </a>
+    <a href="/assets">
+      <Card
+        className="hover:bg-secondary col-span-1 h-full text-center transition-colors"
+      >
+        <CardHeader>
+          <Files className="mx-auto size-12" />
+          <CardTitle>Other Content</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CardDescription
+            >View and manage other content such as images, zip archives, large
+            files, etc.</CardDescription
           >
         </CardContent>
       </Card>

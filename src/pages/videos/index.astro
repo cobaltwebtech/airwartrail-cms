@@ -1,18 +1,18 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DashboardHeader } from "../../components/DashboardHeader";
-import { VideoUpload } from "../../components/VideoUpload";
-import { VideoList } from "../../components/VideoList";
-import { getAllVideos } from "../../lib/bunnyStream";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { VideoList } from "@/components/videos/VideoList";
+import { getAllVideos } from "@/lib/bunnyStream";
 
 // Fetch videos on the server
 const videos = await getAllVideos();
 ---
 
 <BaseLayout title="Videos">
-  <DashboardHeader heading="Videos" text="Manage your streaming video library.">
-    <VideoUpload client:load />
-  </DashboardHeader>
+  <DashboardHeader
+    heading="Videos"
+    text="Manage your streaming video library."
+  />
   <div class="grid gap-4">
     <VideoList videos={videos} client:load />
   </div>

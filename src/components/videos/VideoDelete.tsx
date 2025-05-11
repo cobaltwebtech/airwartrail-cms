@@ -7,8 +7,8 @@ import {
   DialogDescription,
   DialogFooter,
   DialogClose,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { LoaderCircle } from "lucide-react";
 
 interface ConfirmDeleteDialogProps {

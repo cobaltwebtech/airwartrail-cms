@@ -10,14 +10,14 @@ import {
   Film,
   Copy,
 } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "./ui/card";
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,15 +25,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "./ui/select";
-import { Input } from "./ui/input";
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { VideoDialog } from "./VideoDialog";
 import { VideoDelete } from "./VideoDelete";
 import type { Video } from "@/types";

@@ -4,10 +4,9 @@ import {
   twoFactorActions,
   useListPasskeys,
   useSession,
-  revokeSession,
   updateUser,
 } from "@/lib/auth-client";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Session, User } from "better-auth/types";
 import { useState, useEffect } from "react";
 import {
@@ -18,18 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "./ui/button";
-import {
-  KeyRound,
-  Laptop,
-  Loader2,
-  LogOut,
-  Smartphone,
-  Trash2,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { KeyRound, Loader2, LogOut, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -37,7 +29,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./ui/table";
+} from "@/components/ui/table";
 import { toast } from "sonner";
 import type { ActiveSession } from "@/types";
 
@@ -106,7 +98,6 @@ export function UserCard(props: {
 function EditUserDialog(props: { user?: User }) {
   const { user } = props;
   const [isLoading, setIsLoading] = useState(false);
-  const [image, setImage] = useState<File | undefined>();
   const [name, setName] = useState<string | undefined>();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -138,7 +129,7 @@ function EditUserDialog(props: { user?: User }) {
               await updateUser({
                 name: name,
                 fetchOptions: {
-                  onResponse(context) {
+                  onResponse() {
                     setIsLoading(false);
                   },
                   onError(context) {
@@ -257,7 +248,7 @@ function ListPasskeys() {
                     <Button
                       variant="destructive"
                       onClick={async () => {
-                        const res = await passkeyActions.deletePasskey({
+                        await passkeyActions.deletePasskey({
                           id: passkey.id,
                           fetchOptions: {
                             onRequest: () => {
@@ -336,7 +327,7 @@ function TwoFactorDialog(props: { enabled?: boolean }) {
                 await twoFactorActions.disable({
                   password: password,
                   fetchOptions: {
-                    onResponse(context) {
+                    onResponse() {
                       setIsLoading(false);
                     },
                     onError(context) {
@@ -353,7 +344,7 @@ function TwoFactorDialog(props: { enabled?: boolean }) {
               await twoFactorActions.enable({
                 password: password,
                 fetchOptions: {
-                  onResponse(context) {
+                  onResponse() {
                     setIsLoading(false);
                   },
                   onError(context) {

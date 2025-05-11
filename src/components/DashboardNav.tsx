@@ -1,14 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  LayoutDashboard,
-  Film,
-  FolderOpen,
-  LogOut,
-  Pencil,
-} from "lucide-react";
+import { Film, FolderOpen, Files, LogOut, Pencil } from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import { VideoUpload } from "./VideoUpload";
+import { VideoUpload } from "./videos/VideoUpload";
 import { useSession, signOut } from "@/lib/auth-client";
 import type { ActiveSession } from "@/types";
 
@@ -26,17 +20,17 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
   }, []);
 
   const navItems = [
-    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
+    { title: "Other Content", href: "/assets", icon: Files },
   ];
 
   return (
     <div className="bg-muted row-span-2 flex h-full flex-col border-r">
       <div className="sticky top-0">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-          <a href="/" className="flex items-center gap-2 font-semibold">
-            <h1>Air War Trail Videos</h1>
+        <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
+          <a href="/">
+            <h1 className="text-center font-semibold">Air War Trail</h1>
           </a>
         </div>
         <div className="flex flex-col gap-4 border-b p-4">

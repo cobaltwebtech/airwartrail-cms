@@ -5,7 +5,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
     const apiKey = import.meta.env.BUNNY_API_KEY;
     const videoId = params.videoId;
-    const { moments } = await request.json();
+    const { moments } = (await request.json()) as { moments: unknown };
 
     const response = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
