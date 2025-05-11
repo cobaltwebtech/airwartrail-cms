@@ -4,7 +4,7 @@ const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 const apiKey = import.meta.env.BUNNY_API_KEY;
 
 export const POST: APIRoute = async ({ request }) => {
-  const { name } = await request.json();
+  const { name } = (await request.json()) as { name?: string };
 
   if (!name) {
     return new Response(JSON.stringify({ error: "Name is required" }), {
@@ -28,7 +28,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create collection");
+      const errorMessage =
+        typeof errorData === "object" &&
+        errorData !== null &&
+        "message" in errorData &&
+        typeof (errorData as { message?: unknown }).message === "string"
+          ? (errorData as { message: string }).message
+          : "Failed to create collection";
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

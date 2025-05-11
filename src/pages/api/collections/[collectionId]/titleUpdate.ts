@@ -24,7 +24,14 @@ export const POST: APIRoute = async ({ params, request }) => {
       const errorData = await response.json();
       console.error("Error from Bunny", errorData);
 
-      return new Response(JSON.stringify({ error: errorData.message }), {
+      const errorMessage =
+        typeof errorData === "object" &&
+        errorData !== null &&
+        "message" in errorData
+          ? (errorData as { message?: string }).message
+          : "Unknown error";
+
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: response.status,
       });
     }

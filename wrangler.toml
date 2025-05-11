@@ -1,4 +1,4 @@
-name = "airwartrail-video-manager"
+name = "airwartrail-dashboard"
 main = "./dist/_worker.js/index.js"
 compatibility_date = "2025-04-29"
 compatibility_flags = [ "nodejs_compat" ]
@@ -16,7 +16,7 @@ preview_bucket_name = "airwartrail-assets-dev"
 enabled = true
 
 [vars]
-BETTER_AUTH_URL = "https://video.airwartrail.com"
+BETTER_AUTH_URL = "https://dashboard.airwartrail.com"
 PUBLIC_BUNNY_LIBRARY_ID = "416789"
 PUBLIC_BUNNY_STREAM_CDN = "vz-91a12c63-3f2.b-cdn.net"
 PUBLIC_R2_BUCKET_URL = "https://assets.airwartrail.com"

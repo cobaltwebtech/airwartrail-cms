@@ -55,14 +55,14 @@ export function LoginForm({
       const response = await signIn.email({
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: "/",
         rememberMe: true,
       });
 
       // Handle successful login
       if (response && !response.error) {
         toast.success("Login successful!");
-        window.location.href = "/dashboard";
+        window.location.href = "/";
         return;
       }
 
@@ -169,8 +169,8 @@ export function LoginForm({
                         onError(context) {
                           alert(context.error.message);
                         },
-                        onSuccess(context) {
-                          window.location.href = "/dashboard";
+                        onSuccess() {
+                          window.location.href = "/";
                         },
                       },
                     });

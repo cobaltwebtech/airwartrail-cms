@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import type { PropsWithChildren } from "react"; // Use type-only import
+import type { PropsWithChildren } from "react";
 import { FileUpIcon } from "lucide-react";
 import { toast } from "sonner";
 

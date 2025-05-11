@@ -9,29 +9,33 @@ const corsHeaders = {
     "Content-Type, X-Requested-With, Authorization",
 };
 
-// Define CSRF protection middleware
+// Define environment-aware CSRF protection
 function validateCsrf(request: Request): boolean {
   const origin = request.headers.get("origin");
-  const referer = request.headers.get("referer");
   const xRequestedWith = request.headers.get("x-requested-with");
 
+  // Check if this is a development environment
+  const isDev = import.meta.env.DEV;
+
+  // In development mode, be permissive
+  if (isDev) {
+    return true;
+  }
+
+  // In production:
   // Valid XMLHttpRequest header indicates a legitimate AJAX request
   if (xRequestedWith === "XMLHttpRequest") {
     return true;
   }
 
-  // For local development
-  if (origin?.includes("localhost") || referer?.includes("localhost")) {
+  // In production, only accept requests from your domain
+  const allowedDomains = ["airwartrail.com", "dashboard.airwartrail.com"]; // Replace with your actual domains
+  if (origin && allowedDomains.some((domain) => origin.includes(domain))) {
     return true;
   }
 
-  // For production, check against your actual domain
-  // if (origin && origin.includes("your-domain.com")) {
-  //   return true;
-  // }
-
-  // During development, we're being permissive
-  return true;
+  // Otherwise reject
+  return false;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

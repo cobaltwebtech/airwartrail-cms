@@ -2,7 +2,6 @@ import type { R2Bucket } from "@cloudflare/workers-types";
 
 // Ensure the global type is available for local dev or wrangler
 declare global {
-  // eslint-disable-next-line no-var
   var AIRWARTRAIL_ASSETS: R2Bucket | undefined;
 }
 

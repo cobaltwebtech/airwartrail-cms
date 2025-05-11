@@ -1,15 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  LayoutDashboard,
-  Film,
-  FolderOpen,
-  Files,
-  LogOut,
-  Pencil,
-} from "lucide-react";
+import { Film, FolderOpen, Files, LogOut, Pencil } from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import { VideoUpload } from "./VideoUpload";
+import { VideoUpload } from "./videos/VideoUpload";
 import { useSession, signOut } from "@/lib/auth-client";
 import type { ActiveSession } from "@/types";
 
@@ -27,7 +20,6 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
   }, []);
 
   const navItems = [
-    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Videos", href: "/videos", icon: Film },
     { title: "Collections", href: "/collections", icon: FolderOpen },
     { title: "Other Content", href: "/assets", icon: Files },

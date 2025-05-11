@@ -3,7 +3,7 @@ import { Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as tus from "tus-js-client";
 
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function VideoUpload() {
   const [open, setOpen] = useState(false);
@@ -67,12 +67,21 @@ export function VideoUpload() {
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
+        const errorMessage =
+          typeof errorData === "object" &&
+          errorData !== null &&
+          "error" in errorData
+            ? (errorData as { error?: string }).error
+            : undefined;
         throw new Error(
-          `Failed to create video: ${errorData.error || createResponse.statusText}`,
+          `Failed to create video: ${errorMessage || createResponse.statusText}`,
         );
       }
 
-      const video = await createResponse.json();
+      const video = (await createResponse.json()) as {
+        guid?: string;
+        id?: string;
+      };
       const videoId = video.guid || video.id;
       if (!videoId) {
         throw new Error("No valid video ID returned from API");
@@ -85,7 +94,10 @@ export function VideoUpload() {
         throw new Error("Failed to get authentication token for upload");
       }
 
-      const { signature, expire } = await authResponse.json();
+      const { signature, expire } = (await authResponse.json()) as {
+        signature: string;
+        expire: number;
+      };
       const libraryId = import.meta.env.PUBLIC_BUNNY_LIBRARY_ID;
 
       // 3. Use the TUS client for resumable uploads
