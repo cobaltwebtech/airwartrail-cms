@@ -43,7 +43,7 @@ export function FileHeader({
         </div>
         <Button onClick={onUploadClick}>
           <Upload className="mr-2 h-4 w-4" />
-          Upload File
+          Upload
         </Button>
         <Select value={sortCriteria} onValueChange={setSortCriteria}>
           <SelectTrigger className="max-w-sm">
