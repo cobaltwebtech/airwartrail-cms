@@ -92,6 +92,16 @@ export function FileUpload({
               type="file"
               onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
               className={`absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 ${isDragging ? "pointer-events-none" : ""}`}
+              // Allow directory upload
+              ref={(input) => {
+                if (input) {
+                  (input as HTMLInputElement).setAttribute(
+                    "webkitdirectory",
+                    "",
+                  );
+                  (input as HTMLInputElement).setAttribute("directory", "");
+                }
+              }}
             />
             <div className="flex flex-col items-center justify-center">
               <FileUpIcon className="text-muted-foreground mb-2 h-10 w-10" />
