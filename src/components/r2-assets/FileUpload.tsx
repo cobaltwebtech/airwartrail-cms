@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { FileUpIcon } from "lucide-react";
+import { FileUpIcon, FolderIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface FileUploadProps {
@@ -31,6 +31,8 @@ export function FileUpload({
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async () => {
     if (uploadFiles.length === 0) return;
@@ -175,30 +177,58 @@ export function FileUpload({
           <div
             className={`relative border-2 ${isDragging ? "border-primary border-dashed" : "border-muted"} rounded-md p-6 text-center`}
           >
+            {/* Hidden inputs for file and folder selection */}
             <Input
-              id="file-upload"
+              ref={fileInputRef}
               type="file"
+              multiple
               onChange={handleFileChange}
-              className={`absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 ${isDragging ? "pointer-events-none" : ""}`}
-              // Allow directory upload
-              ref={(input) => {
-                if (input) {
-                  (input as HTMLInputElement).setAttribute(
-                    "webkitdirectory",
-                    "",
-                  );
-                  (input as HTMLInputElement).setAttribute("directory", "");
-                  (input as HTMLInputElement).setAttribute("multiple", "");
+              className="hidden"
+            />
+            <Input
+              ref={(el) => {
+                folderInputRef.current = el;
+                if (el) {
+                  // @ts-ignore
+                  el.webkitdirectory = true;
+                  // @ts-ignore
+                  el.directory = true;
                 }
               }}
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              multiple
             />
+
             <div className="flex flex-col items-center justify-center">
               <FileUpIcon className="text-muted-foreground mb-2 h-10 w-10" />
-              <p className="font-medium">
+              <p className="mb-4 font-medium">
                 {isDragging
                   ? "Drop files here"
-                  : "Drag files/folders here or click to browse"}
+                  : "Drag files/folders here to upload"}
               </p>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <FileUpIcon size={16} />
+                  Select Files
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => folderInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <FolderIcon size={16} />
+                  Select Folder
+                </Button>
+              </div>
             </div>
           </div>
 
