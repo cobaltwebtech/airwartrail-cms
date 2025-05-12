@@ -37,17 +37,66 @@ export function DragDropUploader({
     e.stopPropagation();
   };
 
+  // Helper function to recursively get all files from a directory entry
+  const getAllFileEntries = async (dataTransferItems: DataTransferItemList) => {
+    const fileEntries: File[] = [];
+    const traverseDirectory = async (entry: FileSystemEntry, path = "") => {
+      if (entry.isFile) {
+        const fileEntry = entry as FileSystemFileEntry;
+        return new Promise<void>((resolve) => {
+          fileEntry.file((file: File) => {
+            // Create a new file with the full path
+            const fileWithPath = new File(
+              [file],
+              path ? `${path}/${file.name}` : file.name,
+              { type: file.type },
+            );
+            fileEntries.push(fileWithPath);
+            resolve();
+          });
+        });
+      } else if (entry.isDirectory) {
+        const dirEntry = entry as FileSystemDirectoryEntry;
+        const reader = dirEntry.createReader();
+        return new Promise<void>((resolve, reject) => {
+          reader.readEntries(async (entries) => {
+            try {
+              for (const entry of entries) {
+                await traverseDirectory(
+                  entry,
+                  path ? `${path}/${dirEntry.name}` : dirEntry.name,
+                );
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+      }
+    };
+
+    for (const item of dataTransferItems) {
+      const entry = item.webkitGetAsEntry();
+      if (entry) {
+        await traverseDirectory(entry);
+      }
+    }
+
+    return fileEntries;
+  };
+
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
     dragCounter.current = 0;
 
-    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) {
+    if (!e.dataTransfer.items || e.dataTransfer.items.length === 0) {
       return;
     }
 
-    const files = Array.from(e.dataTransfer.files);
+    const files = await getAllFileEntries(e.dataTransfer.items);
 
     if (files.length === 1) {
       // Single file upload

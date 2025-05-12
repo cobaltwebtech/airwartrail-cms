@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, Upload } from "lucide-react";
+import { ArrowUp, ArrowDown, Upload, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -37,9 +37,13 @@ export function FileHeader({
         className="max-w-sm"
       />
       <div className="flex gap-x-4">
+        <div className="flex items-center gap-2">
+          <CloudUpload className="size-6" />
+          <span>Drag and drop files here</span>
+        </div>
         <Button onClick={onUploadClick}>
           <Upload className="mr-2 h-4 w-4" />
-          Upload File
+          Upload
         </Button>
         <Select value={sortCriteria} onValueChange={setSortCriteria}>
           <SelectTrigger className="max-w-sm">

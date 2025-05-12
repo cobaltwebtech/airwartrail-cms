@@ -184,6 +184,9 @@ export function FileList() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Add loading toast
+    const uploadingToast = toast.loading(`Uploading ${file.name}...`);
+
     try {
       console.log(`Uploading file: ${file.name}, size: ${file.size}`);
 
@@ -209,11 +212,17 @@ export function FileList() {
         );
       }
 
+      // Dismiss loading toast and show success
+      toast.dismiss(uploadingToast);
       toast.success("File uploaded successfully");
+
       setIsUploadDialogOpen(false);
       fetchFiles(); // Refresh the file list
     } catch (error) {
       console.error("Error uploading file:", error);
+
+      // Dismiss loading toast and show error
+      toast.dismiss(uploadingToast);
       toast.error(
         `Upload failed: ${
           error instanceof Error ? error.message : String(error)
@@ -373,6 +382,48 @@ export function FileList() {
     setIsPreviewOpen(true);
   };
 
+  // Update this section where you prepare the files for display
+  useEffect(() => {
+    if (files.length === 0) return;
+
+    // First, filter by search term (if any)
+    let filteredFiles = files;
+
+    if (searchTerm.trim() !== "") {
+      const search = searchTerm.toLowerCase();
+      filteredFiles = files.filter((file) =>
+        file.name.toLowerCase().includes(search),
+      );
+    }
+
+    // Then sort the filtered files
+    let sortedFiles = [...filteredFiles];
+
+    if (sortCriteria === "name") {
+      sortedFiles.sort((a, b) => {
+        return sortDirection === "asc"
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      });
+    } else if (sortCriteria === "date") {
+      sortedFiles.sort((a, b) => {
+        const dateA = new Date(a.uploaded).getTime();
+        const dateB = new Date(b.uploaded).getTime();
+        return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    } else if (sortCriteria === "size") {
+      sortedFiles.sort((a, b) => {
+        return sortDirection === "asc" ? a.size - b.size : b.size - a.size;
+      });
+    }
+
+    // Create the directory structure from the filtered and sorted files
+    const structure = organizeFilesIntoStructure(sortedFiles);
+
+    // Update the view based on current path
+    updateCurrentView(structure, currentPath);
+  }, [files, searchTerm, sortCriteria, sortDirection, currentPath]);
+
   return (
     <DragDropUploader
       onUpload={handleUploadFile}
@@ -421,6 +472,7 @@ export function FileList() {
           isOpen={isUploadDialogOpen}
           onOpenChange={setIsUploadDialogOpen}
           onUpload={handleUploadFile}
+          onMultipleUpload={handleUploadMultiple}
           formatFileSize={formatFileSize}
         />
 

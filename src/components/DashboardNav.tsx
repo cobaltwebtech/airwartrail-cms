@@ -37,7 +37,7 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
           <VideoUpload />
         </div>
         <div className="flex-1 overflow-auto py-2">
-          <nav className="grid items-start px-2 text-sm font-medium">
+          <nav className="grid items-start gap-2 px-2 text-sm font-medium">
             {navItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = activePath === item.href;
@@ -45,7 +45,7 @@ export function DashboardNav({ initialSession }: DashboardNavProps) {
                 <a
                   key={index}
                   href={item.href}
-                  className={`group hover:bg-sidebar-accent hover:text-accent-foreground flex items-center rounded-md px-3 py-2 text-sm font-medium ${isActive ? "bg-sidebar-accent" : "transparent"}`}
+                  className={`group hover:bg-sidebar-accent flex items-center rounded-md px-3 py-2 text-sm font-medium ${isActive ? "bg-sidebar-accent" : "transparent"}`}
                   onClick={() => setActivePath(item.href)}
                 >
                   <Icon className="mr-2 h-4 w-4" />
