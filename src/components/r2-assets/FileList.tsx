@@ -421,6 +421,7 @@ export function FileList() {
           isOpen={isUploadDialogOpen}
           onOpenChange={setIsUploadDialogOpen}
           onUpload={handleUploadFile}
+          onMultipleUpload={handleUploadMultiple}
           formatFileSize={formatFileSize}
         />
 

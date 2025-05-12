@@ -16,6 +16,7 @@ interface FileUploadProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onUpload: (file: File) => Promise<void>;
+  onMultipleUpload?: (files: File[]) => Promise<void>;
   formatFileSize: (bytes: number) => string;
 }
 
@@ -23,16 +24,34 @@ export function FileUpload({
   isOpen,
   onOpenChange,
   onUpload,
+  onMultipleUpload,
   formatFileSize,
 }: FileUploadProps) {
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
   const handleFileUpload = async () => {
-    if (uploadFile) {
-      await onUpload(uploadFile);
-      setUploadFile(null);
+    if (uploadFiles.length === 0) return;
+
+    if (uploadFiles.length === 1) {
+      await onUpload(uploadFiles[0]);
+    } else if (uploadFiles.length > 1 && onMultipleUpload) {
+      await onMultipleUpload(uploadFiles);
+    } else {
+      // Fallback to uploading files one by one if onMultipleUpload not provided
+      for (const file of uploadFiles) {
+        await onUpload(file);
+      }
+    }
+
+    setUploadFiles([]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      // Convert FileList to array
+      setUploadFiles(Array.from(e.target.files));
     }
   };
 
@@ -64,17 +83,19 @@ export function FileUpload({
     dragCounter.current = 0;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setUploadFile(e.dataTransfer.files[0]);
+      setUploadFiles(Array.from(e.dataTransfer.files));
     }
   };
+
+  const totalSize = uploadFiles.reduce((sum, file) => sum + file.size, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload File</DialogTitle>
+          <DialogTitle>Upload Files</DialogTitle>
           <DialogDescription>
-            Select a file to upload to your R2 storage
+            Select files or folders to upload to your R2 storage
           </DialogDescription>
         </DialogHeader>
         <div
@@ -90,7 +111,7 @@ export function FileUpload({
             <Input
               id="file-upload"
               type="file"
-              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+              onChange={handleFileChange}
               className={`absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 ${isDragging ? "pointer-events-none" : ""}`}
               // Allow directory upload
               ref={(input) => {
@@ -100,6 +121,7 @@ export function FileUpload({
                     "",
                   );
                   (input as HTMLInputElement).setAttribute("directory", "");
+                  (input as HTMLInputElement).setAttribute("multiple", "");
                 }
               }}
             />
@@ -107,18 +129,39 @@ export function FileUpload({
               <FileUpIcon className="text-muted-foreground mb-2 h-10 w-10" />
               <p className="font-medium">
                 {isDragging
-                  ? "Drop file here"
-                  : "Drag file here or click to browse"}
+                  ? "Drop files here"
+                  : "Drag files/folders here or click to browse"}
               </p>
             </div>
           </div>
 
-          {uploadFile && (
-            <div className="bg-secondary rounded-md p-2 text-sm">
-              <p className="font-semibold">{uploadFile.name}</p>
-              <p className="text-muted-foreground text-xs">
-                {formatFileSize(uploadFile.size)}
+          {uploadFiles.length > 0 && (
+            <div className="bg-secondary max-h-48 overflow-auto rounded-md p-2 text-sm">
+              <p className="mb-1 font-semibold">
+                {uploadFiles.length}{" "}
+                {uploadFiles.length === 1 ? "file" : "files"} selected (
+                {formatFileSize(totalSize)})
               </p>
+              <ul className="space-y-1">
+                {uploadFiles.length <= 10 ? (
+                  uploadFiles.map((file, index) => (
+                    <li key={index} className="truncate text-xs">
+                      {file.name} ({formatFileSize(file.size)})
+                    </li>
+                  ))
+                ) : (
+                  <>
+                    {uploadFiles.slice(0, 5).map((file, index) => (
+                      <li key={index} className="truncate text-xs">
+                        {file.name} ({formatFileSize(file.size)})
+                      </li>
+                    ))}
+                    <li className="text-xs font-medium">
+                      ...and {uploadFiles.length - 5} more files
+                    </li>
+                  </>
+                )}
+              </ul>
             </div>
           )}
         </div>
@@ -126,8 +169,11 @@ export function FileUpload({
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleFileUpload} disabled={!uploadFile}>
-            Upload
+          <Button
+            onClick={handleFileUpload}
+            disabled={uploadFiles.length === 0}
+          >
+            Upload {uploadFiles.length > 0 ? `(${uploadFiles.length})` : ""}
           </Button>
         </DialogFooter>
       </DialogContent>
