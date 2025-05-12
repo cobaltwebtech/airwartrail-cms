@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FileUpIcon } from "lucide-react";
+import { toast } from "sonner";
 
 interface FileUploadProps {
   isOpen: boolean;
@@ -76,14 +77,80 @@ export function FileUpload({
     e.stopPropagation();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  // Helper function to recursively get all files from a directory entry
+  const getAllFileEntries = async (dataTransferItems: DataTransferItemList) => {
+    const fileEntries: File[] = [];
+    const traverseDirectory = async (entry: FileSystemEntry, path = "") => {
+      if (entry.isFile) {
+        const fileEntry = entry as FileSystemFileEntry;
+        return new Promise<void>((resolve) => {
+          fileEntry.file((file: File) => {
+            // Create a new file with the full path
+            const fileWithPath = new File(
+              [file],
+              path ? `${path}/${file.name}` : file.name,
+              { type: file.type },
+            );
+            fileEntries.push(fileWithPath);
+            resolve();
+          });
+        });
+      } else if (entry.isDirectory) {
+        const dirEntry = entry as FileSystemDirectoryEntry;
+        const reader = dirEntry.createReader();
+        return new Promise<void>((resolve, reject) => {
+          reader.readEntries(async (entries) => {
+            try {
+              for (const entry of entries) {
+                await traverseDirectory(
+                  entry,
+                  path ? `${path}/${dirEntry.name}` : dirEntry.name,
+                );
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+      }
+    };
+
+    for (const item of dataTransferItems) {
+      const entry = item.webkitGetAsEntry();
+      if (entry) {
+        await traverseDirectory(entry);
+      }
+    }
+
+    return fileEntries;
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
     dragCounter.current = 0;
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setUploadFiles(Array.from(e.dataTransfer.files));
+    if (!e.dataTransfer.items || e.dataTransfer.items.length === 0) {
+      return;
+    }
+
+    // Show loading indicator
+    const loadingToast = toast.loading("Processing files...");
+
+    try {
+      const files = await getAllFileEntries(e.dataTransfer.items);
+      toast.dismiss(loadingToast);
+
+      if (files.length > 0) {
+        setUploadFiles(files);
+        toast.success(`${files.length} files ready to upload`);
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error("Error processing dropped files");
+      console.error("Error processing dropped files:", error);
     }
   };
 

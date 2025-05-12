@@ -197,7 +197,7 @@ export function FileTable({
               <TableCell colSpan={5}>
                 <div className="flex items-center gap-1">
                   <Button
-                    variant="ghost"
+                    variant="link"
                     size="sm"
                     onClick={() => navigateToDirectory("")}
                     className="px-2"
@@ -210,7 +210,7 @@ export function FileTable({
                       <div key={pathToThis} className="flex items-center">
                         <span>/</span>
                         <Button
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           onClick={() => navigateToDirectory(pathToThis)}
                           className="px-2"
