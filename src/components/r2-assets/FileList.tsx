@@ -184,6 +184,9 @@ export function FileList() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Add loading toast
+    const uploadingToast = toast.loading(`Uploading ${file.name}...`);
+
     try {
       console.log(`Uploading file: ${file.name}, size: ${file.size}`);
 
@@ -209,11 +212,17 @@ export function FileList() {
         );
       }
 
+      // Dismiss loading toast and show success
+      toast.dismiss(uploadingToast);
       toast.success("File uploaded successfully");
+
       setIsUploadDialogOpen(false);
       fetchFiles(); // Refresh the file list
     } catch (error) {
       console.error("Error uploading file:", error);
+
+      // Dismiss loading toast and show error
+      toast.dismiss(uploadingToast);
       toast.error(
         `Upload failed: ${
           error instanceof Error ? error.message : String(error)
