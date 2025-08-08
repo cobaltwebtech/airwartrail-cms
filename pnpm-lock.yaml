@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  kysely: ^0.28.2
+  kysely: ^0.28.4
 
 importers:
 
@@ -1022,7 +1022,7 @@ packages:
   '@libsql/kysely-libsql@0.4.1':
     resolution: {integrity: sha512-mCTa6OWgoME8LNu22COM6XjKBmcMAvNtIO6DYM10jSAFq779fVlrTKQEmXIB8TwJVU65dA5jGCpT8gkDdWS0HQ==}
     peerDependencies:
-      kysely: ^0.28.2
+      kysely: ^0.28.4
 
   '@libsql/linux-arm-gnueabihf@0.5.17':
     resolution: {integrity: sha512-PcASh4k47RqC+kMWAbLUKf1y6Do0q8vnUGi0yhKY4ghJcimMExViBimjbjYRSa+WIb/zh3QxNoXOhQAXx3tiuw==}
@@ -2295,7 +2295,7 @@ packages:
       bun-types: '*'
       expo-sqlite: '>=13.2.0'
       knex: '*'
-      kysely: ^0.28.2
+      kysely: ^0.28.4
       mysql2: '>=2'
       pg: '>=8'
       postgres: '>=3'

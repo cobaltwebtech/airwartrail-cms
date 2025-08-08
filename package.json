@@ -15,7 +15,7 @@
     "upforce": "pnpm up --latest --recursive '*'",
     "up:astro": "pnpx @astrojs/upgrade",
     "astro": "astro",
-    "clean": "rimraf dist .astro node_modules pnpm-lock.yaml yarn.lock .yarn package-lock.json .wrangler"
+    "clean": "rimraf dist .astro node_modules pnpm-lock.yaml .wrangler"
   },
   "dependencies": {
     "@astrojs/cloudflare": "12.6.3",
@@ -67,6 +67,6 @@
     "wrangler": "^4.28.1"
   },
   "resolutions": {
-    "kysely": "^0.28.2"
+    "kysely": "^0.28.4"
   }
 }
