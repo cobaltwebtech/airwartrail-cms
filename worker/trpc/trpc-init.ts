@@ -46,16 +46,18 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
  * Throws UNAUTHORIZED if not logged in
  * Throws FORBIDDEN if not an admin
  * Use this for admin-only endpoints
+ * 
+ * TODO: Implement role-based access control by adding a 'role' column to the user table
  */
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-	// At this point, we know user exists (from protectedProcedure)
-	// Now check if they have admin role
-	if (ctx.user.role !== "admin") {
-		throw new TRPCError({
-			code: "FORBIDDEN",
-			message: "You must be an admin to access this resource",
-		});
-	}
+// export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+// 	// At this point, we know user exists (from protectedProcedure)
+// 	// Now check if they have admin role
+// 	if (ctx.user.role !== "admin") {
+// 		throw new TRPCError({
+// 			code: "FORBIDDEN",
+// 			message: "You must be an admin to access this resource",
+// 		});
+// 	}
 
-	return next();
-});
+// 	return next();
+// });

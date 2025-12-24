@@ -33,10 +33,9 @@ function CollectionsPage() {
 			<DashboardHeader
 				heading="Collections"
 				text="Manage your video collections."
-			>
-				<CollectionCreate />
-			</DashboardHeader>
-			<div className="grid gap-4">
+			/>
+			<CollectionCreate />
+			<div className="grid gap-4 py-4">
 				{isLoading ? (
 					<div className="text-muted-foreground">Loading collections...</div>
 				) : (

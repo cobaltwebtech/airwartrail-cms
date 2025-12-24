@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import type { User } from 'better-auth/types';
-import { KeyRound, Loader2, LogOut, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { KeyRound, Loader2, LogOut, Mail, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +25,10 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import {
-	passkeyActions,
+	authClient,
+	changeEmail,
 	signOut,
-	twoFactorActions,
 	updateUser,
-	useListPasskeys,
 	useSession,
 } from '@/lib/auth-client';
 
@@ -39,7 +38,10 @@ export function UserCard() {
 
 	const handleSignOut = async () => {
 		await signOut();
-		navigate({ to: '/login' });
+		navigate({
+			to: '/auth/login',
+			search: { redirect: undefined, error: undefined },
+		});
 	};
 
 	if (isPending) {
@@ -78,7 +80,10 @@ export function UserCard() {
 							<p className="text-sm">User ID: {session.user.id}</p>
 						</div>
 					</div>
-					<EditUserDialog user={session.user} />
+					<div className="flex gap-2">
+						<ChangeEmailDialog currentEmail={session.user.email} />
+						<EditUserDialog user={session.user} />
+					</div>
 				</div>
 				<div className="flex items-center justify-between">
 					<Button variant="outline" className="gap-2" onClick={handleSignOut}>
@@ -86,7 +91,9 @@ export function UserCard() {
 						Sign Out
 					</Button>
 					<div>
-						<TwoFactorDialog enabled={session.user.twoFactorEnabled} />
+						<TwoFactorDialog
+							enabled={session.user.twoFactorEnabled ?? undefined}
+						/>
 					</div>
 				</div>
 				<div className="flex flex-wrap items-center justify-between gap-2 border-y py-4">
@@ -163,6 +170,92 @@ function EditUserDialog(props: { user?: User }) {
 	);
 }
 
+function ChangeEmailDialog(props: { currentEmail: string }) {
+	const [isOpen, setIsOpen] = useState(false);
+	const [newEmail, setNewEmail] = useState('');
+	const [isLoading, setIsLoading] = useState(false);
+
+	return (
+		<Dialog onOpenChange={setIsOpen} open={isOpen}>
+			<DialogTrigger asChild>
+				<Button variant="outline" size="sm">
+					<Mail className="h-4 w-4 mr-2" />
+					Change Email
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Change Email Address</DialogTitle>
+					<DialogDescription>
+						Enter your new email address. A verification email will be sent to
+						confirm the change.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="grid gap-4">
+					<div className="grid gap-2">
+						<Label htmlFor="current-email">Current Email</Label>
+						<Input
+							id="current-email"
+							type="email"
+							value={props.currentEmail}
+							disabled
+						/>
+					</div>
+					<div className="grid gap-2">
+						<Label htmlFor="new-email">New Email</Label>
+						<Input
+							id="new-email"
+							type="email"
+							placeholder="new-email@example.com"
+							value={newEmail}
+							onChange={(e) => setNewEmail(e.target.value)}
+						/>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={() => setIsOpen(false)}>
+						Cancel
+					</Button>
+					<Button
+						onClick={async () => {
+							if (!newEmail) {
+								toast.error('Please enter a new email address');
+								return;
+							}
+							if (newEmail === props.currentEmail) {
+								toast.error('New email must be different from current email');
+								return;
+							}
+							setIsLoading(true);
+							const { error } = await changeEmail({
+								newEmail,
+								callbackURL: '/dashboard',
+							});
+							setIsLoading(false);
+							if (error) {
+								toast.error(error.message || 'Failed to change email');
+							} else {
+								toast.success(
+									'Verification email sent! Please check your inbox.',
+								);
+								setNewEmail('');
+								setIsOpen(false);
+							}
+						}}
+						disabled={isLoading}
+					>
+						{isLoading ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							'Send Verification'
+						)}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 function AddPasskeyDialog() {
 	const [name, setName] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
@@ -193,17 +286,16 @@ function AddPasskeyDialog() {
 				<DialogFooter>
 					<Button
 						onClick={async () => {
-							const res = await passkeyActions.addPasskey({
-								name: name,
-								fetchOptions: {
-									onSuccess() {
-										alert('Successfully added');
-										setName('');
-									},
-								},
+							setIsLoading(true);
+							const { error } = await authClient.passkey.addPasskey({
+								name: name || undefined,
 							});
-							if (res?.error) {
-								alert(res.error.message);
+							setIsLoading(false);
+							if (error) {
+								toast.error(error.message || 'Failed to add passkey');
+							} else {
+								toast.success('Passkey added successfully');
+								setName('');
 							}
 						}}
 					>
@@ -223,11 +315,37 @@ function AddPasskeyDialog() {
 }
 
 function ListPasskeys() {
-	const { data: passkeysData } = useListPasskeys();
-	const [isDeletePasskey, setIsDeletePasskey] = useState(false);
+	const [passkeysData, setPasskeysData] = useState<
+		{ id: string; name?: string }[] | null
+	>(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const [deletingId, setDeletingId] = useState<string | null>(null);
+
+	const fetchPasskeys = async () => {
+		setIsLoading(true);
+		const { data, error } = await authClient.passkey.listUserPasskeys();
+		setIsLoading(false);
+		if (error) {
+			toast.error('Failed to load passkeys');
+		} else {
+			setPasskeysData(data);
+		}
+	};
+
+	const handleDelete = async (id: string) => {
+		setDeletingId(id);
+		const { error } = await authClient.passkey.deletePasskey({ id });
+		setDeletingId(null);
+		if (error) {
+			toast.error(error.message || 'Failed to delete passkey');
+		} else {
+			toast.success('Passkey deleted successfully');
+			fetchPasskeys();
+		}
+	};
 
 	return (
-		<Dialog>
+		<Dialog onOpenChange={(open) => open && fetchPasskeys()}>
 			<DialogTrigger>
 				<Button variant="outline">
 					Passkeys {passkeysData?.length ? `[${passkeysData?.length}]` : ''}
@@ -238,7 +356,11 @@ function ListPasskeys() {
 					<DialogTitle>Passkeys</DialogTitle>
 					<DialogDescription>List of passkeys</DialogDescription>
 				</DialogHeader>
-				{passkeysData?.length ? (
+				{isLoading ? (
+					<div className="flex items-center justify-center py-4">
+						<Loader2 className="h-6 w-6 animate-spin" />
+					</div>
+				) : passkeysData?.length ? (
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -255,26 +377,9 @@ function ListPasskeys() {
 									<TableCell className="text-right">
 										<Button
 											variant="destructive"
-											onClick={async () => {
-												await passkeyActions.deletePasskey({
-													id: passkey.id,
-													fetchOptions: {
-														onRequest: () => {
-															setIsDeletePasskey(true);
-														},
-														onSuccess: () => {
-															toast.success('Passkey deleted successfully');
-															setIsDeletePasskey(false);
-														},
-														onError: (error) => {
-															alert(error.error.message);
-															setIsDeletePasskey(false);
-														},
-													},
-												});
-											}}
+											onClick={() => handleDelete(passkey.id)}
 										>
-											{isDeletePasskey ? (
+											{deletingId === passkey.id ? (
 												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 											) : (
 												<Trash2 />
@@ -332,38 +437,28 @@ function TwoFactorDialog(props: { enabled?: boolean }) {
 							}
 							setIsLoading(true);
 							if (props.enabled) {
-								await twoFactorActions.disable({
+								const { error } = await authClient.twoFactor.disable({
 									password: password,
-									fetchOptions: {
-										onResponse() {
-											setIsLoading(false);
-										},
-										onError(context) {
-											alert(context.error.message);
-										},
-										onSuccess() {
-											alert('Two factor is disabled!');
-											setIsOpen(false);
-										},
-									},
 								});
+								setIsLoading(false);
+								if (error) {
+									alert(error.message);
+								} else {
+									toast.success('Two factor is disabled!');
+									setIsOpen(false);
+								}
 								return;
 							}
-							await twoFactorActions.enable({
+							const { error } = await authClient.twoFactor.enable({
 								password: password,
-								fetchOptions: {
-									onResponse() {
-										setIsLoading(false);
-									},
-									onError(context) {
-										alert(context.error.message);
-									},
-									onSuccess() {
-										toast.success('Two factor successfully enabled!');
-										setIsOpen(false);
-									},
-								},
 							});
+							setIsLoading(false);
+							if (error) {
+								alert(error.message);
+							} else {
+								toast.success('Two factor successfully enabled!');
+								setIsOpen(false);
+							}
 						}}
 					>
 						{isLoading ? (

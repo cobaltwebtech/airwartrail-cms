@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DashboardHeader } from "@/components/DashboardHeader";
-import { FileList } from "@/components/r2-assets/FileList";
+import { createFileRoute } from '@tanstack/react-router';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { FileList } from '@/components/r2-assets/FileList';
 
-export const Route = createFileRoute("/_dashboard/assets/")({
+export const Route = createFileRoute('/_dashboard/assets/')({
 	component: AssetsPage,
 });
 

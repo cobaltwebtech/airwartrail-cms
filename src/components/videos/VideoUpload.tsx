@@ -32,6 +32,11 @@ export function VideoUpload() {
 		trpc.bunny.createVideo.mutationOptions(),
 	);
 
+	// Get TUS upload signature mutation using tRPC
+	const getTusSignatureMutation = useMutation(
+		trpc.bunny.getTusUploadSignature.mutationOptions(),
+	);
+
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
 			setFile(e.target.files[0]);
@@ -62,19 +67,9 @@ export function VideoUpload() {
 				throw new Error('No valid video ID returned from API');
 			}
 
-			// 2. Get authorization signature and other necessary headers for the upload
-			// Note: This still needs a separate endpoint for generating TUS auth tokens
-			const authResponse = await fetch(`/api/videos/upload?videoId=${videoId}`);
-
-			if (!authResponse.ok) {
-				throw new Error('Failed to get authentication token for upload');
-			}
-
-			const { signature, expire } = (await authResponse.json()) as {
-				signature: string;
-				expire: number;
-			};
-			const libraryId = video.libraryId;
+			// 2. Get authorization signature for TUS upload using tRPC
+			const { signature, expirationTime, libraryId } =
+				await getTusSignatureMutation.mutateAsync({ videoId });
 
 			// 3. Use the TUS client for resumable uploads
 			return new Promise<void>((resolve, reject) => {
@@ -83,7 +78,7 @@ export function VideoUpload() {
 					retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
 					headers: {
 						AuthorizationSignature: signature,
-						AuthorizationExpire: expire.toString(),
+						AuthorizationExpire: expirationTime.toString(),
 						LibraryId: libraryId.toString(),
 						VideoId: videoId,
 					},

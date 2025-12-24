@@ -1,9 +1,9 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DashboardHeader } from "@/components/DashboardHeader";
-import { CollectionsList } from "@/components/collections/CollectionsList";
-import { getCollections } from "@/lib/bunnyStream";
-import CollectionCreate from "@/components/collections/CollectionCreate";
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { CollectionsList } from '@/components/collections/CollectionsList';
+import { getCollections } from '@/lib/bunnyStream';
+import CollectionCreate from '@/components/collections/CollectionCreate';
 
 // Fetch collections on the server
 const collections = await getCollections();

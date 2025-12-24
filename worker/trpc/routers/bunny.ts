@@ -94,9 +94,9 @@ export const bunnyRouter = t.router({
 	 */
 	getAllVideos: publicProcedure.query(async ({ ctx }): Promise<Video[]> => {
 		const { env } = ctx;
-		const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+		const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 		const apiKey = env.BUNNY_API_KEY;
-		const bunnyCdn = env.PUBLIC_BUNNY_STREAM_CDN;
+		const bunnyCdn = env.VITE_BUNNY_STREAM_CDN;
 
 		try {
 			const response = await fetch(
@@ -163,9 +163,9 @@ export const bunnyRouter = t.router({
 		.input(z.object({ videoId: z.string() }))
 		.query(async ({ ctx, input }): Promise<Video> => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
-			const bunnyCdn = env.PUBLIC_BUNNY_STREAM_CDN;
+			const bunnyCdn = env.VITE_BUNNY_STREAM_CDN;
 
 			try {
 				const response = await fetch(
@@ -226,7 +226,7 @@ export const bunnyRouter = t.router({
 		.input(z.object({ videoId: z.string() }))
 		.query(async ({ ctx, input }): Promise<{ url: string }> => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const bunnyToken = env.BUNNY_STREAM_TOKEN;
 
 			if (!bunnyToken) {
@@ -267,7 +267,7 @@ export const bunnyRouter = t.router({
 		)
 		.query(async ({ ctx, input }): Promise<Collection[]> => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 			const page = input?.page ?? 1;
 			const perPage = input?.perPage ?? 50;
@@ -349,7 +349,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -424,7 +424,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			const { videoId, ...updateData } = input;
@@ -474,7 +474,7 @@ export const bunnyRouter = t.router({
 		.input(z.object({ videoId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -521,7 +521,7 @@ export const bunnyRouter = t.router({
 		.input(z.object({ name: z.string().min(1) }))
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -568,7 +568,7 @@ export const bunnyRouter = t.router({
 		.input(z.object({ collectionId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -620,7 +620,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -675,7 +675,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -726,7 +726,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -774,7 +774,7 @@ export const bunnyRouter = t.router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
-			const libraryId = env.PUBLIC_BUNNY_LIBRARY_ID;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 			const apiKey = env.BUNNY_API_KEY;
 
 			try {
@@ -825,6 +825,58 @@ export const bunnyRouter = t.router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to set thumbnail on Bunny.net",
+				});
+			}
+		}),
+
+	/**
+	 * Generate TUS upload authorization signature
+	 * Required for resumable uploads to Bunny.net Stream
+	 * Protected: requires authentication
+	 */
+	getTusUploadSignature: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.uuid("Invalid video ID format"),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const libraryId = env.VITE_BUNNY_LIBRARY_ID;
+			const apiKey = env.BUNNY_API_KEY;
+
+			if (!libraryId || !apiKey) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Server configuration error: Missing Bunny.net credentials",
+				});
+			}
+
+			try {
+				// Calculate expiration time (6 hours from now)
+				const expirationTime = Math.floor(Date.now() / 1000) + 21600;
+
+				// Generate SHA-256 signature for TUS upload authorization
+				// Format: SHA256(library_id + api_key + expiration_time + video_id)
+				const message = `${libraryId}${apiKey}${expirationTime}${input.videoId}`;
+				const encoder = new TextEncoder();
+				const data = encoder.encode(message);
+				const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+				const signature = Array.from(new Uint8Array(hashBuffer))
+					.map((b) => b.toString(16).padStart(2, "0"))
+					.join("");
+
+				return {
+					signature,
+					expirationTime,
+					videoId: input.videoId,
+					libraryId,
+				};
+			} catch (error) {
+				console.error("Error generating TUS upload signature:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to generate upload authorization signature",
 				});
 			}
 		}),

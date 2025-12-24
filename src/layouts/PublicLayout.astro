@@ -1,16 +1,16 @@
 ---
-import "@/styles/global.css";
-import { DashboardFooter } from "@/components/DashboardFooter";
-import { Toaster } from "@/components/ui/sonner";
+import '@/styles/global.css';
+import { DashboardFooter } from '@/components/DashboardFooter';
+import { Toaster } from '@/components/ui/sonner';
 
 interface Props {
-  title: string;
-  description?: string;
+	title: string;
+	description?: string;
 }
 
 const {
-  title,
-  description = "Manage your video content with Bunny.net Stream",
+	title,
+	description = 'Manage your video content with Bunny.net Stream',
 } = Astro.props;
 ---
 

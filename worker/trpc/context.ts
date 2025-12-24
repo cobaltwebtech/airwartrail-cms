@@ -1,10 +1,11 @@
+import { auth } from "@/lib/auth-server";
+
 // Define the session type - matches Better Auth session structure
 type Session = {
 	user: {
 		id: string;
 		email: string;
 		name: string;
-		role?: string;
 		createdAt: Date;
 		updatedAt: Date;
 	};
@@ -43,9 +44,34 @@ export async function createContext({
 	env: Env;
 	workerCtx: ExecutionContext;
 }): Promise<Context> {
-	// TODO: Implement session retrieval from Better Auth
-	// For now, return null session - implement auth integration later
-	const session: Session | null = null;
+	// Retrieve session from Better Auth using request cookies
+	let session: Session | null = null;
+
+	try {
+		const authSession = await auth.api.getSession({
+			headers: req.headers,
+		});
+
+		if (authSession?.user && authSession?.session) {
+			session = {
+				user: {
+					id: authSession.user.id,
+					email: authSession.user.email,
+					name: authSession.user.name,
+					createdAt: authSession.user.createdAt,
+					updatedAt: authSession.user.updatedAt,
+				},
+				session: {
+					id: authSession.session.id,
+					userId: authSession.session.userId,
+					expiresAt: authSession.session.expiresAt,
+				},
+			};
+		}
+	} catch (error) {
+		// Session retrieval failed - user is not authenticated
+		console.error("Error retrieving session:", error);
+	}
 
 	return {
 		req,
@@ -54,4 +80,4 @@ export async function createContext({
 		session,
 		headers: req.headers,
 	};
-};
+}

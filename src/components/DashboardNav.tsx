@@ -18,7 +18,7 @@ export function DashboardNav() {
 	return (
 		<div className="bg-muted row-span-2 flex h-full flex-col border-r">
 			<div className="sticky top-0">
-				<div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6">
+				<div className="flex h-14 items-center justify-center border-b px-4 lg:h-15 lg:px-6">
 					<Link to="/">
 						<h1 className="text-center font-semibold">Air War Trail</h1>
 					</Link>

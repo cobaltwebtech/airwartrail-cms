@@ -36,9 +36,9 @@
 	],
 	"vars": {
 		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com",
-		"PUBLIC_BUNNY_LIBRARY_ID": "416789",
-		"PUBLIC_BUNNY_STREAM_CDN": "vz-91a12c63-3f2.b-cdn.net",
-		"PUBLIC_R2_BUCKET_URL": "https://assets.airwartrail.com",
-		"TURNSTILE_PUBLIC_KEY": "3x00000000000000000000FF"
+		"VITE_BUNNY_LIBRARY_ID": "416789",
+		"VITE_BUNNY_STREAM_CDN": "vz-91a12c63-3f2.b-cdn.net",
+		"VITE_R2_BUCKET_URL": "https://assets.airwartrail.com",
+		"VITE_TURNSTILE_SITE_KEY": "3x00000000000000000000FF"
 	}
 }
