@@ -1,13 +1,10 @@
 {
-  "folders": [
-    {
-      "path": "..",
-    },
-  ],
-  "settings": {
-    "prettier.documentSelectors": ["**/*.astro"],
-    "[astro]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode",
-    },
-  },
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"css.validate": false
+	}
 }

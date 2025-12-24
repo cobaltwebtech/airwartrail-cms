@@ -1,96 +1,90 @@
-import { useState } from "react";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CirclePlus } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CirclePlus } from "lucide-react";
-import { toast } from "sonner";
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { trpc } from '@/lib/trpc';
 
 export default function CollectionCreate() {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+	const queryClient = useQueryClient();
+	const [open, setOpen] = useState(false);
+	const [name, setName] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+	const createCollectionMutation = useMutation(
+		trpc.bunny.createCollection.mutationOptions({
+			onSuccess: () => {
+				toast.success('New collection created successfully');
+				queryClient.invalidateQueries({
+					queryKey: [['bunny', 'getCollections']],
+				});
+				setOpen(false);
+				setName('');
+			},
+			onError: (error) => {
+				toast.error(error.message || 'Failed to create collection');
+			},
+		}),
+	);
 
-    try {
-      const response = await fetch("/api/collections/createCollection", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }),
-      });
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		createCollectionMutation.mutate({ name });
+	};
 
-      if (!response.ok) {
-        throw new Error("Failed to create collection");
-      }
-
-      // Set a flag in localStorage to show the toast message after reload
-      localStorage.setItem("collectionCreated", "true");
-
-      setOpen(false);
-      setName("");
-      window.location.reload();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "An unexpected error occurred",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <CirclePlus />
-          Create Collection
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Collection</DialogTitle>
-            <DialogDescription>
-              Enter the name of the new collection.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="name">Name</label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter collection name"
-                required
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="secondary" disabled={isLoading}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button>
+					<CirclePlus />
+					Create Collection
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<form onSubmit={handleSubmit}>
+					<DialogHeader>
+						<DialogTitle>Create New Collection</DialogTitle>
+						<DialogDescription>
+							Enter the name of the new collection.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid gap-4 py-4">
+						<div className="grid gap-2">
+							<label htmlFor="name">Name</label>
+							<Input
+								id="name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								placeholder="Enter collection name"
+								required
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button
+								variant="secondary"
+								disabled={createCollectionMutation.isPending}
+							>
+								Cancel
+							</Button>
+						</DialogClose>
+						<Button type="submit" disabled={createCollectionMutation.isPending}>
+							{createCollectionMutation.isPending ? 'Creating...' : 'Create'}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
+	);
 }
