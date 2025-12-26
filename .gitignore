@@ -1,10 +1,10 @@
 # build output
 dist/
-.astro
 .idea
 .vercel
 .yarn
 .wrangler
+.tanstack
 
 # dependencies
 node_modules/
@@ -20,5 +20,6 @@ pnpm-debug.log*
 .env.production
 .dev.vars
 
-# macOS-specific files
+# other folders/files
 .DS_Store
+db-copy/

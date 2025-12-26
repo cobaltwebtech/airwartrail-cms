@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { formatDuration } from '@/lib/videoData';
+import { CirclePlus, Save, X } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -8,18 +11,16 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
 	Table,
-	TableHeader,
 	TableBody,
-	TableRow,
 	TableCell,
 	TableHead,
+	TableHeader,
+	TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { X, Save, CirclePlus } from 'lucide-react';
-import { toast } from 'sonner';
+import { formatDuration } from '@/lib/video-helpers';
 import TimeInput from './TimeInput';
 
 interface Moment {

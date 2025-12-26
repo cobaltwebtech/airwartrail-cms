@@ -1,6 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -10,7 +10,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { formatDate } from '@/lib/videoData';
+import { trpc } from '@/lib/trpc';
+import { formatDate } from '@/lib/video-helpers';
 import type { Video } from '@/types';
 
 interface VideoDialogProps {
@@ -25,46 +26,27 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 	open,
 	onOpenChange,
 }) => {
-	const [signedUrl, setSignedUrl] = useState<string | null>(null);
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		const fetchSignedUrl = async () => {
-			setLoading(true);
-			try {
-				const res = await fetch(`/api/videos/${video.id}/videoToken`);
-				if (!res.ok) throw new Error('Failed to fetch signed URL');
-				const data = (await res.json()) as { url: string };
-				setSignedUrl(data.url);
-			} catch {
-				setSignedUrl(null);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		if (video.id) {
-			fetchSignedUrl();
-		}
-	}, [video.id]);
+	const { data, isLoading, isError } = useQuery(
+		trpc.bunny.getVideoToken.queryOptions({ videoId: video.id }),
+	);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="p-2 sm:max-w-screen-lg">
+			<DialogContent className="p-2 sm:max-w-5xl">
 				<div className="aspect-video w-full">
-					{loading ? (
+					{isLoading ? (
 						<div>Loading video...</div>
-					) : signedUrl ? (
+					) : data?.url ? (
 						<iframe
 							title={video.title}
-							src={signedUrl}
+							src={data.url}
 							className="h-full w-full"
 							allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
 							allowFullScreen
 						></iframe>
-					) : (
+					) : isError ? (
 						<div>Failed to load video.</div>
-					)}
+					) : null}
 				</div>
 				<div className="flex flex-row justify-between">
 					<DialogHeader className="p-4">

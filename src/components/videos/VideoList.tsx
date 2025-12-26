@@ -1,17 +1,28 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
+	type ColumnDef,
+	flexRender,
+	getCoreRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable,
+} from '@tanstack/react-table';
+import {
 	ArrowDown,
 	ArrowUp,
+	ArrowUpDown,
 	Copy,
 	Eye,
 	Film,
+	Grid3X3,
+	List,
 	MoreHorizontal,
 	Pencil,
 	Play,
 	Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,8 +48,16 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { trpc } from '@/lib/trpc';
-import { copyVideoUrl, formatDate, formatDuration } from '@/lib/videoData';
+import { copyVideoUrl, formatDate, formatDuration } from '@/lib/video-helpers';
 import type { Video } from '@/types';
 import { VideoDelete } from './VideoDelete';
 import { VideoDialog } from './VideoDialog';
@@ -47,6 +66,43 @@ interface VideoListProps {
 	videos: Video[] | null | undefined;
 }
 
+type ViewMode = 'grid' | 'table';
+
+const STORAGE_KEY = 'videoList-settings';
+
+interface VideoListSettings {
+	viewMode: ViewMode;
+	sortCriteria: string;
+	sortDirection: string;
+	tableSorting: SortingState;
+}
+
+function getStoredSettings(): VideoListSettings {
+	try {
+		const stored = localStorage.getItem(STORAGE_KEY);
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			return {
+				viewMode: parsed.viewMode ?? 'grid',
+				sortCriteria: parsed.sortCriteria ?? 'date',
+				sortDirection: parsed.sortDirection ?? 'desc',
+				tableSorting: parsed.tableSorting ?? [],
+			};
+		}
+	} catch {
+		// Ignore parse errors
+	}
+	return {
+		viewMode: 'grid',
+		sortCriteria: 'date',
+		sortDirection: 'desc',
+		tableSorting: [],
+	};
+}
+
+// Read stored settings once at module level to avoid multiple reads
+const initialSettings = getStoredSettings();
+
 export function VideoList({ videos = [] }: VideoListProps) {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState('');
@@ -54,8 +110,46 @@ export function VideoList({ videos = [] }: VideoListProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
-	const [sortCriteria, setSortCriteria] = useState('date');
-	const [sortDirection, setSortDirection] = useState('desc');
+
+	// Initialize state from stored settings (read once)
+	const [sortCriteria, setSortCriteria] = useState(
+		initialSettings.sortCriteria,
+	);
+	const [sortDirection, setSortDirection] = useState(
+		initialSettings.sortDirection,
+	);
+	const [viewMode, setViewMode] = useState<ViewMode>(initialSettings.viewMode);
+	const [tableSorting, setTableSorting] = useState<SortingState>(
+		initialSettings.tableSorting,
+	);
+
+	// Use ref to track if we need to save (debounced)
+	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// Persist settings to localStorage with debouncing
+	useEffect(() => {
+		// Clear any pending save
+		if (saveTimeoutRef.current) {
+			clearTimeout(saveTimeoutRef.current);
+		}
+
+		// Debounce the save to prevent rapid writes
+		saveTimeoutRef.current = setTimeout(() => {
+			const settings: VideoListSettings = {
+				viewMode,
+				sortCriteria,
+				sortDirection,
+				tableSorting,
+			};
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+		}, 300);
+
+		return () => {
+			if (saveTimeoutRef.current) {
+				clearTimeout(saveTimeoutRef.current);
+			}
+		};
+	}, [viewMode, sortCriteria, sortDirection, tableSorting]);
 
 	// Delete mutation using tRPC
 	const deleteVideoMutation = useMutation(
@@ -76,37 +170,53 @@ export function VideoList({ videos = [] }: VideoListProps) {
 	// Ensure videos is an array before filtering
 	const videoArray = Array.isArray(videos) ? videos : [];
 
-	const filteredVideos = videoArray
-		.filter((video) =>
-			video.title.toLowerCase().includes(searchTerm.toLowerCase()),
-		)
-		.sort((a, b) => {
-			if (sortCriteria === 'title') {
-				return sortDirection === 'asc'
-					? a.title.localeCompare(b.title)
-					: b.title.localeCompare(a.title);
-			} else {
-				return sortDirection === 'asc'
-					? new Date(a.dateUploaded).getTime() -
-							new Date(b.dateUploaded).getTime()
-					: new Date(b.dateUploaded).getTime() -
-							new Date(a.dateUploaded).getTime();
-			}
-		});
+	const filteredVideos = useMemo(() => {
+		return videoArray
+			.filter((video) =>
+				video.title.toLowerCase().includes(searchTerm.toLowerCase()),
+			)
+			.sort((a, b) => {
+				if (sortCriteria === 'title') {
+					return sortDirection === 'asc'
+						? a.title.localeCompare(b.title)
+						: b.title.localeCompare(a.title);
+				} else {
+					return sortDirection === 'asc'
+						? new Date(a.dateUploaded).getTime() -
+								new Date(b.dateUploaded).getTime()
+						: new Date(b.dateUploaded).getTime() -
+								new Date(a.dateUploaded).getTime();
+				}
+			});
+	}, [videoArray, searchTerm, sortCriteria, sortDirection]);
 
 	const toggleSortDirection = () => {
 		setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
 	};
 
-	const handleCopy = (video: Video) => {
+	const handleCopy = useCallback((video: Video) => {
 		copyVideoUrl(video.guid || video.id)();
 		toast.success('URL copied to clipboard');
-	};
+	}, []);
 
-	const handleDeleteRequest = (video: Video) => {
+	const handleDeleteRequest = useCallback((video: Video) => {
 		setVideoToDelete(video);
 		setIsDeleteDialogOpen(true);
-	};
+	}, []);
+
+	const handleSelectVideo = useCallback((video: Video) => {
+		setSelectedVideo(video);
+	}, []);
+
+	const handleSortingChange = useCallback(
+		(updater: SortingState | ((old: SortingState) => SortingState)) => {
+			setTableSorting((old) => {
+				const newValue = typeof updater === 'function' ? updater(old) : updater;
+				return newValue;
+			});
+		},
+		[],
+	);
 
 	const handleDeleteConfirm = async () => {
 		if (videoToDelete) {
@@ -115,6 +225,163 @@ export function VideoList({ videos = [] }: VideoListProps) {
 			setVideoToDelete(null);
 		}
 	};
+
+	// Table columns definition
+	const columns = useMemo<ColumnDef<Video>[]>(
+		() => [
+			{
+				accessorKey: 'thumbnail',
+				header: '',
+				size: 80,
+				enableSorting: false,
+				cell: ({ row }) => (
+					<div className="relative h-12 w-20 overflow-hidden rounded">
+						<img
+							src={
+								row.original.thumbnail ||
+								'/placeholder.svg?height=720&width=1280'
+							}
+							alt={row.original.title}
+							className="h-full w-full object-cover"
+						/>
+					</div>
+				),
+			},
+			{
+				accessorKey: 'title',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Title
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<Link
+						to="/edit-video/$videoId"
+						params={{ videoId: row.original.id }}
+						className="font-medium hover:underline"
+					>
+						{row.original.title}
+					</Link>
+				),
+			},
+			{
+				accessorKey: 'duration',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Duration
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<span className="text-muted-foreground">
+						{formatDuration(row.original.duration)}
+					</span>
+				),
+			},
+			{
+				accessorKey: 'views',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Views
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<span className="text-primary bg-secondary rounded-sm px-2 py-1 text-sm font-bold">
+						{row.original.views}
+					</span>
+				),
+			},
+			{
+				accessorKey: 'dateUploaded',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Uploaded
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<span className="text-muted-foreground text-sm">
+						{formatDate(row.original.dateUploaded)}
+					</span>
+				),
+			},
+			{
+				id: 'actions',
+				header: '',
+				size: 50,
+				enableSorting: false,
+				cell: ({ row }) => {
+					const video = row.original;
+					return (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="icon" className="h-8 w-8">
+									<MoreHorizontal className="size-4" />
+									<span className="sr-only">Open menu</span>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>Actions</DropdownMenuLabel>
+								<DropdownMenuItem onClick={() => handleSelectVideo(video)}>
+									<Eye className="mr-2 size-4" />
+									<span>Preview</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => handleCopy(video)}>
+									<Copy className="mr-2 size-4" />
+									<span>Copy URL</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem asChild>
+									<Link
+										to="/edit-video/$videoId"
+										params={{ videoId: video.id }}
+										className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
+									>
+										<Pencil className="mr-2 size-4" />
+										<span>Edit</span>
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={() => handleDeleteRequest(video)}>
+									<Trash2 className="text-destructive-foreground mr-2 size-4" />
+									<span className="text-destructive">Delete</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					);
+				},
+			},
+		],
+		[handleCopy, handleDeleteRequest, handleSelectVideo],
+	);
+
+	const table = useReactTable({
+		data: filteredVideos,
+		columns,
+		state: {
+			sorting: tableSorting,
+		},
+		onSortingChange: handleSortingChange,
+		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	});
 
 	return (
 		<div className="space-y-4">
@@ -125,19 +392,43 @@ export function VideoList({ videos = [] }: VideoListProps) {
 					onChange={(e) => setSearchTerm(e.target.value)}
 					className="max-w-sm"
 				/>
-				<div className="flex gap-x-4">
-					<Select value={sortCriteria} onValueChange={setSortCriteria}>
-						<SelectTrigger className="max-w-sm">
-							<SelectValue placeholder="Sort by" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="date">Sort by Date</SelectItem>
-							<SelectItem value="title">Sort by Title</SelectItem>
-						</SelectContent>
-					</Select>
-					<Button onClick={toggleSortDirection}>
-						{sortDirection === 'asc' ? <ArrowUp /> : <ArrowDown />}
-					</Button>
+				<div className="flex gap-x-2">
+					{viewMode === 'grid' && (
+						<>
+							<Select value={sortCriteria} onValueChange={setSortCriteria}>
+								<SelectTrigger className="max-w-sm">
+									<SelectValue placeholder="Sort by" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="date">Sort by Date</SelectItem>
+									<SelectItem value="title">Sort by Title</SelectItem>
+								</SelectContent>
+							</Select>
+							<Button onClick={toggleSortDirection}>
+								{sortDirection === 'asc' ? <ArrowUp /> : <ArrowDown />}
+							</Button>
+						</>
+					)}
+					<div className="flex rounded-md border">
+						<Button
+							variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+							size="icon"
+							onClick={() => setViewMode('grid')}
+							className="rounded-r-none"
+						>
+							<Grid3X3 className="h-4 w-4" />
+							<span className="sr-only">Grid view</span>
+						</Button>
+						<Button
+							variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+							size="icon"
+							onClick={() => setViewMode('table')}
+							className="rounded-l-none"
+						>
+							<List className="h-4 w-4" />
+							<span className="sr-only">Table view</span>
+						</Button>
+					</div>
 				</div>
 			</div>
 
@@ -159,93 +450,143 @@ export function VideoList({ videos = [] }: VideoListProps) {
 				onConfirm={handleDeleteConfirm}
 			/>
 
-			<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-				{filteredVideos.map((video) => (
-					<Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
-						<div className="relative">
-							<img
-								src={
-									video.thumbnail || '/placeholder.svg?height=720&width=1280'
-								}
-								alt={video.title}
-								className="aspect-video object-cover"
-							/>
-							<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-								<Button
-									variant="secondary"
-									size="icon"
-									onClick={() => setSelectedVideo(video)}
-								>
-									<Play className="h-6 w-6" />
-								</Button>
-							</div>
-							<div className="absolute right-2 bottom-2 rounded bg-black/70 px-1 text-xs text-white">
-								{formatDuration(video.duration)}
-							</div>
-						</div>
-						<CardHeader className="p-4">
-							<div className="flex items-start justify-between">
-								<Link
-									to="/edit-video/$videoId"
-									params={{ videoId: video.id }}
-									className="cursor-pointer"
-								>
-									<CardTitle className="text-base text-wrap">
-										{video.title}
-									</CardTitle>
-								</Link>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button variant="ghost" size="icon" className="h-8 w-8">
-											<MoreHorizontal className="size-4" />
-											<span className="sr-only">Open menu</span>
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuLabel>Actions</DropdownMenuLabel>
-										<DropdownMenuItem onClick={() => setSelectedVideo(video)}>
-											<Eye className="mr-2 size-4" />
-											<span>Preview</span>
-										</DropdownMenuItem>
-										<DropdownMenuItem onClick={() => handleCopy(video)}>
-											<Copy className="mr-2 size-4" />
-											<span>Copy URL</span>
-										</DropdownMenuItem>
-										<DropdownMenuItem asChild>
-											<Link
-												to="/edit-video/$videoId"
-												params={{ videoId: video.id }}
-												className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
-											>
-												<Pencil className="mr-2 size-4" />
-												<span>Edit</span>
-											</Link>
-										</DropdownMenuItem>
-										<DropdownMenuSeparator />
-										<DropdownMenuItem
-											onClick={() => handleDeleteRequest(video)}
-										>
-											<Trash2 className="text-destructive-foreground mr-2 size-4" />
-											<span className="text-destructive">Delete</span>
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
-							</div>
-							<CardDescription>
-								Views:{' '}
-								<span className="text-primary bg-secondary rounded-sm px-2 py-1 font-bold">
-									{video.views}
-								</span>
-							</CardDescription>
-						</CardHeader>
-						<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-							Uploaded on {formatDate(video.dateUploaded)}
-						</CardFooter>
-					</Card>
-				))}
-			</div>
+			{viewMode === 'table' && (
+				<div className="rounded-md border">
+					<Table>
+						<TableHeader>
+							{table.getHeaderGroups().map((headerGroup) => (
+								<TableRow key={headerGroup.id}>
+									{headerGroup.headers.map((header) => (
+										<TableHead key={header.id}>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext(),
+													)}
+										</TableHead>
+									))}
+								</TableRow>
+							))}
+						</TableHeader>
+						<TableBody>
+							{table.getRowModel().rows?.length ? (
+								table.getRowModel().rows.map((row) => (
+									<TableRow key={row.id}>
+										{row.getVisibleCells().map((cell) => (
+											<TableCell key={cell.id}>
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
+											</TableCell>
+										))}
+									</TableRow>
+								))
+							) : (
+								<TableRow>
+									<TableCell
+										colSpan={columns.length}
+										className="h-24 text-center"
+									>
+										No videos found.
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
+				</div>
+			)}
 
-			{filteredVideos.length === 0 && (
+			{viewMode === 'grid' && (
+				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+					{filteredVideos.map((video) => (
+						<Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
+							<div className="relative">
+								<img
+									src={
+										video.thumbnail || '/placeholder.svg?height=720&width=1280'
+									}
+									alt={video.title}
+									className="aspect-video object-cover"
+								/>
+								<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
+									<Button
+										variant="secondary"
+										size="icon"
+										onClick={() => setSelectedVideo(video)}
+									>
+										<Play className="h-6 w-6" />
+									</Button>
+								</div>
+								<div className="absolute right-2 bottom-2 rounded bg-black/70 px-1 text-xs text-white">
+									{formatDuration(video.duration)}
+								</div>
+							</div>
+							<CardHeader className="p-4">
+								<div className="flex items-start justify-between">
+									<Link
+										to="/edit-video/$videoId"
+										params={{ videoId: video.id }}
+										className="cursor-pointer"
+									>
+										<CardTitle className="text-base text-wrap">
+											{video.title}
+										</CardTitle>
+									</Link>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button variant="ghost" size="icon" className="h-8 w-8">
+												<MoreHorizontal className="size-4" />
+												<span className="sr-only">Open menu</span>
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuLabel>Actions</DropdownMenuLabel>
+											<DropdownMenuItem onClick={() => setSelectedVideo(video)}>
+												<Eye className="mr-2 size-4" />
+												<span>Preview</span>
+											</DropdownMenuItem>
+											<DropdownMenuItem onClick={() => handleCopy(video)}>
+												<Copy className="mr-2 size-4" />
+												<span>Copy URL</span>
+											</DropdownMenuItem>
+											<DropdownMenuItem asChild>
+												<Link
+													to="/edit-video/$videoId"
+													params={{ videoId: video.id }}
+													className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
+												>
+													<Pencil className="mr-2 size-4" />
+													<span>Edit</span>
+												</Link>
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												onClick={() => handleDeleteRequest(video)}
+											>
+												<Trash2 className="text-destructive-foreground mr-2 size-4" />
+												<span className="text-destructive">Delete</span>
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+								<CardDescription>
+									Views:{' '}
+									<span className="text-primary bg-secondary rounded-sm px-2 py-1 font-bold">
+										{video.views}
+									</span>
+								</CardDescription>
+							</CardHeader>
+							<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
+								Uploaded on {formatDate(video.dateUploaded)}
+							</CardFooter>
+						</Card>
+					))}
+				</div>
+			)}
+
+			{filteredVideos.length === 0 && viewMode === 'grid' && (
 				<div className="flex flex-col items-center justify-center py-12 text-center">
 					<Film className="text-muted-foreground mb-4 h-12 w-12" />
 					<h3 className="text-lg font-medium">No videos found</h3>

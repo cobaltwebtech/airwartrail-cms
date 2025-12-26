@@ -1,5 +1,5 @@
 import type React from 'react';
-import { formatDuration, formatDate, convertToGb } from '@/lib/videoData';
+import { convertToGb, formatDate, formatDuration } from '@/lib/video-helpers';
 
 interface VideoInfoProps {
 	initialTitle: string;

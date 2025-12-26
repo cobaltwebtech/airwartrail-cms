@@ -9,7 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { copyVideoUrl } from '@/lib/videoData';
+import { copyVideoUrl } from '@/lib/video-helpers';
 
 interface CopyUrlProps {
 	videoId: string;
