@@ -26,5 +26,10 @@
 			"database_id": "d68f0948-2a35-4274-8eb7-0c7937669688",
 			"migrations_dir": "./drizzle"
 		}
-	]
+	],
+	"vars": {
+		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com",
+		"VITE_BUNNY_LIBRARY_ID": "416789",
+		"VITE_BUNNY_STREAM_CDN": "vz-91a12c63-3f2.b-cdn.net"
+	}
 }

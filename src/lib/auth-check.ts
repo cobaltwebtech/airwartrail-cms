@@ -1,19 +1,27 @@
 import { redirect } from '@tanstack/react-router';
+import { queryClient } from '@/lib/query-client';
 
 /**
  * Client-side session fetcher for TanStack Router.
- * Fetches the session from the Better Auth API endpoint.
+ * Uses TanStack Query for caching to avoid repeated requests.
  */
 async function getSession() {
 	try {
-		const response = await fetch('/api/auth/get-session', {
-			credentials: 'include',
+		return await queryClient.fetchQuery({
+			queryKey: ['auth', 'session'],
+			queryFn: async () => {
+				const response = await fetch('/api/auth/get-session', {
+					credentials: 'include',
+				});
+				if (!response.ok) {
+					return null;
+				}
+				const data = (await response.json()) as { session?: unknown };
+				return data.session || null;
+			},
+			staleTime: 5 * 60 * 1000, // 5 minutes, matching Better Auth server cache
+			gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
 		});
-		if (!response.ok) {
-			return null;
-		}
-		const data = (await response.json()) as { session?: unknown };
-		return data.session || null;
 	} catch {
 		return null;
 	}
@@ -94,4 +102,12 @@ export async function requireNoSession(redirectTo: string = '/') {
 			to: redirectTo,
 		});
 	}
+}
+
+/**
+ * Invalidates the session cache.
+ * Call this after sign out or when session state changes.
+ */
+export function invalidateSessionCache() {
+	queryClient.removeQueries({ queryKey: ['auth', 'session'] });
 }

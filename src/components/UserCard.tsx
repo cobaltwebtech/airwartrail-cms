@@ -24,6 +24,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { invalidateSessionCache } from '@/lib/auth-check';
 import {
 	authClient,
 	changeEmail,
@@ -38,6 +39,7 @@ export function UserCard() {
 
 	const handleSignOut = async () => {
 		await signOut();
+		invalidateSessionCache();
 		navigate({
 			to: '/auth/login',
 			search: { redirect: undefined, error: undefined },

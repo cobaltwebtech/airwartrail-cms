@@ -1,5 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { Film, FolderOpen, LogOut, Pencil } from 'lucide-react';
+import { invalidateSessionCache } from '@/lib/auth-check';
 import { signOut, useSession } from '@/lib/auth-client';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './ui/button';
@@ -70,7 +71,7 @@ export function DashboardNav() {
 						variant="secondary"
 						onClick={async () => {
 							await signOut();
-							window.location.href = '/auth/login';
+							invalidateSessionCache();
 						}}
 						className="w-full justify-start"
 					>
