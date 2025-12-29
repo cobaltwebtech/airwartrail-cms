@@ -171,7 +171,6 @@ function LoginPage() {
 								}}
 								onExpire={() => setTurnstileToken('')}
 								options={{
-									appearance: 'interaction-only',
 									theme: 'dark',
 									size: 'flexible',
 								}}
