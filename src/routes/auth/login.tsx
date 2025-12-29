@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password';
 import { Toaster } from '@/components/ui/sonner';
 import { requireNoSession } from '@/lib/auth-check';
 import { signIn } from '@/lib/auth-client';
@@ -147,9 +148,10 @@ function LoginPage() {
 										Forgot your password?
 									</Link>
 								</div>
-								<Input
+								<PasswordInput
 									id={passwordInputId}
 									value={password}
+									required
 									onChange={(e) => setPassword(e.target.value)}
 									disabled={isLoading}
 									autoComplete="current-password"

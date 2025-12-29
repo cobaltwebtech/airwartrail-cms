@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Film, FolderOpen, LogOut, Pencil } from 'lucide-react';
 import { invalidateSessionCache } from '@/lib/auth-check';
 import { signOut, useSession } from '@/lib/auth-client';
@@ -9,6 +9,7 @@ import { VideoUpload } from './videos/VideoUpload';
 export function DashboardNav() {
 	const { data: session, isPending: loading } = useSession();
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	const navItems = [
 		{ title: 'Videos', href: '/videos', icon: Film },
@@ -72,6 +73,10 @@ export function DashboardNav() {
 						onClick={async () => {
 							await signOut();
 							invalidateSessionCache();
+							navigate({
+								to: '/auth/login',
+								search: { redirect: undefined, error: undefined },
+							});
 						}}
 						className="w-full justify-start"
 					>
