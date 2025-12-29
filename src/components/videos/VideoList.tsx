@@ -48,6 +48,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Table,
 	TableBody,
@@ -57,13 +58,58 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { trpc } from '@/lib/trpc';
+import type { Video } from '@/lib/types';
 import { copyVideoUrl, formatDate, formatDuration } from '@/lib/video-helpers';
-import type { Video } from '@/types';
 import { VideoDelete } from './VideoDelete';
 import { VideoDialog } from './VideoDialog';
 
 interface VideoListProps {
 	videos: Video[] | null | undefined;
+}
+
+interface VideoThumbnailProps {
+	src: string | null | undefined;
+	alt: string;
+	className?: string;
+	aspectVideo?: boolean;
+}
+
+function VideoThumbnail({
+	src,
+	alt,
+	className = '',
+	aspectVideo = false,
+}: VideoThumbnailProps) {
+	const [isLoaded, setIsLoaded] = useState(false);
+	const [hasError, setHasError] = useState(false);
+
+	// If no src or error, just show skeleton
+	if (!src || hasError) {
+		return (
+			<Skeleton
+				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
+			/>
+		);
+	}
+
+	return (
+		<div
+			className={`relative ${aspectVideo ? 'aspect-video' : 'h-full w-full'}`}
+		>
+			{!isLoaded && (
+				<Skeleton
+					className={`absolute inset-0 ${aspectVideo ? 'aspect-video' : 'h-full w-full'}`}
+				/>
+			)}
+			<img
+				src={src}
+				alt={alt}
+				className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
+				onLoad={() => setIsLoaded(true)}
+				onError={() => setHasError(true)}
+			/>
+		</div>
+	);
 }
 
 type ViewMode = 'grid' | 'table';
@@ -236,11 +282,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
 				enableSorting: false,
 				cell: ({ row }) => (
 					<div className="relative h-12 w-20 overflow-hidden rounded">
-						<img
-							src={
-								row.original.thumbnail ||
-								'/placeholder.svg?height=720&width=1280'
-							}
+						<VideoThumbnail
+							src={row.original.thumbnail}
 							alt={row.original.title}
 							className="h-full w-full object-cover"
 						/>
@@ -503,12 +546,11 @@ export function VideoList({ videos = [] }: VideoListProps) {
 					{filteredVideos.map((video) => (
 						<Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
 							<div className="relative">
-								<img
-									src={
-										video.thumbnail || '/placeholder.svg?height=720&width=1280'
-									}
+								<VideoThumbnail
+									src={video.thumbnail}
 									alt={video.title}
-									className="aspect-video object-cover"
+									className="aspect-video w-full object-cover"
+									aspectVideo
 								/>
 								<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
 									<Button

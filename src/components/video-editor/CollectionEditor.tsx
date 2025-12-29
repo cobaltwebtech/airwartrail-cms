@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { Pencil } from 'lucide-react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
 	DialogContent,
@@ -8,19 +13,15 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
-	SelectGroup,
-	SelectLabel,
-	SelectContent,
-	SelectItem,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface CollectionEditorProps {
 	collectionId: string;
@@ -39,15 +40,13 @@ const CollectionEditor: React.FC<CollectionEditorProps> = ({
 		string | null
 	>(collectionId);
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [currentCollectionName, setCurrentCollectionName] = useState('');
 
-	useEffect(() => {
+	// Derived state - calculated directly instead of via useEffect
+	const currentCollectionName = useMemo(() => {
 		const currentCollection = collections.find(
 			(collection) => collection.guid === collectionId,
 		);
-		setCurrentCollectionName(
-			currentCollection ? currentCollection.name : 'None selected',
-		);
+		return currentCollection ? currentCollection.name : 'None selected';
 	}, [collectionId, collections]);
 
 	const handleSave = async () => {

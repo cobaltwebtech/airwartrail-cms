@@ -1,5 +1,5 @@
 // This file contains functions to interact with the Bunny.net Stream API
-import type { Collection, StatusMap, Video, VideoStatus } from '@/types';
+import type { Collection, StatusMap, Video, VideoStatus } from '@/lib/types';
 
 // For server-side API calls
 const libraryId = import.meta.env.VITE_BUNNY_LIBRARY_ID;
@@ -48,6 +48,10 @@ interface BunnyApiResponseItem {
 interface BunnyApiResponse {
 	items?: BunnyApiResponseItem[];
 	videos?: BunnyApiResponseItem[];
+}
+
+interface BunnyCollectionResponse {
+	items?: Collection[];
 }
 
 export async function getAllVideos(): Promise<Video[]> {
@@ -148,28 +152,18 @@ export async function getCollections(
 			},
 		);
 
-		const data = await response.json();
+		const data: BunnyCollectionResponse = await response.json();
 
 		if (data.items && Array.isArray(data.items)) {
-			return data.items.map(
-				(item: {
-					videoLibraryId: string;
-					guid: string;
-					name: string;
-					videoCount: number;
-					totalSize: number;
-					previewVideoIds: string[];
-					previewImageUrls: string[];
-				}) => ({
-					videoLibraryId: item.videoLibraryId,
-					guid: item.guid,
-					name: item.name,
-					videoCount: item.videoCount,
-					totalSize: item.totalSize,
-					previewVideoIds: item.previewVideoIds,
-					previewImageUrls: item.previewImageUrls,
-				}),
-			);
+			return data.items.map((item) => ({
+				videoLibraryId: item.videoLibraryId,
+				guid: item.guid,
+				name: item.name,
+				videoCount: item.videoCount,
+				totalSize: item.totalSize,
+				previewVideoIds: item.previewVideoIds,
+				previewImageUrls: item.previewImageUrls,
+			}));
 		}
 
 		console.error('Unexpected API response structure:', data);

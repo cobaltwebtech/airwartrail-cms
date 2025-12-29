@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 
 // Initialize theme before React hydrates to prevent flash
 const getThemePreference = () => {
@@ -33,10 +34,13 @@ export const Route = createRootRouteWithContext<{
 	component: RootComponent,
 	notFoundComponent: () => {
 		return (
-			<div>
-				<p>This is the notFoundComponent configured on root route</p>
-				<Link to="/">Start Over</Link>
-			</div>
+			<main className="flex flex-col min-h-svh justify-center items-center p-4 space-y-4">
+				<h1 className="text-4xl font-bold">404 Error</h1>
+				<p>Page not found</p>
+				<Button asChild size="lg">
+					<Link to="/">Go to Home</Link>
+				</Button>
+			</main>
 		);
 	},
 });

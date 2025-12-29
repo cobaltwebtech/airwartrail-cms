@@ -11,13 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as DashboardVideosIndexRouteImport } from './routes/_dashboard/videos/index'
 import { Route as DashboardCollectionsIndexRouteImport } from './routes/_dashboard/collections/index'
-import { Route as DashboardAssetsIndexRouteImport } from './routes/_dashboard/assets/index'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
 import { Route as DashboardEditVideoVideoIdRouteImport } from './routes/_dashboard/edit-video/$videoId'
 import { Route as DashboardCollectionsCollectionIdRouteImport } from './routes/_dashboard/collections/$collectionId'
@@ -29,11 +27,6 @@ const DashboardRoute = DashboardRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/auth/signup',
-  path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
@@ -62,11 +55,6 @@ const DashboardCollectionsIndexRoute =
     path: '/collections/',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardAssetsIndexRoute = DashboardAssetsIndexRouteImport.update({
-  id: '/assets/',
-  path: '/assets/',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
   id: '/user/$userId',
   path: '/user/$userId',
@@ -90,11 +78,9 @@ export interface FileRoutesByFullPath {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
   '/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
-  '/assets': typeof DashboardAssetsIndexRoute
   '/collections': typeof DashboardCollectionsIndexRoute
   '/videos': typeof DashboardVideosIndexRoute
 }
@@ -103,11 +89,9 @@ export interface FileRoutesByTo {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
   '/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
-  '/assets': typeof DashboardAssetsIndexRoute
   '/collections': typeof DashboardCollectionsIndexRoute
   '/videos': typeof DashboardVideosIndexRoute
 }
@@ -118,11 +102,9 @@ export interface FileRoutesById {
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/_dashboard/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
   '/_dashboard/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
-  '/_dashboard/assets/': typeof DashboardAssetsIndexRoute
   '/_dashboard/collections/': typeof DashboardCollectionsIndexRoute
   '/_dashboard/videos/': typeof DashboardVideosIndexRoute
 }
@@ -133,11 +115,9 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/auth/signup'
     | '/collections/$collectionId'
     | '/edit-video/$videoId'
     | '/user/$userId'
-    | '/assets'
     | '/collections'
     | '/videos'
   fileRoutesByTo: FileRoutesByTo
@@ -146,11 +126,9 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/auth/signup'
     | '/collections/$collectionId'
     | '/edit-video/$videoId'
     | '/user/$userId'
-    | '/assets'
     | '/collections'
     | '/videos'
   id:
@@ -160,11 +138,9 @@ export interface FileRouteTypes {
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/auth/signup'
     | '/_dashboard/collections/$collectionId'
     | '/_dashboard/edit-video/$videoId'
     | '/_dashboard/user/$userId'
-    | '/_dashboard/assets/'
     | '/_dashboard/collections/'
     | '/_dashboard/videos/'
   fileRoutesById: FileRoutesById
@@ -175,7 +151,6 @@ export interface RootRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
-  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,13 +167,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/signup': {
-      id: '/auth/signup'
-      path: '/auth/signup'
-      fullPath: '/auth/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/reset-password': {
@@ -236,13 +204,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardCollectionsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/assets/': {
-      id: '/_dashboard/assets/'
-      path: '/assets'
-      fullPath: '/assets'
-      preLoaderRoute: typeof DashboardAssetsIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/_dashboard/user/$userId': {
       id: '/_dashboard/user/$userId'
       path: '/user/$userId'
@@ -271,7 +232,6 @@ interface DashboardRouteChildren {
   DashboardCollectionsCollectionIdRoute: typeof DashboardCollectionsCollectionIdRoute
   DashboardEditVideoVideoIdRoute: typeof DashboardEditVideoVideoIdRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
-  DashboardAssetsIndexRoute: typeof DashboardAssetsIndexRoute
   DashboardCollectionsIndexRoute: typeof DashboardCollectionsIndexRoute
   DashboardVideosIndexRoute: typeof DashboardVideosIndexRoute
 }
@@ -280,7 +240,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCollectionsCollectionIdRoute: DashboardCollectionsCollectionIdRoute,
   DashboardEditVideoVideoIdRoute: DashboardEditVideoVideoIdRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
-  DashboardAssetsIndexRoute: DashboardAssetsIndexRoute,
   DashboardCollectionsIndexRoute: DashboardCollectionsIndexRoute,
   DashboardVideosIndexRoute: DashboardVideosIndexRoute,
 }
@@ -295,7 +254,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
-  AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

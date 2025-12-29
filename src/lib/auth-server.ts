@@ -87,15 +87,14 @@ export const auth = betterAuth({
 				},
 			},
 		}),
-		// captcha({
-		// 	provider: 'cloudflare-turnstile',
-		// 	secretKey: env.TURNSTILE_SECRET_KEY,
-		// 	endpoints: [
-		// 		'/sign-in/magic-link',
-		// 		'/sign-up/email',
-		// 		'/sign-in/email',
-		// 		'/request-password-reset',
-		// 	],
-		// }),
+		captcha({
+			provider: 'cloudflare-turnstile',
+			secretKey: env.TURNSTILE_SECRET_KEY,
+			endpoints: [
+				'/sign-up/email',
+				'/sign-in/email',
+				'/request-password-reset',
+			],
+		}),
 	],
 });

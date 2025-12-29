@@ -20,8 +20,8 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 }) => {
 	return (
 		<div className="col-span-full">
-			<h3 className="text-lg font-bold">{initialTitle}</h3>
-			<div className="mt-4 grid grid-cols-5 gap-x-4">
+			<h3 className="text-2xl font-bold text-center mb-8">{initialTitle}</h3>
+			<div className="grid grid-cols-5 gap-x-4">
 				<p className="text-muted-foreground text-sm">
 					Duration:{' '}
 					<span className="text-primary bg-secondary rounded-sm px-2 py-1">

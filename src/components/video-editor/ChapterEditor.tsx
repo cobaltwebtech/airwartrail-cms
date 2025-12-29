@@ -53,9 +53,9 @@ const isValidDuration = (duration: string): boolean => {
 	if (parts.length === 3) {
 		const [hours, minutes, seconds] = parts.map(Number);
 		return (
-			!isNaN(hours) &&
-			!isNaN(minutes) &&
-			!isNaN(seconds) &&
+			!Number.isNaN(hours) &&
+			!Number.isNaN(minutes) &&
+			!Number.isNaN(seconds) &&
 			hours >= 0 &&
 			minutes >= 0 &&
 			minutes < 60 &&
@@ -65,8 +65,8 @@ const isValidDuration = (duration: string): boolean => {
 	} else if (parts.length === 2) {
 		const [minutes, seconds] = parts.map(Number);
 		return (
-			!isNaN(minutes) &&
-			!isNaN(seconds) &&
+			!Number.isNaN(minutes) &&
+			!Number.isNaN(seconds) &&
 			minutes >= 0 &&
 			minutes < 60 &&
 			seconds >= 0 &&
@@ -199,8 +199,8 @@ const ChapterEditor: React.FC<ChapterEditorProps> = ({
 					</TableHeader>
 					<TableBody>
 						{chapters.map((chapter, index) => (
-							<TableRow key={index}>
-								<TableCell className="min-w-[200px]">
+							<TableRow key={chapter.title || index}>
+								<TableCell className="min-w-50">
 									<Input
 										value={chapter.title}
 										onChange={(e) =>

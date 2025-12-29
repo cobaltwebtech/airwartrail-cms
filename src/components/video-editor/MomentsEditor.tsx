@@ -1,6 +1,6 @@
 import { CirclePlus, Save, X } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +24,7 @@ import { formatDuration } from '@/lib/video-helpers';
 import TimeInput from './TimeInput';
 
 interface Moment {
+	id: string;
 	title: string;
 	time: string;
 }
@@ -33,6 +34,9 @@ interface MomentsEditorProps {
 	initialMoments: { label: string; timestamp: number }[];
 	videoDuration: number;
 }
+
+// Generate unique IDs for moments
+const generateId = () => crypto.randomUUID();
 
 type MomentField = 'title' | 'time';
 
@@ -52,9 +56,9 @@ const isValidDuration = (duration: string): boolean => {
 	if (parts.length === 3) {
 		const [hours, minutes, seconds] = parts.map(Number);
 		return (
-			!isNaN(hours) &&
-			!isNaN(minutes) &&
-			!isNaN(seconds) &&
+			!Number.isNaN(hours) &&
+			!Number.isNaN(minutes) &&
+			!Number.isNaN(seconds) &&
 			hours >= 0 &&
 			minutes >= 0 &&
 			minutes < 60 &&
@@ -64,8 +68,8 @@ const isValidDuration = (duration: string): boolean => {
 	} else if (parts.length === 2) {
 		const [minutes, seconds] = parts.map(Number);
 		return (
-			!isNaN(minutes) &&
-			!isNaN(seconds) &&
+			!Number.isNaN(minutes) &&
+			!Number.isNaN(seconds) &&
 			minutes >= 0 &&
 			minutes < 60 &&
 			seconds >= 0 &&
@@ -89,12 +93,11 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({
 }) => {
 	const [moments, setMoments] = useState<Moment[]>(
 		initialMoments.map((moment) => ({
+			id: generateId(),
 			title: moment.label,
 			time: formatDuration(moment.timestamp),
 		})),
 	);
-
-	useEffect(() => {}, [initialMoments, moments]);
 
 	const handleInputChange = (
 		index: number,
@@ -124,7 +127,7 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({
 	};
 
 	const addMoment = () => {
-		setMoments([...moments, { title: '', time: '00:00:00' }]);
+		setMoments([...moments, { id: generateId(), title: '', time: '00:00:00' }]);
 	};
 
 	const deleteMoment = (index: number) => {
@@ -176,8 +179,8 @@ const MomentsEditor: React.FC<MomentsEditorProps> = ({
 					</TableHeader>
 					<TableBody>
 						{moments.map((moment, index) => (
-							<TableRow key={index}>
-								<TableCell className="min-w-[120px]">
+							<TableRow key={moment.id}>
+								<TableCell className="min-w-30">
 									<Input
 										value={moment.title}
 										onChange={(e) =>

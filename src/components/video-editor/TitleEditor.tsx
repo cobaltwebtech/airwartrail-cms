@@ -1,5 +1,8 @@
+import { Save } from 'lucide-react';
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -7,10 +10,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { Save } from 'lucide-react';
 
 interface EditTitleProps {
 	videoId: string;
@@ -26,13 +26,9 @@ const EditTitle: React.FC<EditTitleProps> = ({
 	const [title, setTitle] = useState(initialTitle);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [isButtonDisabled, setIsButtonDisabled] = useState(true);
 
-	// Single useEffect to handle both initial state and changes
-	useEffect(() => {
-		// Check if the title is empty or unchanged
-		setIsButtonDisabled(title.trim() === '' || title === initialTitle);
-	}, [title, initialTitle]);
+	// Derived state - calculated directly instead of via useEffect
+	const isButtonDisabled = title.trim() === '' || title === initialTitle;
 
 	const handleTitleChange = async (event: React.FormEvent) => {
 		event.preventDefault();
@@ -54,7 +50,8 @@ const EditTitle: React.FC<EditTitleProps> = ({
 				body: JSON.stringify({ videoId, newTitle: title }),
 			});
 
-			const result = await response.json();
+			const result: { success: boolean; message?: string } =
+				await response.json();
 			if (!result.success) {
 				throw new Error(result.message);
 			}

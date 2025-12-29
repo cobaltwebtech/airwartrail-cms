@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { Button } from '@/components/ui/button';
 import VideoEditor from '@/components/video-editor/VideoEditor';
 import { trpc } from '@/lib/trpc';
 
@@ -43,6 +44,9 @@ function VideoEditorPage() {
 
 	return (
 		<>
+			<Button asChild variant="link">
+				<Link to="/videos">&larr; Back to Videos</Link>
+			</Button>
 			<DashboardHeader heading="Video Editor" />
 			{isLoading ? (
 				<div className="text-muted-foreground">Loading video details...</div>

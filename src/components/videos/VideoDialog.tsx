@@ -11,8 +11,8 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { trpc } from '@/lib/trpc';
+import type { Video } from '@/lib/types';
 import { formatDate } from '@/lib/video-helpers';
-import type { Video } from '@/types';
 
 interface VideoDialogProps {
 	video: Video;

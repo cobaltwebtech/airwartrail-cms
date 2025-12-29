@@ -25,6 +25,18 @@ App.on(["POST", "GET"], "/api/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
 
+App.use("/trpc/*", async (c, next) => {
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
+
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  await next();
+});
+
 App.all("/trpc/*", (c) => {
   return fetchRequestHandler({
     endpoint: "/trpc",

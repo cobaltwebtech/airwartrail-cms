@@ -1,8 +1,8 @@
+import { Trash2, Upload } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -11,16 +11,16 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
 	Table,
-	TableHeader,
 	TableBody,
-	TableRow,
 	TableCell,
 	TableHead,
+	TableHeader,
+	TableRow,
 } from '@/components/ui/table';
-import { Trash2, Upload } from 'lucide-react';
 import DeleteCaption from './CaptionDelete';
 
 interface CaptionUploadProps {
@@ -97,7 +97,7 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({
 
 			console.log('Response status:', response.status);
 
-			let result;
+			let result: { message?: string };
 			try {
 				result = await response.json();
 			} catch (e) {
@@ -233,8 +233,8 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{captions.map((caption, index) => (
-							<TableRow key={index}>
+						{captions.map((caption) => (
+							<TableRow key={caption.srclang}>
 								<TableCell>{caption.label}</TableCell>
 								<TableCell>{caption.srclang}</TableCell>
 								<TableCell className="text-right">

@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+import type { Collection } from '@/lib/types';
 import { convertToGb } from '@/lib/video-helpers';
-import type { Collection } from '@/types';
 import { CollectionDelete } from './CollectionDelete';
 import { CollectionTitle } from './CollectionTitle';
 

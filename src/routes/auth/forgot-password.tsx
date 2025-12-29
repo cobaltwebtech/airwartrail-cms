@@ -1,6 +1,7 @@
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Loader2, Mail } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,8 @@ function ForgotPasswordPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
 	const [error, setError] = useState('');
+	const [turnstileToken, setTurnstileToken] = useState('');
+	const turnstileRef = useRef<TurnstileInstance>(null);
 	const emailInputId = useId();
 	const search = Route.useSearch();
 
@@ -62,6 +65,11 @@ function ForgotPasswordPage() {
 			await requestPasswordReset({
 				email,
 				redirectTo: '/auth/reset-password',
+				fetchOptions: {
+					headers: {
+						'x-captcha-response': turnstileToken,
+					},
+				},
 			});
 			setIsSuccess(true);
 			toast.success('Password reset link sent to your email!');
@@ -73,6 +81,9 @@ function ForgotPasswordPage() {
 					: 'Failed to process password reset request. Please try again.';
 			setError(message);
 			toast.error(message);
+			// Reset turnstile on error
+			turnstileRef.current?.reset();
+			setTurnstileToken('');
 		} finally {
 			setIsLoading(false);
 		}
@@ -164,10 +175,33 @@ function ForgotPasswordPage() {
 							</div>
 						)}
 
+						<Turnstile
+							className="w-full"
+							ref={turnstileRef}
+							siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+							onSuccess={(token: string) => setTurnstileToken(token)}
+							onError={() => {
+								setTurnstileToken('');
+								toast.error('Captcha verification failed. Please try again.');
+							}}
+							onExpire={() => setTurnstileToken('')}
+							options={{
+								appearance: 'interaction-only',
+								theme: 'dark',
+								size: 'flexible',
+							}}
+							style={{
+								display: 'block',
+								width: '100%',
+								minWidth: '300px',
+								height: '65px',
+							}}
+						/>
+
 						<Button
 							type="submit"
 							className="w-full"
-							disabled={isLoading || !email}
+							disabled={isLoading || !email || !turnstileToken}
 						>
 							{isLoading ? (
 								<>

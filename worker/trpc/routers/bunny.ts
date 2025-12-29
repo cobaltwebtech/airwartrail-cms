@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, publicProcedure, protectedProcedure } from "../trpc-init";
+import { t, protectedProcedure } from "../trpc-init";
 
 // ============================================================================
 // Types & Constants
@@ -92,7 +92,7 @@ export const bunnyRouter = t.router({
 	/**
 	 * Get all videos from the Bunny.net Stream library
 	 */
-	getAllVideos: publicProcedure.query(async ({ ctx }): Promise<Video[]> => {
+	getAllVideos: protectedProcedure.query(async ({ ctx }): Promise<Video[]> => {
 		const { env } = ctx;
 		const libraryId = env.VITE_BUNNY_LIBRARY_ID;
 		const apiKey = env.BUNNY_API_KEY;
@@ -159,7 +159,7 @@ export const bunnyRouter = t.router({
 	/**
 	 * Get a single video by ID
 	 */
-	getVideo: publicProcedure
+	getVideo: protectedProcedure
 		.input(z.object({ videoId: z.string() }))
 		.query(async ({ ctx, input }): Promise<Video> => {
 			const { env } = ctx;
@@ -222,7 +222,7 @@ export const bunnyRouter = t.router({
 	/**
 	 * Generate a signed URL token for secure video playback
 	 */
-	getVideoToken: publicProcedure
+	getVideoToken: protectedProcedure
 		.input(z.object({ videoId: z.string() }))
 		.query(async ({ ctx, input }): Promise<{ url: string }> => {
 			const { env } = ctx;
@@ -256,7 +256,7 @@ export const bunnyRouter = t.router({
 	/**
 	 * Get all collections from the Bunny.net Stream library
 	 */
-	getCollections: publicProcedure
+	getCollections: protectedProcedure
 		.input(
 			z
 				.object({

@@ -1,13 +1,13 @@
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { KeyRound, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
@@ -36,6 +36,10 @@ function LoginPage() {
 	const [password, setPassword] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
+	const [turnstileToken, setTurnstileToken] = useState('');
+	const turnstileRef = useRef<TurnstileInstance>(null);
+	const emailInputId = useId();
+	const passwordInputId = useId();
 
 	// Check for error query parameter on load
 	useEffect(() => {
@@ -69,6 +73,11 @@ function LoginPage() {
 				password,
 				callbackURL: '/',
 				rememberMe: true,
+				fetchOptions: {
+					headers: {
+						'x-captcha-response': turnstileToken,
+					},
+				},
 			});
 
 			// Handle successful login
@@ -94,6 +103,9 @@ function LoginPage() {
 					: 'Login failed. Please check your credentials and try again.';
 			setErrorMessage(errorMsg);
 			toast.error(errorMsg);
+			// Reset turnstile on error
+			turnstileRef.current?.reset();
+			setTurnstileToken('');
 		} finally {
 			setIsLoading(false);
 		}
@@ -112,9 +124,9 @@ function LoginPage() {
 					<form onSubmit={handleSubmit} noValidate>
 						<div className="flex flex-col gap-6">
 							<div className="grid gap-3">
-								<Label htmlFor="email">Email</Label>
+								<Label htmlFor={emailInputId}>Email</Label>
 								<Input
-									id="email"
+									id={emailInputId}
 									type="email"
 									placeholder="m@example.com"
 									required
@@ -126,7 +138,7 @@ function LoginPage() {
 							</div>
 							<div className="grid gap-3">
 								<div className="flex items-center">
-									<Label htmlFor="password">Password</Label>
+									<Label htmlFor={passwordInputId}>Password</Label>
 									<Link
 										to="/auth/forgot-password"
 										search={{ redirect: undefined }}
@@ -136,9 +148,7 @@ function LoginPage() {
 									</Link>
 								</div>
 								<Input
-									id="password"
-									type="password"
-									required
+									id={passwordInputId}
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
 									disabled={isLoading}
@@ -150,8 +160,35 @@ function LoginPage() {
 								<div className="text-destructive text-sm">{errorMessage}</div>
 							)}
 
+							<Turnstile
+								className="w-full"
+								ref={turnstileRef}
+								siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+								onSuccess={(token: string) => setTurnstileToken(token)}
+								onError={() => {
+									setTurnstileToken('');
+									toast.error('Captcha verification failed. Please try again.');
+								}}
+								onExpire={() => setTurnstileToken('')}
+								options={{
+									appearance: 'interaction-only',
+									theme: 'dark',
+									size: 'flexible',
+								}}
+								style={{
+									display: 'block',
+									width: '100%',
+									minWidth: '300px',
+									height: '65px',
+								}}
+							/>
+
 							<div className="flex flex-col gap-3">
-								<Button type="submit" className="w-full" disabled={isLoading}>
+								<Button
+									type="submit"
+									className="w-full"
+									disabled={isLoading || !turnstileToken}
+								>
 									{isLoading ? (
 										<>
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -186,7 +223,7 @@ function LoginPage() {
 						</Button>
 					</div>
 				</CardContent>
-				<CardFooter className="flex justify-center">
+				{/* <CardFooter className="flex justify-center">
 					<div className="text-center text-sm">
 						Don&apos;t have an account?{' '}
 						<Link
@@ -197,7 +234,7 @@ function LoginPage() {
 							Sign up
 						</Link>
 					</div>
-				</CardFooter>
+				</CardFooter> */}
 			</Card>
 			<Toaster richColors position="top-right" />
 		</div>

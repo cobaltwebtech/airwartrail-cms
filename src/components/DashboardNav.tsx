@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { Files, Film, FolderOpen, LogOut, Pencil } from 'lucide-react';
+import { Film, FolderOpen, LogOut, Pencil } from 'lucide-react';
 import { signOut, useSession } from '@/lib/auth-client';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './ui/button';
@@ -12,7 +12,6 @@ export function DashboardNav() {
 	const navItems = [
 		{ title: 'Videos', href: '/videos', icon: Film },
 		{ title: 'Collections', href: '/collections', icon: FolderOpen },
-		{ title: 'Other Content', href: '/assets', icon: Files },
 	] as const;
 
 	return (
@@ -71,7 +70,7 @@ export function DashboardNav() {
 						variant="secondary"
 						onClick={async () => {
 							await signOut();
-							window.location.href = '/login';
+							window.location.href = '/auth/login';
 						}}
 						className="w-full justify-start"
 					>

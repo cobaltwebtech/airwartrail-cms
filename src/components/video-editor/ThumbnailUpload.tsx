@@ -1,8 +1,8 @@
+import { Upload } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -11,8 +11,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload } from 'lucide-react';
 
 interface ThumbnailUploadProps {
 	videoId: string;
@@ -31,7 +31,9 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
 			// Create a preview URL
 			const fileReader = new FileReader();
 			fileReader.onload = (e) => {
-				setPreview(e.target?.result as string);
+				if (typeof e.target?.result === 'string') {
+					setPreview(e.target.result);
+				}
 			};
 			fileReader.readAsDataURL(selectedFile);
 		}
@@ -57,7 +59,7 @@ const ThumbnailUpload: React.FC<ThumbnailUploadProps> = ({ videoId }) => {
 
 			console.log('Response status:', response.status);
 
-			let result;
+			let result: { message?: string };
 			try {
 				result = await response.json();
 			} catch (e) {

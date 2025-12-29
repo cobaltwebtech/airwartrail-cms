@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Files, FolderOpenDot, TvMinimalPlay } from 'lucide-react';
+import { FolderOpenDot, TvMinimalPlay } from 'lucide-react';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import {
 	Card,
@@ -50,20 +50,6 @@ function IndexPage() {
 							<CardContent>
 								<CardDescription>
 									View and manage all collections in the video library.
-								</CardDescription>
-							</CardContent>
-						</Card>
-					</Link>
-					<Link to="/assets">
-						<Card className="hover:bg-secondary col-span-1 h-full text-center transition-colors">
-							<CardHeader>
-								<Files className="mx-auto size-12" />
-								<CardTitle>Other Content</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<CardDescription>
-									View and manage other content such as images, zip archives,
-									large files, etc.
 								</CardDescription>
 							</CardContent>
 						</Card>
