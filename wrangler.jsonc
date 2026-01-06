@@ -9,7 +9,7 @@
 	"observability": {
 		"enabled": true
 	},
-  "upload_source_maps": true,
+	"upload_source_maps": true,
 	"workers_dev": false,
 	"assets": {
 		"run_worker_first": [
@@ -17,19 +17,23 @@
 			"/api/*"
 		], // These routes hit the Worker
 		"directory": "./dist/", // Static assets directory
-    "not_found_handling": "single-page-application",
+		"not_found_handling": "single-page-application",
 	},
 	"d1_databases": [
 		{
-			"binding": "AUTH_DB",
+			"binding": "DB_AUTH",
 			"database_name": "airwartrail-dashboard-auth",
 			"database_id": "d68f0948-2a35-4274-8eb7-0c7937669688",
-			"migrations_dir": "./drizzle"
+			"migrations_dir": "./drizzle/auth"
+		},
+		{
+			"binding": "DB_VIDEOS",
+			"database_name": "airwartrail-dashboard-videos",
+			"database_id": "b6202639-c65c-49f0-8190-93c17545a670",
+			"migrations_dir": "./drizzle/videos"
 		}
 	],
 	"vars": {
-		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com",
-		"VITE_BUNNY_LIBRARY_ID": "416789",
-		"VITE_BUNNY_STREAM_CDN": "vz-91a12c63-3f2.b-cdn.net"
+		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com"
 	}
 }

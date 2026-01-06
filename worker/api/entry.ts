@@ -4,6 +4,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@/worker/trpc/router";
 import { createContext } from "@/worker/trpc/context";
 import { auth } from "@/lib/auth-server";
+import { muxWebhookRouter } from "@/worker/api/webhooks/mux";
 
 export const App = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,9 @@ App.use(
 App.on(["POST", "GET"], "/api/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
+
+// Mux webhook handler (no auth required - uses signature verification)
+App.route("/api/webhooks/mux", muxWebhookRouter);
 
 App.use("/trpc/*", async (c, next) => {
   const session = await auth.api.getSession({

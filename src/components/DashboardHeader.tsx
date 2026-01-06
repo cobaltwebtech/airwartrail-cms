@@ -23,7 +23,8 @@ export function DashboardHeader({
 				<h1 className="font-heading text-3xl md:text-4xl">{heading}</h1>
 				{text && <p className="text-foreground text-lg font-bold">{text}</p>}
 			</div>
-			<div>
+			<div className="flex items-center gap-4">
+				{children}
 				{session?.user && (
 					<Button asChild>
 						<Link to="/user/$userId" params={{ userId: session.user.id }}>
@@ -32,7 +33,6 @@ export function DashboardHeader({
 					</Button>
 				)}
 			</div>
-			{children}
 		</header>
 	);
 }

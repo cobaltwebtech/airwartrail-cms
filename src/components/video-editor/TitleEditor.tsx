@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
@@ -11,24 +12,50 @@ import {
 	CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { trpc } from '@/lib/trpc';
 
 interface EditTitleProps {
 	videoId: string;
+	libraryId?: string;
 	initialTitle: string;
 	onTitleUpdate: (newTitle: string) => void; // Callback to update the parent state
 }
 
 const EditTitle: React.FC<EditTitleProps> = ({
 	videoId,
+	libraryId,
 	initialTitle,
 	onTitleUpdate,
 }) => {
+	const queryClient = useQueryClient();
 	const [title, setTitle] = useState(initialTitle);
-	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// Derived state - calculated directly instead of via useEffect
 	const isButtonDisabled = title.trim() === '' || title === initialTitle;
+
+	const updateTitleMutation = useMutation(
+		trpc.mux.updateAsset.mutationOptions({
+			onSuccess: () => {
+				setError(null);
+				toast.success('Title updated successfully!', {
+					description: 'The video title has been updated.',
+				});
+				onTitleUpdate(title);
+				queryClient.invalidateQueries({
+					queryKey: [['mux', 'getAsset']],
+				});
+			},
+			onError: (err) => {
+				const errorMessage =
+					err instanceof Error ? err.message : 'Unknown error';
+				setError(errorMessage);
+				toast.error('Failed to update title!', {
+					description: errorMessage,
+				});
+			},
+		}),
+	);
 
 	const handleTitleChange = async (event: React.FormEvent) => {
 		event.preventDefault();
@@ -39,35 +66,11 @@ const EditTitle: React.FC<EditTitleProps> = ({
 			return;
 		}
 
-		setLoading(true);
-		setError(null);
-		try {
-			const response = await fetch(`/api/videos/${videoId}/titleUpdate`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ videoId, newTitle: title }),
-			});
-
-			const result: { success: boolean; message?: string } =
-				await response.json();
-			if (!result.success) {
-				throw new Error(result.message);
-			}
-
-			setLoading(false);
-			toast.success('Title updated successfully!', {
-				description: 'The video title has been updated.',
-			});
-			onTitleUpdate(title); // Update the parent state with the new title
-		} catch (err) {
-			setError((err as Error).message);
-			setLoading(false);
-			toast.error('Failed to update title!', {
-				description: (err as Error).message,
-			});
-		}
+		updateTitleMutation.mutate({
+			assetId: videoId,
+			libraryId,
+			title,
+		});
 	};
 
 	return (
@@ -95,11 +98,11 @@ const EditTitle: React.FC<EditTitleProps> = ({
 					/>
 					<Button
 						type="submit"
-						disabled={loading || isButtonDisabled}
+						disabled={updateTitleMutation.isPending || isButtonDisabled}
 						className="mt-2"
 					>
 						<Save className="size-4" />
-						{loading ? 'Saving...' : 'Save Title'}
+						{updateTitleMutation.isPending ? 'Saving...' : 'Save Title'}
 					</Button>
 					{error && <p className="text-destructive mt-2 text-sm">{error}</p>}
 				</form>

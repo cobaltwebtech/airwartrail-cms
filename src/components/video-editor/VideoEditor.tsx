@@ -2,7 +2,6 @@ import type React from 'react';
 import { useState } from 'react';
 import ChapterEditor from '@/components/video-editor/ChapterEditor';
 import CopyUrl from '@/components/video-editor/CopyUrl';
-import ThumbnailUpload from '@/components/video-editor/ThumbnailUpload';
 import TitleEditor from '@/components/video-editor/TitleEditor';
 import VideoInfo from '@/components/video-editor/VideoInfo';
 import VideoPlayer from '@/components/video-editor/VideoPlayer';
@@ -12,6 +11,7 @@ import MomentsEditor from './MomentsEditor';
 
 interface VideoEditorProps {
 	videoId: string;
+	libraryId?: string;
 	video: {
 		title: string;
 		duration: number;
@@ -30,6 +30,7 @@ interface VideoEditorProps {
 const VideoEditor: React.FC<VideoEditorProps> = ({
 	video,
 	videoId,
+	libraryId,
 	collections,
 }) => {
 	const [title, setTitle] = useState(video?.title || '');
@@ -74,19 +75,23 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
 				collections={collections}
 				videoId={videoId}
 			/>
-			<VideoPlayer videoId={videoId} />
+			<VideoPlayer videoId={videoId} libraryId={libraryId} />
 			<TitleEditor
 				videoId={videoId}
+				libraryId={libraryId}
 				initialTitle={title}
 				onTitleUpdate={handleTitleUpdate}
 			/>
-			<ThumbnailUpload videoId={videoId} />
 			<MomentsEditor
 				videoId={videoId}
 				initialMoments={moments}
 				videoDuration={duration}
 			/>
-			<CaptionUpload videoId={videoId} initialCaptions={captions} />
+			<CaptionUpload
+				videoId={videoId}
+				libraryId={libraryId}
+				initialCaptions={captions}
+			/>
 			<ChapterEditor
 				videoId={videoId}
 				initialChapters={chapters}

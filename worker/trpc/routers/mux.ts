@@ -1,0 +1,1467 @@
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { t, protectedProcedure } from "../trpc-init";
+import Mux from "@mux/mux-node";
+import { drizzle } from "drizzle-orm/d1";
+import { eq, and, inArray } from "drizzle-orm";
+import { generateLibraryId, generateVideoId } from "@/worker/lib/generate-id";
+import {
+	muxLibrary,
+	video,
+	type MuxLibrary,
+} from "@/db/video-schema";
+import { encrypt, decrypt } from "@/worker/lib/encryption";
+
+// ============================================================================
+// Language Code Mapping
+// ============================================================================
+
+const LANGUAGE_NAMES: Record<string, string> = {
+	en: 'English',
+	es: 'Spanish',
+	it: 'Italian',
+	pt: 'Portuguese',
+	de: 'German',
+	fr: 'French',
+	pl: 'Polish',
+	ru: 'Russian',
+	nl: 'Dutch',
+	ca: 'Catalan',
+	tr: 'Turkish',
+	sv: 'Swedish',
+	uk: 'Ukrainian',
+	no: 'Norwegian',
+	fi: 'Finnish',
+	sk: 'Slovak',
+	el: 'Greek',
+	cs: 'Czech',
+	hr: 'Croatian',
+	da: 'Danish',
+	ro: 'Romanian',
+	bg: 'Bulgarian',
+};
+
+function getLanguageName(code: string): string {
+	return LANGUAGE_NAMES[code] || code.toUpperCase();
+}
+
+// ============================================================================
+// Encryption
+// ============================================================================
+
+/**
+ * Get the encryption secret from environment
+ */
+function getEncryptionSecret(env: Env): string {
+	const secret = env.DB_VIDEOS_SECRET;
+	if (!secret) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Encryption secret not configured",
+		});
+	}
+	return secret;
+}
+
+/**
+ * Encrypt sensitive library fields before storage
+ */
+async function encryptLibraryCredentials<
+	T extends {
+		tokenId?: string;
+		tokenSecret?: string;
+		signingKeyId?: string | null;
+		signingKeyPrivate?: string | null;
+		webhookSecret?: string | null;
+	},
+>(data: T, env: Env): Promise<T> {
+	const secret = getEncryptionSecret(env);
+	const result = { ...data };
+
+	if (data.tokenId) {
+		(result as { tokenId: string }).tokenId = await encrypt(data.tokenId, secret);
+	}
+	if (data.tokenSecret) {
+		(result as { tokenSecret: string }).tokenSecret = await encrypt(data.tokenSecret, secret);
+	}
+	if (data.signingKeyId) {
+		(result as { signingKeyId: string }).signingKeyId = await encrypt(data.signingKeyId, secret);
+	}
+	if (data.signingKeyPrivate) {
+		(result as { signingKeyPrivate: string }).signingKeyPrivate = await encrypt(data.signingKeyPrivate, secret);
+	}
+	if (data.webhookSecret) {
+		(result as { webhookSecret: string }).webhookSecret = await encrypt(data.webhookSecret, secret);
+	}
+
+	return result;
+}
+
+/**
+ * Decrypt sensitive library fields after retrieval
+ */
+async function decryptLibraryCredentials(
+	library: MuxLibrary,
+	env: Env,
+): Promise<MuxLibrary> {
+	const secret = getEncryptionSecret(env);
+
+	try {
+		return {
+			...library,
+			tokenId: library.tokenId ? await decrypt(library.tokenId, secret) : library.tokenId,
+			tokenSecret: library.tokenSecret ? await decrypt(library.tokenSecret, secret) : library.tokenSecret,
+			signingKeyId: library.signingKeyId ? await decrypt(library.signingKeyId, secret) : library.signingKeyId,
+			signingKeyPrivate: library.signingKeyPrivate ? await decrypt(library.signingKeyPrivate, secret) : library.signingKeyPrivate,
+			webhookSecret: library.webhookSecret ? await decrypt(library.webhookSecret, secret) : library.webhookSecret,
+		};
+	} catch (error) {
+		// If decryption fails, credentials might be stored in plain text (legacy/migration)
+		console.warn("Failed to decrypt library credentials, using raw values:", error);
+		return library;
+	}
+}
+
+// ============================================================================
+// Types & Constants
+// ============================================================================
+
+type MuxAssetState = "preparing" | "ready" | "errored";
+
+export interface MuxAsset {
+	id: string;
+	playbackId: string;
+	status: MuxAssetState;
+	title: string;
+	thumbnail?: string;
+	duration: number;
+	createdAt: string;
+	updatedAt?: string;
+	captions?: MuxTrack[];
+	metadata?: Record<string, unknown>;
+	policy?: "public" | "signed";
+}
+
+export interface MuxTrack {
+	id: string;
+	type: "text" | "audio" | "video";
+	textType?: "captions" | "subtitles";
+	language?: string;
+	languageCode?: string;
+	name?: string;
+	closed_captions?: boolean;
+}
+
+export interface DirectUpload {
+	id: string;
+	url: string;
+	status: "waiting" | "asset_created" | "errored" | "cancelled" | "timed_out";
+	timeout: number;
+	assetId?: string;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Get the database instance for videos
+ */
+function getVideosDb(env: Env) {
+	return drizzle(env.DB_VIDEOS);
+}
+
+/**
+ * Get a Mux library by ID or the default library
+ * Automatically decrypts sensitive credentials
+ */
+async function getMuxLibrary(
+	env: Env,
+	libraryId?: string,
+): Promise<MuxLibrary> {
+	const db = getVideosDb(env);
+
+	let library: MuxLibrary | undefined;
+
+	if (libraryId) {
+		// Get specific library by ID
+		const result = await db
+			.select()
+			.from(muxLibrary)
+			.where(and(eq(muxLibrary.id, libraryId), eq(muxLibrary.isActive, true)))
+			.limit(1);
+		library = result[0];
+	} else {
+		// Get the default library
+		const result = await db
+			.select()
+			.from(muxLibrary)
+			.where(and(eq(muxLibrary.isDefault, true), eq(muxLibrary.isActive, true)))
+			.limit(1);
+		library = result[0];
+
+		// If no default, get the first active library
+		if (!library) {
+			const fallback = await db
+				.select()
+				.from(muxLibrary)
+				.where(eq(muxLibrary.isActive, true))
+				.limit(1);
+			library = fallback[0];
+		}
+	}
+
+	if (!library) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: libraryId
+				? `Mux library with ID ${libraryId} not found`
+				: "No Mux library configured. Please set up a Mux library first.",
+		});
+	}
+
+	// Decrypt sensitive credentials before returning
+	return decryptLibraryCredentials(library, env);
+}
+
+/**
+ * Create a Mux client using library credentials from the database
+ */
+async function getMuxClient(env: Env, libraryId?: string): Promise<{ mux: Mux; library: MuxLibrary }> {
+	const library = await getMuxLibrary(env, libraryId);
+
+	if (!library.tokenId || !library.tokenSecret) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Mux credentials not configured for this library",
+		});
+	}
+
+	const mux = new Mux({
+		tokenId: library.tokenId,
+		tokenSecret: library.tokenSecret,
+	});
+
+	return { mux, library };
+}
+
+async function generateSignedTokens(
+	playbackId: string,
+	library: MuxLibrary,
+	expiresIn: number = 3600,
+): Promise<{ playback: string; thumbnail: string; storyboard: string }> {
+	const signingKeyId = library.signingKeyId;
+	const signingKeySecret = library.signingKeyPrivate;
+
+	if (!signingKeyId || !signingKeySecret) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Mux signing key ID or secret not configured for this library",
+		});
+	}
+
+	// Create a Mux client with JWT signing keys configured
+	const muxClient = new Mux({
+		tokenId: library.tokenId,
+		tokenSecret: library.tokenSecret,
+		jwtSigningKey: signingKeyId,
+		jwtPrivateKey: signingKeySecret,
+	});
+
+	// Generate tokens for each type using Mux's JWT helpers
+	const playbackToken = await muxClient.jwt.signPlaybackId(playbackId, {
+		expiration: `${expiresIn}s`,
+		type: "video",
+	});
+
+	const thumbnailToken = await muxClient.jwt.signPlaybackId(playbackId, {
+		expiration: `${expiresIn}s`,
+		type: "thumbnail",
+	});
+
+	const storyboardToken = await muxClient.jwt.signPlaybackId(playbackId, {
+		expiration: `${expiresIn}s`,
+		type: "storyboard",
+	});
+
+	return {
+		playback: playbackToken as string,
+		thumbnail: thumbnailToken as string,
+		storyboard: storyboardToken as string,
+	};
+}
+
+function mapMuxAssetToVideo(asset: any): MuxAsset {
+	// Get the first public playback ID or create one
+	const playbackId = asset.playback_ids?.[0]?.id || "";
+	const policy = asset.playback_ids?.[0]?.policy || "public";
+
+	// Extract thumbnail URL
+	let thumbnail: string | undefined;
+	if (asset.master?.url) {
+		// Use Mux's default thumbnail URL pattern
+		thumbnail = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+	}
+
+	// Map tracks to MuxTrack interface
+	const captions: MuxTrack[] = (asset.tracks || [])
+		.filter((track: any) => track.type === "text")
+		.map((track: any) => ({
+			id: track.id,
+			type: track.type,
+			textType: track.text_type,
+			language: track.language_code,
+			languageCode: track.language_code,
+			name: track.name,
+			closed_captions: track.closed_captions,
+		}));
+
+	return {
+		id: asset.id,
+		playbackId,
+		status: asset.status,
+		title: asset.meta?.title || "Untitled",
+		thumbnail,
+		duration: asset.duration || 0,
+		createdAt: new Date(asset.created_at * 1000).toISOString(),
+		updatedAt: asset.updated_at
+			? new Date(asset.updated_at * 1000).toISOString()
+			: undefined,
+		captions: captions.length > 0 ? captions : undefined,
+		metadata: asset.meta,
+		policy: policy as "public" | "signed",
+	};
+}
+
+// ============================================================================
+// Router
+// ============================================================================
+
+export const muxRouter = t.router({
+	/**
+	 * List all available Mux libraries
+	 */
+	listLibraries: protectedProcedure.query(async ({ ctx }) => {
+		const { env } = ctx;
+		const db = getVideosDb(env);
+
+		try {
+			const libraries = await db
+				.select({
+					id: muxLibrary.id,
+					name: muxLibrary.name,
+					description: muxLibrary.description,
+					defaultPlaybackPolicy: muxLibrary.defaultPlaybackPolicy,
+					defaultVideoQuality: muxLibrary.defaultVideoQuality,
+					isDefault: muxLibrary.isDefault,
+					isActive: muxLibrary.isActive,
+					createdAt: muxLibrary.createdAt,
+					updatedAt: muxLibrary.updatedAt,
+				})
+				.from(muxLibrary)
+				.where(eq(muxLibrary.isActive, true));
+
+			return libraries;
+		} catch (error) {
+			if (error instanceof TRPCError) throw error;
+			console.error("Error listing Mux libraries:", error);
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to list Mux libraries",
+			});
+		}
+	}),
+
+	/**
+	 * Get a specific Mux library by ID
+	 */
+	getLibrary: protectedProcedure
+		.input(z.object({ libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+
+			try {
+				const library = await getMuxLibrary(env, input.libraryId);
+				// Return library with IDs (not secrets) for display
+				return {
+					id: library.id,
+					name: library.name,
+					description: library.description,
+					muxEnvironmentId: library.muxEnvironmentId,
+					tokenId: library.tokenId, // ID only, not the secret
+					signingKeyId: library.signingKeyId, // ID only, not the private key
+					webhookSecret: library.webhookSecret, // Displayed hidden, user can reveal
+					defaultPlaybackPolicy: library.defaultPlaybackPolicy,
+					defaultVideoQuality: library.defaultVideoQuality,
+					isDefault: library.isDefault,
+					isActive: library.isActive,
+					hasSigningKey: !!(library.signingKeyId && library.signingKeyPrivate),
+					createdAt: library.createdAt,
+					updatedAt: library.updatedAt,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting Mux library:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get Mux library",
+				});
+			}
+		}),
+
+	/**
+	 * Create a new Mux library
+	 */
+	createLibrary: protectedProcedure
+		.input(
+			z.object({
+				name: z.string().min(1).max(100),
+				description: z.string().max(500).optional(),
+				muxEnvironmentId: z.string().optional(),
+				tokenId: z.string().min(1),
+				tokenSecret: z.string().min(1),
+				signingKeyId: z.string().optional(),
+				signingKeyPrivate: z.string().optional(),
+				webhookSecret: z.string().optional(),
+				defaultPlaybackPolicy: z
+					.enum(["public", "signed", "drm"])
+					.default("public"),
+				defaultVideoQuality: z
+					.enum(["basic", "plus", "premium"])
+					.default("plus"),
+				isDefault: z.boolean().default(false),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const id = generateLibraryId();
+
+				// If this is set as default, unset any existing default
+				if (input.isDefault) {
+					await db
+						.update(muxLibrary)
+						.set({ isDefault: false })
+						.where(eq(muxLibrary.isDefault, true));
+				}
+
+				// Encrypt sensitive credentials before storing
+				const encryptedCredentials = await encryptLibraryCredentials(
+					{
+						tokenId: input.tokenId,
+						tokenSecret: input.tokenSecret,
+						signingKeyId: input.signingKeyId,
+						signingKeyPrivate: input.signingKeyPrivate,
+						webhookSecret: input.webhookSecret,
+					},
+					env,
+				);
+
+				const [newLibrary] = await db
+					.insert(muxLibrary)
+					.values({
+						id,
+						name: input.name,
+						description: input.description,
+						muxEnvironmentId: input.muxEnvironmentId,
+						tokenId: encryptedCredentials.tokenId,
+						tokenSecret: encryptedCredentials.tokenSecret,
+						signingKeyId: encryptedCredentials.signingKeyId,
+						signingKeyPrivate: encryptedCredentials.signingKeyPrivate,
+						webhookSecret: encryptedCredentials.webhookSecret,
+						defaultPlaybackPolicy: input.defaultPlaybackPolicy,
+						defaultVideoQuality: input.defaultVideoQuality,
+						isDefault: input.isDefault,
+						isActive: true,
+					})
+					.returning({
+						id: muxLibrary.id,
+						name: muxLibrary.name,
+						description: muxLibrary.description,
+						defaultPlaybackPolicy: muxLibrary.defaultPlaybackPolicy,
+						defaultVideoQuality: muxLibrary.defaultVideoQuality,
+						isDefault: muxLibrary.isDefault,
+						isActive: muxLibrary.isActive,
+						createdAt: muxLibrary.createdAt,
+						updatedAt: muxLibrary.updatedAt,
+					});
+
+				return newLibrary;
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error creating Mux library:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create Mux library",
+				});
+			}
+		}),
+
+	/**
+	 * Update a Mux library
+	 */
+	updateLibrary: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				name: z.string().min(1).max(100).optional(),
+				description: z.string().max(500).optional().nullable(),
+				muxEnvironmentId: z.string().optional().nullable(),
+				tokenId: z.string().min(1).optional(),
+				tokenSecret: z.string().min(1).optional(),
+				signingKeyId: z.string().optional().nullable(),
+				signingKeyPrivate: z.string().optional().nullable(),
+				webhookSecret: z.string().optional().nullable(),
+				defaultPlaybackPolicy: z
+					.enum(["public", "signed", "drm"])
+					.optional(),
+				defaultVideoQuality: z
+					.enum(["basic", "plus", "premium"])
+					.optional(),
+				isDefault: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				// Check if library exists
+				const existing = await db
+					.select()
+					.from(muxLibrary)
+					.where(eq(muxLibrary.id, input.libraryId))
+					.limit(1);
+
+				if (!existing[0]) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: `Library with ID ${input.libraryId} not found`,
+					});
+				}
+
+				// If this is set as default, unset any existing default
+				if (input.isDefault) {
+					await db
+						.update(muxLibrary)
+						.set({ isDefault: false })
+						.where(eq(muxLibrary.isDefault, true));
+				}
+
+				// Encrypt any credential fields being updated
+				const encryptedCredentials = await encryptLibraryCredentials(
+					{
+						tokenId: input.tokenId,
+						tokenSecret: input.tokenSecret,
+						signingKeyId: input.signingKeyId,
+						signingKeyPrivate: input.signingKeyPrivate,
+						webhookSecret: input.webhookSecret,
+					},
+					env,
+				);
+
+				// Build update object with only provided fields
+				const updateData: Partial<typeof muxLibrary.$inferInsert> = {};
+				if (input.name !== undefined) updateData.name = input.name;
+				if (input.description !== undefined)
+					updateData.description = input.description;
+				if (input.muxEnvironmentId !== undefined)
+					updateData.muxEnvironmentId = input.muxEnvironmentId;
+				if (input.tokenId !== undefined)
+					updateData.tokenId = encryptedCredentials.tokenId;
+				if (input.tokenSecret !== undefined)
+					updateData.tokenSecret = encryptedCredentials.tokenSecret;
+				if (input.signingKeyId !== undefined)
+					updateData.signingKeyId = encryptedCredentials.signingKeyId;
+				if (input.signingKeyPrivate !== undefined)
+					updateData.signingKeyPrivate = encryptedCredentials.signingKeyPrivate;
+				if (input.webhookSecret !== undefined)
+					updateData.webhookSecret = encryptedCredentials.webhookSecret;
+				if (input.defaultPlaybackPolicy !== undefined)
+					updateData.defaultPlaybackPolicy = input.defaultPlaybackPolicy;
+				if (input.defaultVideoQuality !== undefined)
+					updateData.defaultVideoQuality = input.defaultVideoQuality;
+				if (input.isDefault !== undefined)
+					updateData.isDefault = input.isDefault;
+
+				const [updatedLibrary] = await db
+					.update(muxLibrary)
+					.set(updateData)
+					.where(eq(muxLibrary.id, input.libraryId))
+					.returning({
+						id: muxLibrary.id,
+						name: muxLibrary.name,
+						description: muxLibrary.description,
+						defaultPlaybackPolicy: muxLibrary.defaultPlaybackPolicy,
+						defaultVideoQuality: muxLibrary.defaultVideoQuality,
+						isDefault: muxLibrary.isDefault,
+						isActive: muxLibrary.isActive,
+						createdAt: muxLibrary.createdAt,
+						updatedAt: muxLibrary.updatedAt,
+					});
+
+				return updatedLibrary;
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating Mux library:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update Mux library",
+				});
+			}
+		}),
+
+	/**
+	 * Delete a Mux library
+	 */
+	deleteLibrary: protectedProcedure
+		.input(z.object({ libraryId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				// Check if library exists
+				const existing = await db
+					.select()
+					.from(muxLibrary)
+					.where(eq(muxLibrary.id, input.libraryId))
+					.limit(1);
+
+				if (!existing[0]) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: `Library with ID ${input.libraryId} not found`,
+					});
+				}
+
+				// Delete the library from the database
+				await db
+					.delete(muxLibrary)
+					.where(eq(muxLibrary.id, input.libraryId));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error deleting Mux library:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete Mux library",
+				});
+			}
+		}),
+
+	/**
+	 * Test Mux library credentials
+	 */
+	testLibraryCredentials: protectedProcedure
+		.input(
+			z.object({
+				tokenId: z.string().min(1),
+				tokenSecret: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			try {
+				const mux = new Mux({
+					tokenId: input.tokenId,
+					tokenSecret: input.tokenSecret,
+				});
+
+				// Try to list assets to verify credentials work
+				await mux.video.assets.list({ limit: 1 });
+
+				return { success: true, message: "Credentials are valid" };
+			} catch (error) {
+				console.error("Error testing Mux credentials:", error);
+				return {
+					success: false,
+					message: "Invalid credentials or unable to connect to Mux",
+				};
+			}
+		}),
+
+	/**
+	 * Get all assets from Mux
+	 */
+	listAssets: protectedProcedure
+		.input(
+			z
+				.object({
+					libraryId: z.string().optional(),
+					limit: z.number().min(1).max(100).default(25),
+					page: z.number().min(1).default(1),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }): Promise<MuxAsset[]> => {
+			const { env } = ctx;
+			const libraryId = input?.libraryId;
+			const limit = input?.limit ?? 25;
+			const page = input?.page ?? 1;
+
+			try {
+				const { mux } = await getMuxClient(env, libraryId);
+				const assets = await mux.video.assets.list({
+					limit,
+					page,
+				});
+
+				return (assets.data || []).map(mapMuxAssetToVideo);
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error listing Mux assets:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to list assets from Mux",
+				});
+			}
+		}),
+
+	/**
+	 * Get a single asset by ID
+	 */
+	getAsset: protectedProcedure
+		.input(z.object({ assetId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }): Promise<MuxAsset> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				const asset = await mux.video.assets.retrieve(input.assetId);
+
+				return mapMuxAssetToVideo(asset);
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error fetching Mux asset:", error);
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: `Asset ${input.assetId} not found`,
+				});
+			}
+		}),
+
+	/**
+	 * Update an asset (title, metadata)
+	 */
+	updateAsset: protectedProcedure
+		.input(
+			z.object({
+				assetId: z.string(),
+				libraryId: z.string().optional(),
+				title: z.string().optional(),
+				metadata: z.record(z.string(), z.unknown()).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<MuxAsset> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				const asset = await mux.video.assets.update(input.assetId, {
+					meta: input.metadata,
+					passthrough: input.title,
+				});
+
+				return mapMuxAssetToVideo(asset);
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating Mux asset:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update asset",
+				});
+			}
+		}),
+
+	/**
+	 * Check if a video is synced to the local database
+	 */
+	getVideoSyncStatus: protectedProcedure
+		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }): Promise<{ isSynced: boolean; videoId?: string }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { library } = await getMuxClient(env, input.libraryId);
+
+				const existingVideo = await db
+					.select({ id: video.id })
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.muxAssetId, input.muxAssetId),
+						),
+					)
+					.limit(1);
+
+				return {
+					isSynced: existingVideo.length > 0,
+					videoId: existingVideo[0]?.id,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error checking video sync status:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to check video sync status",
+				});
+			}
+		}),
+
+	/**
+	 * Sync a single asset from Mux to the local database
+	 */
+	syncSingleAsset: protectedProcedure
+		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean; videoId: string }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { mux, library } = await getMuxClient(env, input.libraryId);
+
+				// Check if already synced
+				const existingVideo = await db
+					.select({ id: video.id, externalId: video.externalId })
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.muxAssetId, input.muxAssetId),
+						),
+					)
+					.limit(1);
+
+				if (existingVideo.length > 0) {
+					const existingId = existingVideo[0].id;
+					
+					// Even if already synced locally, ensure Mux has our external_id
+					try {
+						await mux.video.assets.update(input.muxAssetId, {
+							meta: {
+								external_id: existingId,
+							},
+						});
+					} catch (updateError) {
+						console.warn("Failed to update Mux asset with external ID:", updateError);
+					}
+					
+					// Also update our database if externalId isn't set
+					if (!existingVideo[0].externalId) {
+						await db
+							.update(video)
+							.set({ externalId: existingId })
+							.where(eq(video.id, existingId));
+					}
+					
+					return { success: true, videoId: existingId };
+				}
+
+				// Fetch the asset from Mux
+				const asset = await mux.video.assets.retrieve(input.muxAssetId);
+
+				const playbackId = asset.playback_ids?.[0]?.id || null;
+				const playbackPolicy =
+					(asset.playback_ids?.[0]?.policy as "public" | "signed" | "drm") ||
+					library.defaultPlaybackPolicy;
+
+				const newVideoId = generateVideoId();
+
+				// Store the title, preserving existing title if any
+				const title = asset.meta?.title || asset.passthrough || "Untitled";
+
+				await db.insert(video).values({
+					id: newVideoId,
+					libraryId: library.id,
+					muxAssetId: asset.id,
+					muxPlaybackId: playbackId,
+					status: asset.status as "preparing" | "ready" | "errored",
+					title,
+					duration: asset.duration || null,
+					aspectRatio: asset.aspect_ratio || null,
+					maxWidth:
+						asset.max_stored_resolution === "Audio only"
+							? null
+							: parseInt(asset.max_stored_resolution?.split("x")?.[0] || "0") || null,
+					maxHeight:
+						asset.max_stored_resolution === "Audio only"
+							? null
+							: parseInt(asset.max_stored_resolution?.split("x")?.[1] || "0") || null,
+					maxFrameRate: asset.max_stored_frame_rate || null,
+					resolutionTier: asset.resolution_tier as
+						| "audio-only"
+						| "720p"
+						| "1080p"
+						| "1440p"
+						| "2160p"
+						| null,
+					videoQuality:
+						(asset.video_quality as "basic" | "plus" | "premium") ||
+						library.defaultVideoQuality,
+					playbackPolicy,
+					passthrough: newVideoId, // Store our internal ID as passthrough
+					externalId: newVideoId, // Also store in externalId field
+					ingestType: asset.ingest_type as
+						| "on_demand_url"
+						| "on_demand_direct_upload"
+						| "on_demand_clip"
+						| "live_rtmp"
+						| "live_srt"
+						| null,
+					isTest: asset.test || false,
+					createdAt: asset.created_at ? new Date(Number(asset.created_at) * 1000) : new Date(),
+					updatedAt: new Date(),
+				});
+
+				// Update Mux asset with our internal video ID in meta.external_id
+				// This creates a two-way link between our database and Mux
+				try {
+					await mux.video.assets.update(input.muxAssetId, {
+						meta: {
+							external_id: newVideoId,
+						},
+					});
+				} catch (updateError) {
+					// Log but don't fail - the local sync succeeded
+					console.warn("Failed to update Mux asset with external ID:", updateError);
+				}
+
+				return { success: true, videoId: newVideoId };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error syncing single asset:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to sync asset to database",
+				});
+			}
+		}),
+
+	/**
+	 * Delete an asset
+	 */
+	deleteAsset: protectedProcedure
+		.input(z.object({ assetId: z.string(), libraryId: z.string().optional() }))
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				await mux.video.assets.delete(input.assetId);
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error deleting Mux asset:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete asset",
+				});
+			}
+		}),
+
+	/**
+	 * Create a direct upload URL for resumable uploads
+	 */
+	createDirectUpload: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string().optional(),
+				corsOrigin: z.string(),
+				timeout: z.number().min(60).max(604800).default(3600),
+				title: z.string().optional(),
+				metadata: z.record(z.string(), z.unknown()).optional(),
+				// Optional video quality override (defaults to library setting)
+				videoQuality: z.enum(['basic', 'plus', 'premium']).optional(),
+				// Optional playback policy override (defaults to library setting)
+				playbackPolicy: z.enum(['public', 'signed']).optional(),
+				// Optional auto-generated captions
+				autoCaptions: z.object({
+					enabled: z.boolean(),
+					languageCode: z.enum([
+						'en', 'es', 'it', 'pt', 'de', 'fr', 'pl', 'ru', 'nl', 'ca',
+						'tr', 'sv', 'uk', 'no', 'fi', 'sk', 'el', 'cs', 'hr', 'da', 'ro', 'bg'
+					]).default('en'),
+				}).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<DirectUpload> => {
+			const { env } = ctx;
+
+			try {
+				const { mux, library } = await getMuxClient(env, input.libraryId);
+				
+				// Use library defaults for playback policy and video quality
+				// Allow per-upload playback policy override, fallback to library default
+				const playbackPolicy = input.playbackPolicy || library.defaultPlaybackPolicy || "public";
+				// Allow per-upload video quality override, fallback to library default
+				const videoQuality = input.videoQuality || library.defaultVideoQuality || "basic";
+				
+				// Build meta object with title if provided
+				const meta: { title?: string; [key: string]: unknown } = {};
+				if (input.title) {
+					meta.title = input.title;
+				}
+				// Merge any additional metadata
+				if (input.metadata) {
+					Object.assign(meta, input.metadata);
+				}
+				
+				// Build inputs array for auto-generated captions if enabled
+				const languageCode = input.autoCaptions?.languageCode ?? 'en';
+				const inputs = input.autoCaptions?.enabled
+					? [
+							{
+								generated_subtitles: [
+									{
+										language_code: languageCode,
+										name: `${getLanguageName(languageCode)} CC`,
+									},
+								],
+							},
+						]
+					: undefined;
+
+				const upload = await mux.video.uploads.create({
+					cors_origin: input.corsOrigin,
+					timeout: input.timeout,
+					new_asset_settings: {
+						playback_policies: [playbackPolicy],
+						video_quality: videoQuality,
+						meta: Object.keys(meta).length > 0 ? meta : undefined,
+						inputs,
+					},
+				});
+
+				return {
+					id: upload.id,
+					url: upload.url,
+					status: upload.status,
+					timeout: upload.timeout,
+					assetId: upload.asset_id,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error creating direct upload:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create direct upload",
+				});
+			}
+		}),
+
+	/**
+	 * Get direct upload status
+	 */
+	getDirectUpload: protectedProcedure
+		.input(z.object({ uploadId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }): Promise<DirectUpload> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				const upload = await mux.video.uploads.retrieve(input.uploadId);
+
+				return {
+					id: upload.id,
+					url: upload.url,
+					status: upload.status,
+					timeout: upload.timeout,
+					assetId: upload.asset_id,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error retrieving direct upload:", error);
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: `Upload ${input.uploadId} not found`,
+				});
+			}
+		}),
+
+	/**
+	 * Create a playback ID for an asset
+	 */
+	createPlaybackId: protectedProcedure
+		.input(
+			z.object({
+				assetId: z.string(),
+				libraryId: z.string().optional(),
+				policy: z.enum(["public", "signed"]).default("public"),
+			}),
+		)
+		.mutation(
+			async ({
+				ctx,
+				input,
+			}): Promise<{ playbackId: string; policy: string }> => {
+				const { env } = ctx;
+
+				try {
+					const { mux } = await getMuxClient(env, input.libraryId);
+					const playbackId = await mux.video.assets.createPlaybackId(
+						input.assetId,
+						{ policy: input.policy },
+					);
+
+					return {
+						playbackId: playbackId.id,
+						policy: input.policy,
+					};
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					console.error("Error creating playback ID:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to create playback ID",
+					});
+				}
+			},
+		),
+
+	/**
+	 * Add a caption or subtitle track to an asset
+	 */
+	addCaption: protectedProcedure
+		.input(
+			z.object({
+				assetId: z.string(),
+				libraryId: z.string().optional(),
+				url: z.string().url(),
+				language: z.string(),
+				textType: z.enum(["subtitles"]).default("subtitles"),
+				name: z.string().optional(),
+				closedCaptions: z.boolean().default(false),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<MuxTrack> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				const track = await mux.video.assets.createTrack(input.assetId, {
+					url: input.url,
+					type: "text",
+					text_type: input.textType as "subtitles",
+					language_code: input.language,
+					name: input.name,
+					closed_captions: input.closedCaptions,
+				});
+
+				return {
+					id: track.id ?? "",
+					type: track.type ?? "text",
+					textType: track.text_type,
+					language: track.language_code,
+					name: track.name,
+					closed_captions: track.closed_captions,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error adding caption:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add caption",
+				});
+			}
+		}),
+
+	/**
+	 * Delete a caption or subtitle track
+	 */
+	deleteCaption: protectedProcedure
+		.input(z.object({ assetId: z.string(), trackId: z.string(), libraryId: z.string().optional() }))
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				await mux.video.assets.deleteTrack(input.assetId, input.trackId);
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error deleting caption:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete caption",
+				});
+			}
+		}),
+
+	/**
+	 * Get assets by collection/tag (using metadata filtering)
+	 * Since Mux doesn't have native collections, we filter by metadata
+	 */
+	getAssetsByCollection: protectedProcedure
+		.input(z.object({ collectionId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }): Promise<MuxAsset[]> => {
+			const { env } = ctx;
+
+			try {
+				const { mux } = await getMuxClient(env, input.libraryId);
+				// List all assets and filter client-side by metadata
+				const assets = await mux.video.assets.list({ limit: 100 });
+
+				const filtered = (assets.data || []).filter((asset: any) => {
+					return asset.meta?.collectionId === input.collectionId;
+				});
+
+				return filtered.map(mapMuxAssetToVideo);
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting assets by collection:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get assets",
+				});
+			}
+		}),
+
+	/**
+	 * Generate signed tokens for secure video playback
+	 */
+	generateSignedTokens: protectedProcedure
+		.input(
+			z.object({
+				playbackId: z.string(),
+				libraryId: z.string().optional(),
+				expiresIn: z.number().default(3600),
+			}),
+		)
+		.query(
+			async ({
+				ctx,
+				input,
+			}): Promise<{
+				playback: string;
+				thumbnail: string;
+				storyboard: string;
+			}> => {
+				const { env } = ctx;
+
+				try {
+					const library = await getMuxLibrary(env, input.libraryId);
+					return await generateSignedTokens(
+						input.playbackId,
+						library,
+						input.expiresIn,
+					);
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					console.error("Error generating signed tokens:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to generate signed tokens",
+					});
+				}
+			},
+		),
+
+	/**
+	 * Create a signed URL for playback (for signed playback policies)
+	 */
+	createSignedUrl: protectedProcedure
+		.input(
+			z.object({
+				playbackId: z.string(),
+				libraryId: z.string().optional(),
+				expiresIn: z.number().default(3600),
+			}),
+		)
+		.query(async ({ ctx, input }): Promise<{ url: string; token?: string }> => {
+			const { env } = ctx;
+
+			try {
+				const library = await getMuxLibrary(env, input.libraryId);
+				
+				// For signed playback, generate a signed URL with JWT token
+				if (library.signingKeyId && library.signingKeyPrivate) {
+					const tokens = await generateSignedTokens(
+						input.playbackId,
+						library,
+						input.expiresIn,
+					);
+					return {
+						url: `https://stream.mux.com/${input.playbackId}`,
+						token: tokens.playback,
+					};
+				}
+
+				// For public playback, return the standard URL
+				return {
+					url: `https://stream.mux.com/${input.playbackId}`,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error creating signed URL:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create signed URL",
+				});
+			}
+		}),
+
+	/**
+	 * Sync assets from Mux to the local database
+	 * This is useful for importing videos that were uploaded directly to Mux
+	 */
+	syncMuxAssets: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string().optional(),
+			}),
+		)
+		.mutation(
+			async ({
+				ctx,
+				input,
+			}): Promise<{ synced: number; updated: number; total: number }> => {
+				const { env } = ctx;
+				const db = getVideosDb(env);
+
+				try {
+					const { mux, library } = await getMuxClient(env, input.libraryId);
+
+					// Fetch all assets from Mux (paginated)
+					const allMuxAssets: any[] = [];
+					let page = 1;
+					const limit = 100;
+
+					while (true) {
+						const assets = await mux.video.assets.list({ limit, page });
+						if (!assets.data || assets.data.length === 0) break;
+						allMuxAssets.push(...assets.data);
+						if (assets.data.length < limit) break;
+						page++;
+					}
+
+					if (allMuxAssets.length === 0) {
+						return { synced: 0, updated: 0, total: 0 };
+					}
+
+					// Get all muxAssetIds that already exist in our database for this library
+					const muxAssetIds = allMuxAssets.map((a) => a.id);
+					const existingVideos = await db
+						.select({ id: video.id, muxAssetId: video.muxAssetId, externalId: video.externalId })
+						.from(video)
+						.where(
+							and(
+								eq(video.libraryId, library.id),
+								inArray(video.muxAssetId, muxAssetIds),
+							),
+						);
+
+					const existingMuxAssetIds = new Set(
+						existingVideos.map((v) => v.muxAssetId),
+					);
+
+					// For existing videos, ensure Mux has the external_id set
+					const existingUpdatePromises = existingVideos.map(async (v) => {
+						try {
+							await mux.video.assets.update(v.muxAssetId, {
+								meta: {
+									external_id: v.id,
+								},
+							});
+							// Also update our database if externalId isn't set
+							if (!v.externalId) {
+								await db
+									.update(video)
+									.set({ externalId: v.id })
+									.where(eq(video.id, v.id));
+							}
+						} catch (updateError) {
+							console.warn(`Failed to update existing Mux asset ${v.muxAssetId} with external ID:`, updateError);
+						}
+					});
+					await Promise.allSettled(existingUpdatePromises);
+
+					// Filter to only assets that don't exist in the database
+					const assetsToSync = allMuxAssets.filter(
+						(asset) => !existingMuxAssetIds.has(asset.id),
+					);
+
+					if (assetsToSync.length === 0) {
+						return {
+							synced: 0,
+							updated: existingVideos.length,
+							total: allMuxAssets.length,
+						};
+					}
+
+					// Prepare videos to insert with generated IDs
+					const videosToInsert = assetsToSync.map((asset) => {
+						const playbackId = asset.playback_ids?.[0]?.id || null;
+						const playbackPolicy =
+							(asset.playback_ids?.[0]?.policy as
+								| "public"
+								| "signed"
+								| "drm") || library.defaultPlaybackPolicy;
+
+						const newVideoId = generateVideoId();
+
+						return {
+							id: newVideoId,
+							libraryId: library.id,
+							muxAssetId: asset.id,
+							muxPlaybackId: playbackId,
+							status: asset.status as "preparing" | "ready" | "errored",
+							title: asset.meta?.title || asset.passthrough || "Untitled",
+							duration: asset.duration || null,
+							aspectRatio: asset.aspect_ratio || null,
+							maxWidth: asset.max_stored_resolution === "Audio only" ? null : parseInt(asset.max_stored_resolution?.split("x")?.[0] || "0") || null,
+							maxHeight: asset.max_stored_resolution === "Audio only" ? null : parseInt(asset.max_stored_resolution?.split("x")?.[1] || "0") || null,
+							maxFrameRate: asset.max_stored_frame_rate || null,
+							resolutionTier: asset.resolution_tier as "audio-only" | "720p" | "1080p" | "1440p" | "2160p" | null,
+							videoQuality: (asset.video_quality as "basic" | "plus" | "premium") || library.defaultVideoQuality,
+							playbackPolicy,
+							passthrough: newVideoId, // Store our internal ID as passthrough
+							externalId: newVideoId, // Also store in externalId field
+							ingestType: asset.ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
+							isTest: asset.test || false,
+							createdAt: asset.created_at ? new Date(Number(asset.created_at) * 1000) : new Date(),
+							updatedAt: new Date(),
+						};
+					});
+
+					// Batch insert videos into database
+					await db.insert(video).values(videosToInsert);
+
+					// Update Mux assets with our internal video IDs (meta.external_id field)
+					// This creates a two-way link between our database and Mux
+					const updatePromises = videosToInsert.map(async (v) => {
+						try {
+							await mux.video.assets.update(v.muxAssetId, {
+								meta: {
+									external_id: v.id,
+								},
+							});
+						} catch (updateError) {
+							// Log but don't fail - the local sync succeeded
+							console.warn(`Failed to update Mux asset ${v.muxAssetId} with external ID:`, updateError);
+						}
+					});
+
+					// Wait for all Mux updates (but don't fail if some don't work)
+					await Promise.allSettled(updatePromises);
+
+					return {
+						synced: assetsToSync.length,
+						updated: existingVideos.length,
+						total: allMuxAssets.length,
+					};
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					console.error("Error syncing Mux assets:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to sync assets from Mux",
+					});
+				}
+			},
+		),
+});

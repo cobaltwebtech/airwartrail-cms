@@ -1,4 +1,6 @@
+import MuxPlayer from '@mux/mux-player-react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,7 @@ import { formatDate } from '@/lib/video-helpers';
 
 interface VideoDialogProps {
 	video: Video;
+	libraryId: string;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	isEditing: boolean;
@@ -23,27 +26,52 @@ interface VideoDialogProps {
 
 export const VideoDialog: React.FC<VideoDialogProps> = ({
 	video,
+	libraryId,
 	open,
 	onOpenChange,
 }) => {
-	const { data, isLoading, isError } = useQuery(
-		trpc.bunny.getVideoToken.queryOptions({ videoId: video.id }),
+	const {
+		data: asset,
+		isLoading,
+		isError,
+	} = useQuery(
+		trpc.mux.getAsset.queryOptions({ assetId: video.id, libraryId }),
+	);
+
+	// Fetch signed tokens only when the video has a "signed" playback policy
+	const { data: tokens, isLoading: tokensLoading } = useQuery(
+		trpc.mux.generateSignedTokens.queryOptions(
+			{
+				playbackId: asset?.playbackId ?? '',
+				libraryId,
+				expiresIn: 3600,
+			},
+			{
+				enabled: !!asset?.playbackId && asset?.policy === 'signed',
+			},
+		),
 	);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="p-2 sm:max-w-5xl">
 				<div className="aspect-video w-full">
-					{isLoading ? (
+					{isLoading || (asset?.policy === 'signed' && tokensLoading) ? (
 						<div>Loading video...</div>
-					) : data?.url ? (
-						<iframe
-							title={video.title}
-							src={data.url}
-							className="h-full w-full"
-							allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-							allowFullScreen
-						></iframe>
+					) : asset?.playbackId ? (
+						<MuxPlayer
+							playbackId={asset.playbackId}
+							title={asset.title}
+							{...(asset.policy === 'signed' && tokens
+								? {
+										tokens: {
+											playback: tokens.playback,
+											thumbnail: tokens.thumbnail,
+											storyboard: tokens.storyboard,
+										},
+									}
+								: {})}
+						/>
 					) : isError ? (
 						<div>Failed to load video.</div>
 					) : null}
@@ -51,7 +79,12 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 				<div className="flex flex-row justify-between">
 					<DialogHeader className="p-4">
 						<DialogTitle>
-							<a href={`/edit-video/${video.id}`}>{video.title}</a>
+							<Link
+								to="/library/$libraryId/edit-video/$videoId"
+								params={{ libraryId, videoId: video.id }}
+							>
+								{video.title}
+							</Link>
 						</DialogTitle>
 						<DialogDescription>
 							Uploaded on{' '}
@@ -67,11 +100,14 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
-						<a href={`/edit-video/${video.id}`}>
+						<Link
+							to="/library/$libraryId/edit-video/$videoId"
+							params={{ libraryId, videoId: video.id }}
+						>
 							<Button variant="outline" size="icon">
 								<Pencil className="size-4" />
 							</Button>
-						</a>
+						</Link>
 					</DialogFooter>
 				</div>
 			</DialogContent>

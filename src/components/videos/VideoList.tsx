@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
@@ -65,26 +65,110 @@ import { VideoDialog } from './VideoDialog';
 
 interface VideoListProps {
 	videos: Video[] | null | undefined;
+	libraryId: string;
+}
+
+interface MuxThumbnailOptions {
+	width?: number;
+	height?: number;
+	time?: number;
+	fitMode?: 'preserve' | 'stretch' | 'crop' | 'smartcrop' | 'pad';
+	format?: 'png' | 'jpg' | 'webp';
+	token?: string;
+}
+
+/**
+ * Generates a Mux thumbnail URL from a playback ID
+ * @see https://docs.mux.com/guides/get-images-from-a-video
+ */
+function getMuxThumbnailUrl(
+	playbackId: string | null | undefined,
+	options: MuxThumbnailOptions = {},
+): string | null {
+	if (!playbackId) return null;
+
+	const {
+		width,
+		height,
+		time,
+		fitMode = 'smartcrop',
+		format = 'webp',
+		token,
+	} = options;
+
+	const params = new URLSearchParams();
+	if (width) params.set('width', width.toString());
+	if (height) params.set('height', height.toString());
+	if (time !== undefined) params.set('time', time.toString());
+	if (fitMode) params.set('fit_mode', fitMode);
+	if (token) params.set('token', token);
+
+	const queryString = params.toString();
+	return `https://image.mux.com/${playbackId}/thumbnail.${format}${queryString ? `?${queryString}` : ''}`;
 }
 
 interface VideoThumbnailProps {
-	src: string | null | undefined;
+	playbackId: string | null | undefined;
 	alt: string;
 	className?: string;
 	aspectVideo?: boolean;
+	width?: number;
+	height?: number;
+	policy?: 'public' | 'signed';
+	libraryId?: string;
 }
 
 function VideoThumbnail({
-	src,
+	playbackId,
 	alt,
 	className = '',
 	aspectVideo = false,
+	width,
+	height,
+	policy = 'public',
+	libraryId,
 }: VideoThumbnailProps) {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [hasError, setHasError] = useState(false);
 
-	// If no src or error, just show skeleton
-	if (!src || hasError) {
+	// Fetch signed token if the video has a signed policy
+	const { data: signedTokens, isLoading: isLoadingToken } = useQuery(
+		trpc.mux.generateSignedTokens.queryOptions(
+			{ playbackId: playbackId ?? '', libraryId },
+			{
+				enabled: policy === 'signed' && !!playbackId,
+				staleTime: 30 * 60 * 1000, // Cache for 30 minutes (tokens expire in 1 hour by default)
+			},
+		),
+	);
+
+	const thumbnailUrl = getMuxThumbnailUrl(playbackId, {
+		width: width ?? (aspectVideo ? 640 : 160),
+		height: height ?? (aspectVideo ? 360 : 90),
+		fitMode: 'smartcrop',
+		token: policy === 'signed' ? signedTokens?.thumbnail : undefined,
+	});
+
+	// If no playbackId, loading token for signed video, or error, show skeleton
+	if (!playbackId || hasError || (policy === 'signed' && isLoadingToken)) {
+		return (
+			<Skeleton
+				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
+			/>
+		);
+	}
+
+	// For signed videos, wait until we have the token
+	if (policy === 'signed' && !signedTokens?.thumbnail) {
+		return (
+			<Skeleton
+				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
+			/>
+		);
+	}
+
+	// At this point thumbnailUrl is guaranteed to be non-null
+	if (!thumbnailUrl) {
 		return (
 			<Skeleton
 				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
@@ -102,7 +186,7 @@ function VideoThumbnail({
 				/>
 			)}
 			<img
-				src={src}
+				src={thumbnailUrl}
 				alt={alt}
 				className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
 				onLoad={() => setIsLoaded(true)}
@@ -149,7 +233,7 @@ function getStoredSettings(): VideoListSettings {
 // Read stored settings once at module level to avoid multiple reads
 const initialSettings = getStoredSettings();
 
-export function VideoList({ videos = [] }: VideoListProps) {
+export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -199,12 +283,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
 	// Delete mutation using tRPC
 	const deleteVideoMutation = useMutation(
-		trpc.bunny.deleteVideo.mutationOptions({
+		trpc.mux.deleteAsset.mutationOptions({
 			onSuccess: () => {
 				toast.success('Video deleted successfully');
 				// Invalidate the videos query to refetch
 				queryClient.invalidateQueries({
-					queryKey: [['bunny', 'getAllVideos']],
+					queryKey: [['mux', 'listAssets']],
 				});
 			},
 			onError: (error) => {
@@ -228,10 +312,10 @@ export function VideoList({ videos = [] }: VideoListProps) {
 						: b.title.localeCompare(a.title);
 				} else {
 					return sortDirection === 'asc'
-						? new Date(a.dateUploaded).getTime() -
-								new Date(b.dateUploaded).getTime()
-						: new Date(b.dateUploaded).getTime() -
-								new Date(a.dateUploaded).getTime();
+						? new Date(a.dateUploaded || 0).getTime() -
+								new Date(b.dateUploaded || 0).getTime()
+						: new Date(b.dateUploaded || 0).getTime() -
+								new Date(a.dateUploaded || 0).getTime();
 				}
 			});
 	}, [videoArray, searchTerm, sortCriteria, sortDirection]);
@@ -266,7 +350,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
 
 	const handleDeleteConfirm = async () => {
 		if (videoToDelete) {
-			deleteVideoMutation.mutate({ videoId: videoToDelete.id });
+			deleteVideoMutation.mutate({ assetId: videoToDelete.id, libraryId });
 			setIsDeleteDialogOpen(false);
 			setVideoToDelete(null);
 		}
@@ -283,9 +367,13 @@ export function VideoList({ videos = [] }: VideoListProps) {
 				cell: ({ row }) => (
 					<div className="relative h-12 w-20 overflow-hidden rounded">
 						<VideoThumbnail
-							src={row.original.thumbnail}
+							playbackId={row.original.playbackId}
 							alt={row.original.title}
 							className="h-full w-full object-cover"
+							width={160}
+							height={90}
+							policy={row.original.policy}
+							libraryId={libraryId}
 						/>
 					</div>
 				),
@@ -304,8 +392,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
 				),
 				cell: ({ row }) => (
 					<Link
-						to="/edit-video/$videoId"
-						params={{ videoId: row.original.id }}
+						to="/library/$libraryId/edit-video/$videoId"
+						params={{ videoId: row.original.id, libraryId }}
 						className="font-medium hover:underline"
 					>
 						{row.original.title}
@@ -393,8 +481,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
 								</DropdownMenuItem>
 								<DropdownMenuItem asChild>
 									<Link
-										to="/edit-video/$videoId"
-										params={{ videoId: video.id }}
+										to="/library/$libraryId/edit-video/$videoId"
+										params={{ videoId: video.id, libraryId }}
 										className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
 									>
 										<Pencil className="mr-2 size-4" />
@@ -412,7 +500,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
 				},
 			},
 		],
-		[handleCopy, handleDeleteRequest, handleSelectVideo],
+		[handleCopy, handleDeleteRequest, handleSelectVideo, libraryId],
 	);
 
 	const table = useReactTable({
@@ -478,6 +566,7 @@ export function VideoList({ videos = [] }: VideoListProps) {
 			{selectedVideo && (
 				<VideoDialog
 					video={selectedVideo}
+					libraryId={libraryId}
 					open={!!selectedVideo}
 					onOpenChange={() => {
 						setSelectedVideo(null);
@@ -547,10 +636,12 @@ export function VideoList({ videos = [] }: VideoListProps) {
 						<Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
 							<div className="relative">
 								<VideoThumbnail
-									src={video.thumbnail}
+									playbackId={video.playbackId}
 									alt={video.title}
 									className="aspect-video w-full object-cover"
 									aspectVideo
+									policy={video.policy}
+									libraryId={libraryId}
 								/>
 								<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
 									<Button
@@ -568,8 +659,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
 							<CardHeader className="p-4">
 								<div className="flex items-start justify-between">
 									<Link
-										to="/edit-video/$videoId"
-										params={{ videoId: video.id }}
+										to="/library/$libraryId/edit-video/$videoId"
+										params={{ videoId: video.id, libraryId }}
 										className="cursor-pointer"
 									>
 										<CardTitle className="text-base text-wrap">
@@ -595,8 +686,8 @@ export function VideoList({ videos = [] }: VideoListProps) {
 											</DropdownMenuItem>
 											<DropdownMenuItem asChild>
 												<Link
-													to="/edit-video/$videoId"
-													params={{ videoId: video.id }}
+													to="/library/$libraryId/edit-video/$videoId"
+													params={{ videoId: video.id, libraryId }}
 													className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
 												>
 													<Pencil className="mr-2 size-4" />

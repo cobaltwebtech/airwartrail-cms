@@ -3,27 +3,51 @@ import type { $Infer } from './auth-client';
 
 export type ActiveSession = typeof $Infer.Session;
 
-export type VideoStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+// Mux Asset Status
+export type MuxAssetStatus = 'preparing' | 'ready' | 'errored';
 
+export interface MuxTrack {
+	id: string;
+	type: 'text' | 'audio' | 'video';
+	textType?: 'captions' | 'subtitles';
+	language?: string;
+	languageCode?: string;
+	name?: string;
+	closed_captions?: boolean;
+}
+
+// Updated Video interface to use Mux Asset structure
 export interface Video {
 	id: string;
-	guid?: string;
+	playbackId: string;
+	status: MuxAssetStatus;
 	title: string;
 	thumbnail?: string;
+	duration: number;
+	createdAt: string;
+	updatedAt?: string;
+	captions?: MuxTrack[];
+	metadata?: Record<string, unknown>;
+	policy?: 'public' | 'signed';
+	// Deprecated fields kept for backward compatibility
+	guid?: string;
 	thumbnailFileName?: string;
 	collectionId?: string;
-	duration: number;
-	status: VideoStatus;
-	views: number;
-	storageSize: number;
-	statusText: string;
-	dateUploaded: string;
-	captions?: { label: string; srclang: string }[];
+	views?: number;
+	storageSize?: number;
+	statusText?: string;
+	dateUploaded?: string;
 	chapters?: { title: string; start: number; end: number }[];
 	moments?: { label: string; timestamp: number }[];
 }
 
-export type StatusMap = Record<VideoStatus, string>;
+export interface DirectUpload {
+	id: string;
+	url: string;
+	status: 'waiting' | 'asset_created' | 'errored' | 'cancelled' | 'timed_out';
+	timeout: number;
+	assetId?: string;
+}
 
 export interface Collection {
 	videoLibraryId: number;

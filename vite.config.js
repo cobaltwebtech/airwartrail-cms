@@ -11,11 +11,16 @@ export default defineConfig({
 	plugins: [
 		tsConfigPaths(),
 		tanstackRouter({ target: 'react', autoCodeSplitting: true }),
-		viteReact(),
+		viteReact({
+			babel: {
+				plugins: ['babel-plugin-react-compiler'],
+			},
+		}),
 		tailwindcss(),
 		cloudflare(),
 	],
 	server: {
+		allowedHosts: ["cgarza-mbp-m2.discus-jazz.ts.net"],
 		watch: {
 			ignored: ['**/.wrangler/state/**'],
 		},

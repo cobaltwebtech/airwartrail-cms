@@ -1,8 +1,8 @@
 import { t } from "./trpc-init";
-import { bunnyRouter } from "./routers/bunny";
+import { muxRouter } from "./routers/mux";
 
 export const appRouter = t.router({
-	bunny: bunnyRouter,
+	mux: muxRouter,
 });
 
 export type AppRouter = typeof appRouter;

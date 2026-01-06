@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1767678657621,
+      "tag": "0000_db-migration-videos",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1767735259654,
+      "tag": "0001_db-migration-videos",
+      "breakpoints": true
+    }
+  ]
+}

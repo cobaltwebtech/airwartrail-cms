@@ -6,7 +6,7 @@ import { captcha, twoFactor } from 'better-auth/plugins';
 import { drizzle } from 'drizzle-orm/d1';
 import { Resend } from 'resend';
 import { PasswordReset } from '@/components/email/PasswordReset';
-import * as authSchema from '@/lib/auth-schema';
+import * as authSchema from '@/db/auth-schema';
 
 // Initialize Drizzle with the Cloudflare D1 database
 export const createDrizzle = (db: D1Database) =>
@@ -18,7 +18,7 @@ const resend = new Resend(env.RESEND_API_KEY);
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET,
 	baseURL: env.BETTER_AUTH_URL,
-	database: drizzleAdapter(createDrizzle(env.AUTH_DB), {
+	database: drizzleAdapter(createDrizzle(env.DB_AUTH), {
 		provider: 'sqlite',
 	}),
 	session: {

@@ -14,11 +14,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as DashboardVideosIndexRouteImport } from './routes/_dashboard/videos/index'
-import { Route as DashboardCollectionsIndexRouteImport } from './routes/_dashboard/collections/index'
+import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
-import { Route as DashboardEditVideoVideoIdRouteImport } from './routes/_dashboard/edit-video/$videoId'
-import { Route as DashboardCollectionsCollectionIdRouteImport } from './routes/_dashboard/collections/$collectionId'
+import { Route as DashboardLibraryNewRouteImport } from './routes/_dashboard/library/new'
+import { Route as DashboardLibraryLibraryIdVideosRouteImport } from './routes/_dashboard/library/$libraryId/videos'
+import { Route as DashboardLibraryLibraryIdEditLibraryRouteImport } from './routes/_dashboard/library/$libraryId/edit-library'
+import { Route as DashboardLibraryLibraryIdEditVideoVideoIdRouteImport } from './routes/_dashboard/library/$libraryId/edit-video/$videoId'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/_dashboard',
@@ -44,105 +45,116 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardVideosIndexRoute = DashboardVideosIndexRouteImport.update({
-  id: '/videos/',
-  path: '/videos/',
+const DashboardUploadRoute = DashboardUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardCollectionsIndexRoute =
-  DashboardCollectionsIndexRouteImport.update({
-    id: '/collections/',
-    path: '/collections/',
-    getParentRoute: () => DashboardRoute,
-  } as any)
 const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
   id: '/user/$userId',
   path: '/user/$userId',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardEditVideoVideoIdRoute =
-  DashboardEditVideoVideoIdRouteImport.update({
-    id: '/edit-video/$videoId',
-    path: '/edit-video/$videoId',
+const DashboardLibraryNewRoute = DashboardLibraryNewRouteImport.update({
+  id: '/library/new',
+  path: '/library/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLibraryLibraryIdVideosRoute =
+  DashboardLibraryLibraryIdVideosRouteImport.update({
+    id: '/library/$libraryId/videos',
+    path: '/library/$libraryId/videos',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardCollectionsCollectionIdRoute =
-  DashboardCollectionsCollectionIdRouteImport.update({
-    id: '/collections/$collectionId',
-    path: '/collections/$collectionId',
+const DashboardLibraryLibraryIdEditLibraryRoute =
+  DashboardLibraryLibraryIdEditLibraryRouteImport.update({
+    id: '/library/$libraryId/edit-library',
+    path: '/library/$libraryId/edit-library',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdEditVideoVideoIdRoute =
+  DashboardLibraryLibraryIdEditVideoVideoIdRouteImport.update({
+    id: '/library/$libraryId/edit-video/$videoId',
+    path: '/library/$libraryId/edit-video/$videoId',
     getParentRoute: () => DashboardRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
-  '/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
+  '/library/new': typeof DashboardLibraryNewRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
-  '/collections': typeof DashboardCollectionsIndexRoute
-  '/videos': typeof DashboardVideosIndexRoute
+  '/library/$libraryId/edit-library': typeof DashboardLibraryLibraryIdEditLibraryRoute
+  '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
+  '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
-  '/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
+  '/library/new': typeof DashboardLibraryNewRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
-  '/collections': typeof DashboardCollectionsIndexRoute
-  '/videos': typeof DashboardVideosIndexRoute
+  '/library/$libraryId/edit-library': typeof DashboardLibraryLibraryIdEditLibraryRoute
+  '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
+  '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
+  '/_dashboard/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/_dashboard/collections/$collectionId': typeof DashboardCollectionsCollectionIdRoute
-  '/_dashboard/edit-video/$videoId': typeof DashboardEditVideoVideoIdRoute
+  '/_dashboard/library/new': typeof DashboardLibraryNewRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
-  '/_dashboard/collections/': typeof DashboardCollectionsIndexRoute
-  '/_dashboard/videos/': typeof DashboardVideosIndexRoute
+  '/_dashboard/library/$libraryId/edit-library': typeof DashboardLibraryLibraryIdEditLibraryRoute
+  '/_dashboard/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
+  '/_dashboard/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/upload'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/collections/$collectionId'
-    | '/edit-video/$videoId'
+    | '/library/new'
     | '/user/$userId'
-    | '/collections'
-    | '/videos'
+    | '/library/$libraryId/edit-library'
+    | '/library/$libraryId/videos'
+    | '/library/$libraryId/edit-video/$videoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/upload'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/collections/$collectionId'
-    | '/edit-video/$videoId'
+    | '/library/new'
     | '/user/$userId'
-    | '/collections'
-    | '/videos'
+    | '/library/$libraryId/edit-library'
+    | '/library/$libraryId/videos'
+    | '/library/$libraryId/edit-video/$videoId'
   id:
     | '__root__'
     | '/'
     | '/_dashboard'
+    | '/_dashboard/upload'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/_dashboard/collections/$collectionId'
-    | '/_dashboard/edit-video/$videoId'
+    | '/_dashboard/library/new'
     | '/_dashboard/user/$userId'
-    | '/_dashboard/collections/'
-    | '/_dashboard/videos/'
+    | '/_dashboard/library/$libraryId/edit-library'
+    | '/_dashboard/library/$libraryId/videos'
+    | '/_dashboard/library/$libraryId/edit-video/$videoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -190,18 +202,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_dashboard/videos/': {
-      id: '/_dashboard/videos/'
-      path: '/videos'
-      fullPath: '/videos'
-      preLoaderRoute: typeof DashboardVideosIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/collections/': {
-      id: '/_dashboard/collections/'
-      path: '/collections'
-      fullPath: '/collections'
-      preLoaderRoute: typeof DashboardCollectionsIndexRouteImport
+    '/_dashboard/upload': {
+      id: '/_dashboard/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof DashboardUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/user/$userId': {
@@ -211,37 +216,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUserUserIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/edit-video/$videoId': {
-      id: '/_dashboard/edit-video/$videoId'
-      path: '/edit-video/$videoId'
-      fullPath: '/edit-video/$videoId'
-      preLoaderRoute: typeof DashboardEditVideoVideoIdRouteImport
+    '/_dashboard/library/new': {
+      id: '/_dashboard/library/new'
+      path: '/library/new'
+      fullPath: '/library/new'
+      preLoaderRoute: typeof DashboardLibraryNewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/collections/$collectionId': {
-      id: '/_dashboard/collections/$collectionId'
-      path: '/collections/$collectionId'
-      fullPath: '/collections/$collectionId'
-      preLoaderRoute: typeof DashboardCollectionsCollectionIdRouteImport
+    '/_dashboard/library/$libraryId/videos': {
+      id: '/_dashboard/library/$libraryId/videos'
+      path: '/library/$libraryId/videos'
+      fullPath: '/library/$libraryId/videos'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdVideosRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/edit-library': {
+      id: '/_dashboard/library/$libraryId/edit-library'
+      path: '/library/$libraryId/edit-library'
+      fullPath: '/library/$libraryId/edit-library'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdEditLibraryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/edit-video/$videoId': {
+      id: '/_dashboard/library/$libraryId/edit-video/$videoId'
+      path: '/library/$libraryId/edit-video/$videoId'
+      fullPath: '/library/$libraryId/edit-video/$videoId'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdEditVideoVideoIdRouteImport
       parentRoute: typeof DashboardRoute
     }
   }
 }
 
 interface DashboardRouteChildren {
-  DashboardCollectionsCollectionIdRoute: typeof DashboardCollectionsCollectionIdRoute
-  DashboardEditVideoVideoIdRoute: typeof DashboardEditVideoVideoIdRoute
+  DashboardUploadRoute: typeof DashboardUploadRoute
+  DashboardLibraryNewRoute: typeof DashboardLibraryNewRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
-  DashboardCollectionsIndexRoute: typeof DashboardCollectionsIndexRoute
-  DashboardVideosIndexRoute: typeof DashboardVideosIndexRoute
+  DashboardLibraryLibraryIdEditLibraryRoute: typeof DashboardLibraryLibraryIdEditLibraryRoute
+  DashboardLibraryLibraryIdVideosRoute: typeof DashboardLibraryLibraryIdVideosRoute
+  DashboardLibraryLibraryIdEditVideoVideoIdRoute: typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardCollectionsCollectionIdRoute: DashboardCollectionsCollectionIdRoute,
-  DashboardEditVideoVideoIdRoute: DashboardEditVideoVideoIdRoute,
+  DashboardUploadRoute: DashboardUploadRoute,
+  DashboardLibraryNewRoute: DashboardLibraryNewRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
-  DashboardCollectionsIndexRoute: DashboardCollectionsIndexRoute,
-  DashboardVideosIndexRoute: DashboardVideosIndexRoute,
+  DashboardLibraryLibraryIdEditLibraryRoute:
+    DashboardLibraryLibraryIdEditLibraryRoute,
+  DashboardLibraryLibraryIdVideosRoute: DashboardLibraryLibraryIdVideosRoute,
+  DashboardLibraryLibraryIdEditVideoVideoIdRoute:
+    DashboardLibraryLibraryIdEditVideoVideoIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
