@@ -3,6 +3,14 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { CheckCircle, CloudOff, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { Badge } from '@/components/ui/badge';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import VideoEditor from '@/components/video-editor/VideoEditor';
 import { trpc } from '@/lib/trpc';
@@ -31,9 +39,30 @@ function VideoEditorPage() {
 		error: videoError,
 	} = useQuery(trpc.mux.getAsset.queryOptions({ assetId: videoId, libraryId }));
 
+	// Fetch view count from Mux Data API
+	const { data: viewCountData } = useQuery(
+		trpc.mux.getAssetViewCount.queryOptions(
+			{ muxAssetId: videoId, libraryId },
+			{ enabled: !!muxAsset },
+		),
+	);
+
 	// Check sync status
 	const { data: syncStatus, isLoading: syncStatusLoading } = useQuery(
 		trpc.mux.getVideoSyncStatus.queryOptions(
+			{ muxAssetId: videoId, libraryId },
+			{ enabled: !!muxAsset },
+		),
+	);
+
+	// Fetch library details to get library name
+	const { data: library } = useQuery(
+		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
+	);
+
+	// Fetch video data from database
+	const { data: videoData } = useQuery(
+		trpc.mux.getVideoFromDatabase.queryOptions(
 			{ muxAssetId: videoId, libraryId },
 			{ enabled: !!muxAsset },
 		),
@@ -67,23 +96,27 @@ function VideoEditorPage() {
 				title: muxAsset.title || 'Untitled',
 				duration: muxAsset.duration || 0,
 				statusText: muxAsset.status === 'ready' ? 'Ready' : 'Processing',
-				views: 0, // Mux doesn't provide view counts
-				storageSize: 0, // Mux doesn't provide storage size
+				views: viewCountData?.views ?? 0,
 				dateUploaded: muxAsset.createdAt || new Date().toISOString(),
-				collectionId:
-					typeof muxAsset.metadata?.collectionId === 'string'
-						? muxAsset.metadata.collectionId
-						: undefined,
+				isPublished: Boolean(muxAsset.metadata?.isPublished),
 				captions: muxAsset.captions?.map((cap) => ({
 					label: cap.name || cap.language || 'Caption',
 					srclang: cap.languageCode || 'en',
 				})),
-				chapters: Array.isArray(muxAsset.metadata?.chapters)
-					? muxAsset.metadata.chapters
-					: undefined,
-				moments: Array.isArray(muxAsset.metadata?.moments)
-					? muxAsset.metadata.moments
-					: undefined,
+				resolutionTier: muxAsset.resolutionTier,
+				aspectRatio: muxAsset.aspectRatio,
+				videoQuality: muxAsset.videoQuality,
+				maxStoredFrameRate: muxAsset.maxStoredFrameRate,
+				maxWidth: muxAsset.maxWidth,
+				maxHeight: muxAsset.maxHeight,
+				id: videoData?.id,
+				muxAssetId: videoData?.muxAssetId,
+				muxPlaybackId: videoData?.muxPlaybackId ?? undefined,
+				muxEnvironmentId: library?.muxEnvironmentId ?? undefined,
+				createdAt: videoData?.createdAt.toISOString(),
+				updatedAt: videoData?.updatedAt.toISOString(),
+				viewCountSyncedAt: videoData?.viewCountSyncedAt?.toISOString(),
+				libraryName: library?.name,
 			}
 		: null;
 
@@ -97,55 +130,66 @@ function VideoEditorPage() {
 
 	return (
 		<>
-			<div className="flex items-center justify-between px-4 lg:px-6">
-				<Button asChild variant="link" className="px-0">
-					<Link to="/library/$libraryId/videos" params={{ libraryId }}>
-						&larr; Back to Videos
-					</Link>
-				</Button>
-				{/* Sync Status Indicator */}
-				{!syncStatusLoading && syncStatus && (
-					<div className="flex items-center gap-2">
-						{syncStatus.isSynced ? (
-							<span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-								<CheckCircle className="size-4" />
-								Synced
-							</span>
-						) : (
-							<div className="flex items-center gap-2">
-								<span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-									<CloudOff className="size-4" />
-									Not Synced
-								</span>
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={handleSync}
-									disabled={syncMutation.isPending}
-								>
-									<RefreshCw
-										className={`mr-2 size-4 ${syncMutation.isPending ? 'animate-spin' : ''}`}
-									/>
-									{syncMutation.isPending ? 'Syncing...' : 'Sync to Database'}
-								</Button>
-							</div>
-						)}
-					</div>
+			<DashboardHeader heading="Video Editor">
+				<div className="flex justify-between items-center py-4">
+					<Breadcrumb>
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink href="/">All Libraries</BreadcrumbLink>
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>
+								<BreadcrumbLink asChild>
+									<Link to="/library/$libraryId/videos" params={{ libraryId }}>
+										Videos
+									</Link>
+								</BreadcrumbLink>
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>{video?.title}</BreadcrumbItem>
+						</BreadcrumbList>
+					</Breadcrumb>
+					{/* Sync Status Indicator */}
+					{!syncStatusLoading && syncStatus && (
+						<div>
+							{syncStatus.isSynced ? (
+								<Badge variant="accent">
+									<CheckCircle className="size-4" />
+									Synced
+								</Badge>
+							) : (
+								<div className="flex items-center gap-2">
+									<Badge variant="destructive">
+										<CloudOff className="size-4" />
+										Not Synced
+									</Badge>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={handleSync}
+										disabled={syncMutation.isPending}
+									>
+										<RefreshCw
+											className={`mr-2 size-4 ${syncMutation.isPending ? 'animate-spin' : ''}`}
+										/>
+										{syncMutation.isPending ? 'Syncing...' : 'Sync to Database'}
+									</Button>
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+			</DashboardHeader>
+
+			<section className="mb-6">
+				{videoLoading ? (
+					<p className="text-muted-foreground">Loading video details...</p>
+				) : video ? (
+					<VideoEditor video={video} videoId={videoId} libraryId={libraryId} />
+				) : (
+					<p>Video not found</p>
 				)}
-			</div>
-			<DashboardHeader heading="Video Editor" />
-			{videoLoading ? (
-				<div className="text-muted-foreground">Loading video details...</div>
-			) : video ? (
-				<VideoEditor
-					video={video}
-					videoId={videoId}
-					libraryId={libraryId}
-					collections={[]}
-				/>
-			) : (
-				<p>Video not found</p>
-			)}
+			</section>
 		</>
 	);
 }

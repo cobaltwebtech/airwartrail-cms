@@ -11,7 +11,7 @@ function UserProfilePage() {
 		<>
 			<DashboardHeader
 				heading="User Profile"
-				text="Manage your credentials and info."
+				text="Manage your credentials and profile"
 			/>
 			<UserCard />
 		</>

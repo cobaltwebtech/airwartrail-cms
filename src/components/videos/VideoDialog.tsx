@@ -1,8 +1,10 @@
-import MuxPlayer from '@mux/mux-player-react';
+import MuxPlayer, { type MuxPlayerRefAttributes } from '@mux/mux-player-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import type React from 'react';
+import { useEffect, useRef } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -14,7 +16,6 @@ import {
 } from '@/components/ui/dialog';
 import { trpc } from '@/lib/trpc';
 import type { Video } from '@/lib/types';
-import { formatDate } from '@/lib/video-helpers';
 
 interface VideoDialogProps {
 	video: Video;
@@ -30,6 +31,8 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 	open,
 	onOpenChange,
 }) => {
+	const playerRef = useRef<MuxPlayerRefAttributes | null>(null);
+
 	const {
 		data: asset,
 		isLoading,
@@ -52,14 +55,54 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 		),
 	);
 
+	// Fetch chapters for the video
+	const { data: chapters } = useQuery(
+		trpc.mux.getChapters.queryOptions(
+			{ videoId: video.id, libraryId },
+			{ enabled: open && !!video.id },
+		),
+	);
+
+	// Add chapters to the player when they're loaded
+	useEffect(() => {
+		const player = playerRef.current;
+		if (!player || !chapters || chapters.length === 0) return;
+
+		// Wait for metadata to be loaded before adding chapters
+		const addChaptersToPlayer = () => {
+			if (player.readyState >= 1) {
+				// Convert chapters to Mux Player format
+				const muxChapters = chapters.map((chapter) => ({
+					startTime: chapter.startTime,
+					endTime: chapter.endTime ?? undefined,
+					value: chapter.title,
+				}));
+				player.addChapters(muxChapters);
+			}
+		};
+
+		if (player.readyState >= 1) {
+			addChaptersToPlayer();
+		} else {
+			player.addEventListener('loadedmetadata', addChaptersToPlayer, {
+				once: true,
+			});
+		}
+
+		return () => {
+			player.removeEventListener('loadedmetadata', addChaptersToPlayer);
+		};
+	}, [chapters]);
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="p-2 sm:max-w-5xl">
-				<div className="aspect-video w-full">
+				<div className="aspect-video w-full rounded-sm overflow-hidden">
 					{isLoading || (asset?.policy === 'signed' && tokensLoading) ? (
 						<div>Loading video...</div>
 					) : asset?.playbackId ? (
 						<MuxPlayer
+							ref={playerRef}
 							playbackId={asset.playbackId}
 							title={asset.title}
 							{...(asset.policy === 'signed' && tokens
@@ -87,16 +130,7 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 							</Link>
 						</DialogTitle>
 						<DialogDescription>
-							Uploaded on{' '}
-							<span className="capitalize">
-								{formatDate(video.dateUploaded)}
-							</span>
-						</DialogDescription>
-						<DialogDescription>
-							Views:{' '}
-							<span className="text-primary bg-secondary rounded-sm px-2 py-1 font-bold">
-								{video.views}
-							</span>
+							Views: <Badge variant="secondary">{video.views}</Badge>
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

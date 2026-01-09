@@ -1,79 +1,96 @@
 import type React from 'react';
 import { useState } from 'react';
 import ChapterEditor from '@/components/video-editor/ChapterEditor';
-import CopyUrl from '@/components/video-editor/CopyUrl';
+import PublishStatus from '@/components/video-editor/PublishStatus';
 import TitleEditor from '@/components/video-editor/TitleEditor';
 import VideoInfo from '@/components/video-editor/VideoInfo';
 import VideoPlayer from '@/components/video-editor/VideoPlayer';
-import CaptionUpload from './CaptionUpload';
-import CollectionEditor from './CollectionEditor';
-import MomentsEditor from './MomentsEditor';
+import CaptionEditor from './CaptionEditor';
+import DescriptionEditor from './DescriptionEditor';
+import VideoData from './VideoData';
 
 interface VideoEditorProps {
 	videoId: string;
 	libraryId?: string;
 	video: {
 		title: string;
+		description?: string;
 		duration: number;
 		statusText: string;
-		views: number;
-		storageSize: number;
+		views?: number;
 		dateUploaded: string;
-		collectionId?: string;
+		isPublished: boolean;
 		captions?: { label: string; srclang: string }[];
-		chapters?: { title: string; start: number; end: number }[];
-		moments?: { label: string; timestamp: number }[];
+		resolutionTier?: string;
+		aspectRatio?: string;
+		videoQuality?: string;
+		maxStoredFrameRate?: number;
+		maxWidth?: number;
+		maxHeight?: number;
+		id?: string;
+		muxAssetId?: string;
+		muxPlaybackId?: string;
+		muxEnvironmentId?: string;
+		createdAt?: string;
+		updatedAt?: string;
+		viewCountSyncedAt?: string;
+		libraryName?: string;
 	} | null;
-	collections: { guid: string; name: string }[];
 }
 
 const VideoEditor: React.FC<VideoEditorProps> = ({
 	video,
 	videoId,
 	libraryId,
-	collections,
 }) => {
 	const [title, setTitle] = useState(video?.title || '');
-	const [collectionId, setCollectionId] = useState<string | null>(
-		video?.collectionId || null,
-	);
+	const [description, setDescription] = useState(video?.description || '');
 	const duration = video?.duration || 0;
 	const dateUploaded = video?.dateUploaded || '';
 	const views = video?.views || 0;
-	const storageSize = video?.storageSize || 0;
 	const statusText = video?.statusText || '';
 	const captions = video?.captions || [];
-	const chapters = video?.chapters || [];
-	const moments = video?.moments || [];
-
-	type HandleUpdateCollectionId = (newCollectionId: string | null) => void;
-
-	const handleUpdateCollectionId: HandleUpdateCollectionId = (
-		newCollectionId,
-	) => {
-		setCollectionId(newCollectionId);
-	};
-
+	const resolutionTier = video?.resolutionTier;
+	const aspectRatio = video?.aspectRatio;
+	const videoQuality = video?.videoQuality;
+	const maxStoredFrameRate = video?.maxStoredFrameRate;
+	const maxWidth = video?.maxWidth;
+	const maxHeight = video?.maxHeight;
+	const internalId = video?.id || '';
+	const muxAssetId = video?.muxAssetId || videoId;
+	const muxPlaybackId = video?.muxPlaybackId || '';
+	const muxEnvironmentId = video?.muxEnvironmentId || '';
+	const createdAt = video?.createdAt;
+	const updatedAt = video?.updatedAt;
+	const viewCountSyncedAt = video?.viewCountSyncedAt;
 	const handleTitleUpdate = (newTitle: string) => {
 		setTitle(newTitle);
 	};
 
+	const handleDescriptionUpdate = (newDescription: string) => {
+		setDescription(newDescription);
+	};
+
 	return (
-		<div className="grid grid-cols-8 gap-4">
+		<div className="grid md:grid-cols-8 gap-4">
 			<VideoInfo
 				duration={duration}
 				views={views}
-				storageSize={storageSize}
 				initialTitle={title}
 				dateUploaded={dateUploaded}
 				statusText={statusText}
+				libraryName={video?.libraryName}
+				resolutionTier={resolutionTier}
+				aspectRatio={aspectRatio}
+				videoQuality={videoQuality}
+				maxStoredFrameRate={maxStoredFrameRate}
+				maxWidth={maxWidth}
+				maxHeight={maxHeight}
 			/>
-			<CopyUrl videoId={videoId} />
-			<CollectionEditor
-				collectionId={collectionId || ''}
-				onUpdateCollectionId={handleUpdateCollectionId}
-				collections={collections}
+			<PublishStatus
 				videoId={videoId}
+				libraryId={libraryId}
+				initialPublishStatus={video?.isPublished}
 			/>
 			<VideoPlayer videoId={videoId} libraryId={libraryId} />
 			<TitleEditor
@@ -82,20 +99,31 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
 				initialTitle={title}
 				onTitleUpdate={handleTitleUpdate}
 			/>
-			<MomentsEditor
+			<DescriptionEditor
 				videoId={videoId}
-				initialMoments={moments}
-				videoDuration={duration}
+				libraryId={libraryId}
+				initialDescription={description}
+				onDescriptionUpdate={handleDescriptionUpdate}
 			/>
-			<CaptionUpload
+			<CaptionEditor
 				videoId={videoId}
 				libraryId={libraryId}
 				initialCaptions={captions}
 			/>
 			<ChapterEditor
 				videoId={videoId}
-				initialChapters={chapters}
+				libraryId={libraryId}
 				videoDuration={duration}
+			/>
+			<VideoData
+				internalId={internalId}
+				libraryId={libraryId || 'n/a'}
+				muxAssetId={muxAssetId}
+				muxPlaybackId={muxPlaybackId}
+				muxEnvironmentId={muxEnvironmentId}
+				createdAt={createdAt}
+				updatedAt={updatedAt}
+				viewCountSyncedAt={viewCountSyncedAt}
 			/>
 		</div>
 	);

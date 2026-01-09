@@ -29,6 +29,7 @@ export interface Video {
 	captions?: MuxTrack[];
 	metadata?: Record<string, unknown>;
 	policy?: 'public' | 'signed';
+	isPublished?: boolean;
 	// Deprecated fields kept for backward compatibility
 	guid?: string;
 	thumbnailFileName?: string;
@@ -38,7 +39,6 @@ export interface Video {
 	statusText?: string;
 	dateUploaded?: string;
 	chapters?: { title: string; start: number; end: number }[];
-	moments?: { label: string; timestamp: number }[];
 }
 
 export interface DirectUpload {

@@ -466,8 +466,8 @@ function UploadPage() {
 									<Label htmlFor="autoCaptions">Auto-generate captions</Label>
 									<p className="text-xs text-muted-foreground max-w-sm">
 										This will generate captions of the language of the audio
-										track. Do not use for mixed-language content, plan to upload
-										your own captions, or translation of languages.
+										track. Do not use for mixed-language content, if you plan to
+										upload your own captions, or translation of languages.
 									</p>
 								</div>
 								<Switch

@@ -1,6 +1,11 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { DashboardFooter } from '@/components/DashboardFooter';
-import { DashboardNav } from '@/components/DashboardNav';
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import {
+	SidebarInset,
+	SidebarProvider,
+	SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { requireAuth } from '@/lib/auth-check';
 
@@ -15,15 +20,16 @@ export const Route = createFileRoute('/_dashboard')({
 
 function DashboardLayout() {
 	return (
-		<div className="bg-background grid min-h-screen w-full md:grid-cols-[200px_1fr]">
-			<DashboardNav />
-			<div className="min-h-screen flex flex-col">
-				<main className="h-full p-4 lg:p-6">
+		<SidebarProvider>
+			<AppSidebar />
+			<SidebarInset>
+				<SidebarTrigger />
+				<main className="flex flex-1 flex-col px-6 py-4">
 					<Outlet />
 				</main>
 				<DashboardFooter />
-			</div>
+			</SidebarInset>
 			<Toaster richColors position="top-right" />
-		</div>
+		</SidebarProvider>
 	);
 }

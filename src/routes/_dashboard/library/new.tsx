@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
-	ArrowLeft,
 	CheckCircle,
 	KeyRound,
 	Library,
@@ -11,6 +10,12 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -59,12 +64,12 @@ function CreateLibraryPage() {
 	// Create mutation
 	const createMutation = useMutation(
 		trpc.mux.createLibrary.mutationOptions({
-			onSuccess: (data) => {
+			onSuccess: () => {
 				toast.success('Library created successfully');
 				queryClient.invalidateQueries({
 					queryKey: trpc.mux.listLibraries.queryKey(),
 				});
-				navigate({ to: '/library/$libraryId', params: { libraryId: data.id } });
+				navigate({ to: '/' });
 			},
 			onError: (error) => {
 				toast.error(`Failed to create library: ${error.message}`);
@@ -125,17 +130,17 @@ function CreateLibraryPage() {
 			<DashboardHeader
 				heading="Create Video Library"
 				text="Set up a new Mux video library with your API credentials."
-			/>
+			>
+				<Breadcrumb>
+					<BreadcrumbList>
+						<BreadcrumbItem>
+							<BreadcrumbLink href="/">&larr; Back to Libraries</BreadcrumbLink>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
+			</DashboardHeader>
 
-			<div className="p-4 lg:p-6 space-y-6">
-				<Link
-					to="/"
-					className="text-muted-foreground hover:text-primary inline-flex items-center text-sm transition-colors"
-				>
-					<ArrowLeft className="mr-2 size-4" />
-					Back to Libraries
-				</Link>
-
+			<section className="space-y-6">
 				<div className="grid gap-6 lg:grid-cols-2">
 					{/* General Settings */}
 					<Card>
@@ -375,7 +380,7 @@ function CreateLibraryPage() {
 						Create Library
 					</Button>
 				</div>
-			</div>
+			</section>
 		</>
 	);
 }

@@ -2,17 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
 	ArrowLeft,
-	CheckCircle,
+	CirclePlay,
 	KeyRound,
 	Loader2,
 	Save,
 	Settings,
 	Trash2,
-	XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -46,7 +51,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute(
-	'/_dashboard/library/$libraryId/edit-library',
+	'/_dashboard/library/edit-library/$libraryId',
 )({
 	component: LibrarySettingsPage,
 	loader: async ({ context: { queryClient }, params }) => {
@@ -210,51 +215,18 @@ function LibrarySettingsPage() {
 			<DashboardHeader
 				heading={`${library.name} Settings`}
 				text="Manage your video library configuration and Mux credentials."
-			/>
+			>
+				<Breadcrumb>
+					<BreadcrumbList>
+						<BreadcrumbItem>
+							<BreadcrumbLink href="/">&larr; Back to Libraries</BreadcrumbLink>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
+			</DashboardHeader>
 
-			<div className="p-4 lg:p-6 space-y-6">
-				<div className="flex items-center justify-between">
-					<Link
-						to="/"
-						className="text-muted-foreground hover:text-primary inline-flex items-center text-sm transition-colors"
-					>
-						<ArrowLeft className="mr-2 size-4" />
-						Back to Libraries
-					</Link>
-
-					<Dialog>
-						<DialogTrigger asChild>
-							<Button variant="destructive" size="sm">
-								<Trash2 className="mr-2 size-4" />
-								Delete Library
-							</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Delete Library</DialogTitle>
-								<DialogDescription>
-									Are you sure you want to delete "{library.name}"? This action
-									cannot be undone. All videos associated with this library will
-									become inaccessible.
-								</DialogDescription>
-							</DialogHeader>
-							<DialogFooter>
-								<DialogClose asChild>
-									<Button variant="outline">Cancel</Button>
-								</DialogClose>
-								<Button
-									variant="destructive"
-									onClick={() => deleteMutation.mutate({ libraryId })}
-								>
-									{deleteMutation.isPending ? (
-										<Loader2 className="mr-2 size-4 animate-spin" />
-									) : null}
-									Delete
-								</Button>
-							</DialogFooter>
-						</DialogContent>
-					</Dialog>
-				</div>
+			<section className="space-y-6">
+				<div className="flex items-center justify-end"></div>
 
 				<div className="grid gap-6 lg:grid-cols-2">
 					{/* General Settings */}
@@ -309,7 +281,10 @@ function LibrarySettingsPage() {
 					{/* Playback Settings */}
 					<Card>
 						<CardHeader>
-							<CardTitle>Playback Settings</CardTitle>
+							<CardTitle className="flex items-center gap-2">
+								<CirclePlay className="size-5" />
+								Playback Settings
+							</CardTitle>
 							<CardDescription>
 								Default settings for new videos uploaded to this library.
 							</CardDescription>
@@ -371,26 +346,22 @@ function LibrarySettingsPage() {
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
 								<KeyRound className="size-5" />
-								Mux API Credentials
+								API Credentials
 							</CardTitle>
 							<CardDescription>
-								Your Mux API credentials. Leave fields empty to keep existing
+								Library API credentials. Leave fields empty to keep existing
 								values.
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
 							<div className="space-y-2">
-								<Label htmlFor="muxEnvironmentId">Mux Environment ID</Label>
+								<Label htmlFor="muxEnvironmentId">Environment ID</Label>
 								<Input
 									id="muxEnvironmentId"
 									value={muxEnvironmentId}
 									onChange={(e) => setMuxEnvironmentId(e.target.value)}
 									placeholder="e.g., env_xxxxx"
 								/>
-								<p className="text-muted-foreground text-xs">
-									Found in Mux Dashboard → Settings → Environment. Used for
-									webhook routing.
-								</p>
 							</div>
 
 							<div className="grid gap-4 md:grid-cols-2">
@@ -448,8 +419,7 @@ function LibrarySettingsPage() {
 									Signing Keys (Optional)
 								</h4>
 								<p className="text-muted-foreground mb-4 text-sm">
-									Signing keys are required for signed playback URLs. You can
-									generate these in your Mux dashboard.
+									Signing keys are required for signed playback URLs.
 								</p>
 								<div className="grid gap-4 md:grid-cols-2">
 									<div className="space-y-2">
@@ -489,9 +459,11 @@ function LibrarySettingsPage() {
 									Webhook Configuration
 								</h4>
 								<p className="text-muted-foreground mb-4 text-sm">
-									The webhook secret is used to verify incoming webhooks from
-									Mux. Configure your webhook in the Mux dashboard to point to
-									your webhook endpoint.
+									The webhook secret used to verify the signature of incoming
+									webhooks. The webhook endpoint is:{' '}
+									<code className="bg-secondary text-primary px-3 py-2 rounded-sm">
+										https://dashboard.airwartrail.com/api/webhooks/mux
+									</code>
 								</p>
 								<div className="space-y-2">
 									<Label htmlFor="webhookSecret">Webhook Signing Secret</Label>
@@ -501,10 +473,6 @@ function LibrarySettingsPage() {
 										onChange={(e) => setWebhookSecret(e.target.value)}
 										placeholder="No webhook secret configured"
 									/>
-									<p className="text-muted-foreground text-xs">
-										Click the eye icon to reveal. Found in Mux Dashboard →
-										Settings → Webhooks → Signing Secret
-									</p>
 								</div>
 							</div>
 						</CardContent>
@@ -512,23 +480,63 @@ function LibrarySettingsPage() {
 				</div>
 
 				{/* Save Button */}
-				<div className="flex justify-end gap-4">
-					<Button variant="outline" asChild>
-						<Link to="/">Cancel</Link>
-					</Button>
-					<Button
-						onClick={handleSave}
-						disabled={updateMutation.isPending || !name}
-					>
-						{updateMutation.isPending ? (
-							<Loader2 className="mr-2 size-4 animate-spin" />
-						) : (
-							<Save className="mr-2 size-4" />
-						)}
-						Save Changes
-					</Button>
+				<div className="flex justify-between gap-4">
+					<div className="flex gap-2">
+						<Button
+							onClick={handleSave}
+							disabled={updateMutation.isPending || !name}
+						>
+							{updateMutation.isPending ? (
+								<Loader2 className="mr-2 size-4 animate-spin" />
+							) : (
+								<Save className="mr-2 size-4" />
+							)}
+							Save Changes
+						</Button>
+						<Button variant="outline" asChild>
+							<Link to="/">Cancel</Link>
+						</Button>
+					</div>
+					<Dialog>
+						<DialogTrigger asChild>
+							<Button variant="destructive" size="sm">
+								<Trash2 className="mr-2 size-4" />
+								Delete Library
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Delete Library</DialogTitle>
+								<DialogDescription>
+									Are you sure you want to delete{' '}
+									<span className="text-primary font-semibold">
+										{library.name}
+									</span>
+									? This action cannot be undone. All videos associated with
+									this library will become inaccessible in the dashboard.
+									However, the videos will not be deleted and storage and usage
+									costs will still be incurred. Contact support to permanently
+									delete library and associated videos.
+								</DialogDescription>
+							</DialogHeader>
+							<DialogFooter>
+								<DialogClose asChild>
+									<Button variant="outline">Cancel</Button>
+								</DialogClose>
+								<Button
+									variant="destructive"
+									onClick={() => deleteMutation.mutate({ libraryId })}
+								>
+									{deleteMutation.isPending ? (
+										<Loader2 className="mr-2 size-4 animate-spin" />
+									) : null}
+									Delete
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>{' '}
 				</div>
-			</div>
+			</section>
 		</>
 	);
 }

@@ -3,6 +3,12 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { RefreshCw, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { VideoList } from '@/components/videos/VideoList';
 import { trpc } from '@/lib/trpc';
@@ -86,44 +92,47 @@ function VideosPage() {
 				heading={library?.name ? `${library.name} - Videos` : 'Videos'}
 				text={library?.description || 'Manage your streaming video library.'}
 			>
-				<div className="flex gap-2">
-					<Button asChild size="sm">
-						<Link
-							to={`/library/$libraryId/edit-library`}
-							params={{ libraryId }}
+				<div className="flex justify-between items-center">
+					<Breadcrumb>
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink href="/">
+									&larr; Back to Libraries
+								</BreadcrumbLink>
+							</BreadcrumbItem>
+						</BreadcrumbList>
+					</Breadcrumb>
+					<div className="flex gap-4">
+						<Button asChild>
+							<Link
+								to="/library/edit-library/$libraryId"
+								params={{ libraryId }}
+							>
+								<Settings />
+								Edit Library
+							</Link>
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={handleSync}
+							disabled={syncMutation.isPending}
 						>
-							<Settings className="mr-2 size-4" />
-							Edit Library
-						</Link>
-					</Button>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={handleSync}
-						disabled={syncMutation.isPending}
-					>
-						<RefreshCw
-							className={`mr-2 size-4 ${syncMutation.isPending ? 'animate-spin' : ''}`}
-						/>
-						{syncMutation.isPending ? 'Syncing...' : 'Sync from Mux'}
-					</Button>
+							<RefreshCw
+								className={`${syncMutation.isPending ? 'animate-spin' : ''}`}
+							/>
+							{syncMutation.isPending ? 'Syncing...' : 'Sync from Mux'}
+						</Button>
+					</div>
 				</div>
 			</DashboardHeader>
-			<div className="px-4 lg:px-6 mb-4">
-				<Link
-					to="/"
-					className="text-sm text-muted-foreground hover:text-primary transition-colors"
-				>
-					← Back to Libraries
-				</Link>
-			</div>
-			<div className="grid gap-4">
+
+			<section className="my-4">
 				{isLoading ? (
 					<div className="text-muted-foreground">Loading videos...</div>
 				) : (
 					<VideoList videos={videos} libraryId={libraryId} />
 				)}
-			</div>
+			</section>
 		</>
 	);
 }

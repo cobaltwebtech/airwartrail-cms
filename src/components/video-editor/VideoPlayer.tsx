@@ -1,6 +1,7 @@
-import MuxPlayer from '@mux/mux-player-react';
+import MuxPlayer, { type MuxPlayerRefAttributes } from '@mux/mux-player-react';
 import { useQuery } from '@tanstack/react-query';
 import type React from 'react';
+import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trpc } from '@/lib/trpc';
@@ -11,6 +12,8 @@ interface VideoPlayerProps {
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
+	const playerRef = useRef<MuxPlayerRefAttributes | null>(null);
+
 	const {
 		data: video,
 		isLoading,
@@ -31,9 +34,48 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
 		),
 	);
 
+	// Fetch chapters for the video
+	const { data: chapters } = useQuery(
+		trpc.mux.getChapters.queryOptions(
+			{ videoId, libraryId },
+			{ enabled: !!videoId },
+		),
+	);
+
+	// Add chapters to the player when they're loaded
+	useEffect(() => {
+		const player = playerRef.current;
+		if (!player || !chapters || chapters.length === 0) return;
+
+		// Wait for metadata to be loaded before adding chapters
+		const addChaptersToPlayer = () => {
+			if (player.readyState >= 1) {
+				// Convert chapters to Mux Player format
+				const muxChapters = chapters.map((chapter) => ({
+					startTime: chapter.startTime,
+					endTime: chapter.endTime ?? undefined,
+					value: chapter.title,
+				}));
+				player.addChapters(muxChapters);
+			}
+		};
+
+		if (player.readyState >= 1) {
+			addChaptersToPlayer();
+		} else {
+			player.addEventListener('loadedmetadata', addChaptersToPlayer, {
+				once: true,
+			});
+		}
+
+		return () => {
+			player.removeEventListener('loadedmetadata', addChaptersToPlayer);
+		};
+	}, [chapters]);
+
 	if (isLoading) {
 		return (
-			<Card className="col-span-4 col-start-5 row-span-2 w-full">
+			<Card className="col-span-4 col-start-5 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -48,7 +90,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
 
 	if (isError || !video?.playbackId) {
 		return (
-			<Card className="col-span-4 col-start-5 row-span-2 w-full">
+			<Card className="col-span-4 col-start-5 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -87,6 +129,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
 			<CardContent>
 				<div className="aspect-video w-full rounded-sm overflow-hidden">
 					<MuxPlayer
+						ref={playerRef}
 						playbackId={video.playbackId}
 						title={video.title}
 						streamType="on-demand"

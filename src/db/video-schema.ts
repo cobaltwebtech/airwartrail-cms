@@ -118,6 +118,10 @@ export const video = sqliteTable(
 		publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
 		// Analytics (cached from Mux Data or custom tracking)
 		viewCount: integer('view_count').default(0),
+		viewCountSyncedAt: integer('view_count_synced_at', {
+			mode: 'timestamp_ms',
+		}), // Last time we synced views from Mux
+		totalWatchTimeMs: integer('total_watch_time_ms').default(0), // Cumulative watch time in milliseconds
 		// Processing info
 		ingestType: text('ingest_type', {
 			enum: [
@@ -186,37 +190,6 @@ export const videoChapter = sqliteTable(
 	(table) => [
 		index('video_chapter_video_id_idx').on(table.videoId),
 		index('video_chapter_sort_order_idx').on(table.sortOrder),
-	],
-);
-
-/**
- * Video Moment Schema
- * Stores timestamp markers/moments for videos (e.g., highlights, key points)
- */
-export const videoMoment = sqliteTable(
-	'video_moment',
-	{
-		id: text('id').primaryKey(),
-		videoId: text('video_id')
-			.notNull()
-			.references(() => video.id, { onDelete: 'cascade' }),
-		label: text('label').notNull(),
-		timestamp: real('timestamp').notNull(), // Time in seconds
-		description: text('description'),
-		// Optional icon or type for categorization
-		momentType: text('moment_type'),
-		sortOrder: integer('sort_order').default(0).notNull(),
-		createdAt: integer('created_at', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => new Date())
-			.notNull(),
-	},
-	(table) => [
-		index('video_moment_video_id_idx').on(table.videoId),
-		index('video_moment_timestamp_idx').on(table.timestamp),
 	],
 );
 
@@ -357,7 +330,6 @@ export const videoRelations = relations(video, ({ one, many }) => ({
 		references: [muxLibrary.id],
 	}),
 	chapters: many(videoChapter),
-	moments: many(videoMoment),
 	tracks: many(videoTrack),
 	collectionItems: many(videoCollectionItem),
 }));
@@ -365,13 +337,6 @@ export const videoRelations = relations(video, ({ one, many }) => ({
 export const videoChapterRelations = relations(videoChapter, ({ one }) => ({
 	video: one(video, {
 		fields: [videoChapter.videoId],
-		references: [video.id],
-	}),
-}));
-
-export const videoMomentRelations = relations(videoMoment, ({ one }) => ({
-	video: one(video, {
-		fields: [videoMoment.videoId],
 		references: [video.id],
 	}),
 }));
@@ -420,9 +385,6 @@ export type NewVideo = typeof video.$inferInsert;
 
 export type VideoChapter = typeof videoChapter.$inferSelect;
 export type NewVideoChapter = typeof videoChapter.$inferInsert;
-
-export type VideoMoment = typeof videoMoment.$inferSelect;
-export type NewVideoMoment = typeof videoMoment.$inferInsert;
 
 export type VideoTrack = typeof videoTrack.$inferSelect;
 export type NewVideoTrack = typeof videoTrack.$inferInsert;

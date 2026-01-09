@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -350,8 +351,10 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 
 	const handleDeleteConfirm = async () => {
 		if (videoToDelete) {
-			deleteVideoMutation.mutate({ assetId: videoToDelete.id, libraryId });
-			setIsDeleteDialogOpen(false);
+			await deleteVideoMutation.mutateAsync({
+				assetId: videoToDelete.id,
+				libraryId,
+			});
 			setVideoToDelete(null);
 		}
 	};
@@ -366,15 +369,21 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				enableSorting: false,
 				cell: ({ row }) => (
 					<div className="relative h-12 w-20 overflow-hidden rounded">
-						<VideoThumbnail
-							playbackId={row.original.playbackId}
-							alt={row.original.title}
-							className="h-full w-full object-cover"
-							width={160}
-							height={90}
-							policy={row.original.policy}
-							libraryId={libraryId}
-						/>
+						<Link
+							to="/library/$libraryId/edit-video/$videoId"
+							params={{ videoId: row.original.id, libraryId }}
+							className="font-medium hover:underline"
+						>
+							<VideoThumbnail
+								playbackId={row.original.playbackId}
+								alt={row.original.title}
+								className="h-full w-full object-cover"
+								width={160}
+								height={90}
+								policy={row.original.policy}
+								libraryId={libraryId}
+							/>
+						</Link>
 					</div>
 				),
 			},
@@ -431,13 +440,22 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 					</Button>
 				),
 				cell: ({ row }) => (
-					<span className="text-primary bg-secondary rounded-sm px-2 py-1 text-sm font-bold">
-						{row.original.views}
-					</span>
+					<Badge variant="secondary">
+						{row.original.views?.toLocaleString() ?? 0}
+					</Badge>
 				),
 			},
 			{
-				accessorKey: 'dateUploaded',
+				accessorKey: 'isPublished',
+				header: 'Visibility',
+				cell: ({ row }) => (
+					<Badge variant={row.original.isPublished ? 'default' : 'secondary'}>
+						{row.original.isPublished ? 'Published' : 'Unpublished'}
+					</Badge>
+				),
+			},
+			{
+				accessorKey: 'createdAt',
 				header: ({ column }) => (
 					<Button
 						variant="ghost"
@@ -450,7 +468,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				),
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-sm">
-						{formatDate(row.original.dateUploaded)}
+						{formatDate(row.original.createdAt)}
 					</span>
 				),
 			},
@@ -705,14 +723,26 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									</DropdownMenu>
 								</div>
 								<CardDescription>
-									Views:{' '}
-									<span className="text-primary bg-secondary rounded-sm px-2 py-1 font-bold">
-										{video.views}
-									</span>
+									<div className="space-y-1">
+										<div>
+											Views:{' '}
+											<Badge variant="secondary">
+												{(video.views ?? 0).toLocaleString()}
+											</Badge>
+										</div>
+										<div>
+											Visibility:{' '}
+											<Badge
+												variant={video.isPublished ? 'default' : 'secondary'}
+											>
+												{video.isPublished ? 'Published' : 'Unpublished'}
+											</Badge>
+										</div>
+									</div>
 								</CardDescription>
 							</CardHeader>
 							<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-								Uploaded on {formatDate(video.dateUploaded)}
+								Uploaded on {formatDate(video.createdAt)}
 							</CardFooter>
 						</Card>
 					))}

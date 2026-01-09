@@ -3,14 +3,22 @@ import { TRPCError } from "@trpc/server";
 import { t, protectedProcedure } from "../trpc-init";
 import Mux from "@mux/mux-node";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, asc } from "drizzle-orm";
 import { generateLibraryId, generateVideoId } from "@/worker/lib/generate-id";
+import { customAlphabet } from "nanoid";
 import {
 	muxLibrary,
 	video,
+	videoChapter,
 	type MuxLibrary,
 } from "@/db/video-schema";
 import { encrypt, decrypt } from "@/worker/lib/encryption";
+
+// Generate chapter IDs
+const generateChapterId = customAlphabet(
+	"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+	16,
+);
 
 // ============================================================================
 // Language Code Mapping
@@ -140,6 +148,17 @@ export interface MuxAsset {
 	captions?: MuxTrack[];
 	metadata?: Record<string, unknown>;
 	policy?: "public" | "signed";
+	// Additional Mux asset metadata
+	resolutionTier?: "audio-only" | "720p" | "1080p" | "1440p" | "2160p";
+	aspectRatio?: string;
+	videoQuality?: "basic" | "plus" | "premium";
+	maxStoredFrameRate?: number;
+	maxWidth?: number;
+	maxHeight?: number;
+	// Analytics
+	views?: number;
+	// Database metadata
+	isPublished?: boolean;
 }
 
 export interface MuxTrack {
@@ -316,6 +335,9 @@ function mapMuxAssetToVideo(asset: any): MuxAsset {
 			closed_captions: track.closed_captions,
 		}));
 
+	// Extract video track info for resolution
+	const videoTrack = (asset.tracks || []).find((track: any) => track.type === "video");
+
 	return {
 		id: asset.id,
 		playbackId,
@@ -330,6 +352,13 @@ function mapMuxAssetToVideo(asset: any): MuxAsset {
 		captions: captions.length > 0 ? captions : undefined,
 		metadata: asset.meta,
 		policy: policy as "public" | "signed",
+		// Additional Mux asset metadata
+		resolutionTier: asset.resolution_tier,
+		aspectRatio: asset.aspect_ratio,
+		videoQuality: asset.video_quality,
+		maxStoredFrameRate: asset.max_stored_frame_rate,
+		maxWidth: videoTrack?.max_width,
+		maxHeight: videoTrack?.max_height,
 	};
 }
 
@@ -703,13 +732,56 @@ export const muxRouter = t.router({
 			const page = input?.page ?? 1;
 
 			try {
-				const { mux } = await getMuxClient(env, libraryId);
+				const { mux, library } = await getMuxClient(env, libraryId);
+				const db = getVideosDb(env);
 				const assets = await mux.video.assets.list({
 					limit,
 					page,
 				});
 
-				return (assets.data || []).map(mapMuxAssetToVideo);
+				const muxAssets = (assets.data || []).map(mapMuxAssetToVideo);
+
+				// Get all mux asset IDs
+				const muxAssetIds = muxAssets.map((asset) => asset.id);
+
+				// Fetch view counts and published status from database for these assets
+				if (muxAssetIds.length > 0) {
+					const videoMetadata = await db
+						.select({
+							muxAssetId: video.muxAssetId,
+							viewCount: video.viewCount,
+							isPublished: video.isPublished,
+						})
+						.from(video)
+						.where(
+							and(
+								eq(video.libraryId, library.id),
+								inArray(video.muxAssetId, muxAssetIds),
+								eq(video.isDeleted, false),
+							),
+						);
+
+					// Create a map for quick lookup
+					const videoMetadataMap = new Map<string, { viewCount: number; isPublished: boolean }>();
+					for (const record of videoMetadata) {
+						videoMetadataMap.set(record.muxAssetId, {
+							viewCount: record.viewCount ?? 0,
+							isPublished: record.isPublished,
+						});
+					}
+
+					// Enrich assets with view counts and published status
+					return muxAssets.map((asset) => {
+						const metadata = videoMetadataMap.get(asset.id);
+						return {
+							...asset,
+							views: metadata?.viewCount ?? 0,
+							isPublished: metadata?.isPublished ?? false,
+						};
+					});
+				}
+
+				return muxAssets;
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;
 				console.error("Error listing Mux assets:", error);
@@ -760,9 +832,15 @@ export const muxRouter = t.router({
 
 			try {
 				const { mux } = await getMuxClient(env, input.libraryId);
+				
+				// Build the meta object, merging title and custom metadata
+				const meta: Record<string, unknown> = { ...input.metadata };
+				if (input.title !== undefined) {
+					meta.title = input.title;
+				}
+
 				const asset = await mux.video.assets.update(input.assetId, {
-					meta: input.metadata,
-					passthrough: input.title,
+					meta: Object.keys(meta).length > 0 ? meta : undefined,
 				});
 
 				return mapMuxAssetToVideo(asset);
@@ -772,6 +850,135 @@ export const muxRouter = t.router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to update asset",
+				});
+			}
+		}),
+
+	/**
+	 * Update video metadata in local database
+	 */
+	updateVideoMetadata: protectedProcedure
+		.input(
+			z.object({
+				muxAssetId: z.string(),
+				libraryId: z.string().optional(),
+				title: z.string().optional(),
+				description: z.string().optional(),
+				isPublished: z.boolean().optional(),
+				publishedAt: z.string().nullable().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { library } = await getMuxClient(env, input.libraryId);
+
+				// Find the video in the database
+				const existingVideo = await db
+					.select()
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.muxAssetId, input.muxAssetId),
+						),
+					)
+					.limit(1);
+
+				if (existingVideo.length === 0) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video not found in database",
+					});
+				}
+
+				// Build update object with only provided fields
+				const updateData: Partial<typeof video.$inferInsert> = {};
+				if (input.title !== undefined) {
+					updateData.title = input.title;
+				}
+				if (input.description !== undefined) {
+					updateData.description = input.description;
+				}
+				if (input.isPublished !== undefined) {
+					updateData.isPublished = input.isPublished;
+				}
+				if (input.publishedAt !== undefined) {
+					updateData.publishedAt = input.publishedAt ? new Date(input.publishedAt) : null;
+				}
+
+				// Only update if there are fields to update
+				if (Object.keys(updateData).length === 0) {
+					return { success: true };
+				}
+
+				// Update the database record
+				await db
+					.update(video)
+					.set(updateData)
+					.where(eq(video.id, existingVideo[0].id));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating video metadata:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update video metadata",
+				});
+			}
+		}),
+
+	/**
+	 * Get video metadata from local database
+	 */
+	getVideoFromDatabase: protectedProcedure
+		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { library } = await getMuxClient(env, input.libraryId);
+
+				const [videoRecord] = await db
+					.select({
+						id: video.id,
+						title: video.title,
+						description: video.description,
+						muxAssetId: video.muxAssetId,
+						muxPlaybackId: video.muxPlaybackId,
+						status: video.status,
+						duration: video.duration,
+						viewCount: video.viewCount,
+						isPublished: video.isPublished,
+						publishedAt: video.publishedAt,
+						viewCountSyncedAt: video.viewCountSyncedAt,
+						createdAt: video.createdAt,
+						updatedAt: video.updatedAt,
+					})
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.muxAssetId, input.muxAssetId),
+						),
+					)
+					.limit(1);
+
+				if (!videoRecord) {
+					return null;
+				}
+
+				return videoRecord;
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting video from database:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get video from database",
 				});
 			}
 		}),
@@ -952,7 +1159,20 @@ export const muxRouter = t.router({
 
 			try {
 				const { mux } = await getMuxClient(env, input.libraryId);
+				const db = getVideosDb(env);
+
+				// Delete from Mux first
 				await mux.video.assets.delete(input.assetId);
+
+				// Then delete from database (soft delete)
+				await db
+					.update(video)
+					.set({
+						isDeleted: true,
+						deletedAt: new Date(),
+					})
+					.where(eq(video.muxAssetId, input.assetId));
+
 				return { success: true };
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;
@@ -1464,4 +1684,289 @@ export const muxRouter = t.router({
 				}
 			},
 		),
+
+	/**
+	 * Get view count for a specific asset from Mux Data API
+	 * This performs incremental syncing - it fetches views since the last sync
+	 * and accumulates them into the stored total for lifetime tracking.
+	 *
+	 * Mux Data only retains data for 100 days, so we store cumulative totals
+	 * in our database to maintain lifetime view counts.
+	 */
+	getAssetViewCount: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				muxAssetId: z.string(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const { libraryId, muxAssetId } = input;
+
+			const db = getVideosDb(env);
+
+			try {
+				// Get the current stored video record
+				const [videoRecord] = await db
+					.select({
+						id: video.id,
+						viewCount: video.viewCount,
+						viewCountSyncedAt: video.viewCountSyncedAt,
+						totalWatchTimeMs: video.totalWatchTimeMs,
+					})
+					.from(video)
+					.where(and(eq(video.muxAssetId, muxAssetId), eq(video.libraryId, libraryId)))
+					.limit(1);
+
+				// If no video record exists in our DB, just fetch from Mux without storing
+				if (!videoRecord) {
+					const { mux } = await getMuxClient(env, libraryId);
+					const response = await mux.data.metrics.getOverallValues("views", {
+						filters: [`asset_id:${muxAssetId}`],
+						timeframe: ["90:days"],
+					});
+
+					return {
+						muxAssetId,
+						views: response.data?.total_views ?? 0,
+						totalWatchTime: response.data?.total_watch_time ?? null,
+						totalPlayingTime: response.data?.total_playing_time ?? null,
+						source: "mux-only" as const,
+					};
+				}
+
+				const { mux } = await getMuxClient(env, libraryId);
+				const now = Date.now();
+				const lastSyncAt = videoRecord.viewCountSyncedAt?.getTime() ?? null;
+
+				// Determine the timeframe to query
+				// If we have a last sync time, get views since then
+				// Otherwise, get all available data (up to 90 days)
+				let timeframeParam: string[];
+				if (lastSyncAt) {
+					// Query from last sync to now using epoch timestamps
+					const lastSyncEpoch = Math.floor(lastSyncAt / 1000);
+					const nowEpoch = Math.floor(now / 1000);
+					timeframeParam = [String(lastSyncEpoch), String(nowEpoch)];
+				} else {
+					// First sync - get maximum available data (90 days)
+					timeframeParam = ["90:days"];
+				}
+
+				const response = await mux.data.metrics.getOverallValues("views", {
+					filters: [`asset_id:${muxAssetId}`],
+					timeframe: timeframeParam,
+				});
+
+				const newViews = response.data?.total_views ?? 0;
+				const newWatchTime = response.data?.total_watch_time ?? 0;
+
+				// Calculate cumulative totals
+				const storedViewCount = videoRecord.viewCount ?? 0;
+				const storedWatchTime = videoRecord.totalWatchTimeMs ?? 0;
+
+				// If this is an incremental sync (we have a lastSyncAt), add new views to total
+				// If this is the first sync, the newViews becomes the baseline
+				const cumulativeViews = lastSyncAt ? storedViewCount + newViews : newViews;
+				const cumulativeWatchTime = lastSyncAt ? storedWatchTime + newWatchTime : newWatchTime;
+
+				// Update the database with new cumulative totals
+				await db
+					.update(video)
+					.set({
+						viewCount: cumulativeViews,
+						totalWatchTimeMs: cumulativeWatchTime,
+						viewCountSyncedAt: new Date(now),
+						updatedAt: new Date(now),
+					})
+					.where(eq(video.id, videoRecord.id));
+
+				return {
+					muxAssetId,
+					views: cumulativeViews,
+					totalWatchTime: cumulativeWatchTime,
+					totalPlayingTime: response.data?.total_playing_time ?? null,
+					lastSyncAt: lastSyncAt ? new Date(lastSyncAt).toISOString() : null,
+					newViewsSinceLastSync: lastSyncAt ? newViews : null,
+					source: "database-synced" as const,
+				};
+			} catch (error) {
+				// If Mux API fails, return stored values from database
+				console.warn("Failed to fetch view count from Mux Data API:", error);
+
+				const db = getVideosDb(env);
+				const [videoRecord] = await db
+					.select({
+						viewCount: video.viewCount,
+						totalWatchTimeMs: video.totalWatchTimeMs,
+						viewCountSyncedAt: video.viewCountSyncedAt,
+					})
+					.from(video)
+					.where(and(eq(video.muxAssetId, muxAssetId), eq(video.libraryId, libraryId)))
+					.limit(1);
+
+				return {
+					muxAssetId,
+					views: videoRecord?.viewCount ?? 0,
+					totalWatchTime: videoRecord?.totalWatchTimeMs ?? null,
+					totalPlayingTime: null,
+					lastSyncAt: videoRecord?.viewCountSyncedAt?.toISOString() ?? null,
+					source: "database-cached" as const,
+				};
+			}
+		}),
+
+	// ============================================================================
+	// Chapter Management
+	// ============================================================================
+
+	/**
+	 * Get chapters for a video
+	 */
+	getChapters: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.string(),
+				libraryId: z.string().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const { videoId, libraryId } = input;
+
+			const db = getVideosDb(env);
+
+			// First, find the video record by muxAssetId
+			const whereClause = libraryId
+				? and(eq(video.muxAssetId, videoId), eq(video.libraryId, libraryId))
+				: eq(video.muxAssetId, videoId);
+
+			const [videoRecord] = await db
+				.select({ id: video.id })
+				.from(video)
+				.where(whereClause)
+				.limit(1);
+
+			if (!videoRecord) {
+				return [];
+			}
+
+			// Get chapters for this video
+			const chapters = await db
+				.select()
+				.from(videoChapter)
+				.where(eq(videoChapter.videoId, videoRecord.id))
+				.orderBy(asc(videoChapter.sortOrder), asc(videoChapter.startTime));
+
+			return chapters.map((chapter) => ({
+				id: chapter.id,
+				title: chapter.title,
+				startTime: chapter.startTime,
+				endTime: chapter.endTime,
+				sortOrder: chapter.sortOrder,
+				thumbnailTime: chapter.thumbnailTime,
+			}));
+		}),
+
+	/**
+	 * Save chapters for a video (replace all existing chapters)
+	 */
+	saveChapters: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.string(),
+				libraryId: z.string().optional(),
+				chapters: z.array(
+					z.object({
+						id: z.string().optional(),
+						title: z.string().min(1),
+						startTime: z.number().min(0),
+						endTime: z.number().min(0).optional().nullable(),
+						sortOrder: z.number().optional(),
+						thumbnailTime: z.number().optional().nullable(),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const { videoId, libraryId, chapters } = input;
+
+			const db = getVideosDb(env);
+
+			// Find the video record by muxAssetId
+			const whereClause = libraryId
+				? and(eq(video.muxAssetId, videoId), eq(video.libraryId, libraryId))
+				: eq(video.muxAssetId, videoId);
+
+			const [videoRecord] = await db
+				.select({ id: video.id })
+				.from(video)
+				.where(whereClause)
+				.limit(1);
+
+			if (!videoRecord) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Video not found in database. Please sync the video first.",
+				});
+			}
+
+			// Delete existing chapters for this video
+			await db
+				.delete(videoChapter)
+				.where(eq(videoChapter.videoId, videoRecord.id));
+
+			// Insert new chapters
+			if (chapters.length > 0) {
+				const chaptersToInsert = chapters.map((chapter, index) => ({
+					id: chapter.id || generateChapterId(),
+					videoId: videoRecord.id,
+					title: chapter.title,
+					startTime: chapter.startTime,
+					endTime: chapter.endTime ?? null,
+					sortOrder: chapter.sortOrder ?? index,
+					thumbnailTime: chapter.thumbnailTime ?? null,
+				}));
+
+				await db.insert(videoChapter).values(chaptersToInsert);
+			}
+
+			// Return the saved chapters
+			const savedChapters = await db
+				.select()
+				.from(videoChapter)
+				.where(eq(videoChapter.videoId, videoRecord.id))
+				.orderBy(asc(videoChapter.sortOrder), asc(videoChapter.startTime));
+
+			return savedChapters.map((chapter) => ({
+				id: chapter.id,
+				title: chapter.title,
+				startTime: chapter.startTime,
+				endTime: chapter.endTime,
+				sortOrder: chapter.sortOrder,
+				thumbnailTime: chapter.thumbnailTime,
+			}));
+		}),
+
+	/**
+	 * Delete a single chapter
+	 */
+	deleteChapter: protectedProcedure
+		.input(
+			z.object({
+				chapterId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const { chapterId } = input;
+
+			const db = getVideosDb(env);
+
+			await db.delete(videoChapter).where(eq(videoChapter.id, chapterId));
+
+			return { success: true };
+		}),
 });

@@ -12,6 +12,14 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogOverlay,
+	DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -23,15 +31,14 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { trpc } from '@/lib/trpc';
-import DeleteCaption from './CaptionDelete';
 
-interface CaptionUploadProps {
+interface CaptionEditorProps {
 	videoId: string;
 	libraryId?: string;
 	initialCaptions: { label: string; srclang: string }[];
 }
 
-const CaptionUpload: React.FC<CaptionUploadProps> = ({
+const CaptionEditor: React.FC<CaptionEditorProps> = ({
 	videoId,
 	libraryId,
 	initialCaptions,
@@ -276,13 +283,34 @@ const CaptionUpload: React.FC<CaptionUploadProps> = ({
 					</TableBody>
 				</Table>
 			</CardContent>
-			<DeleteCaption
-				open={isDeleteDialogOpen}
-				onOpenChange={setIsDeleteDialogOpen}
-				onConfirm={handleDeleteConfirm}
-			/>
+			<CaptionDelete />
 		</Card>
 	);
 };
 
-export default CaptionUpload;
+export default CaptionEditor;
+
+function CaptionDelete() {
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogOverlay />
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Confirm Deletion</DialogTitle>
+				</DialogHeader>
+				<div className="py-4">
+					Are you sure you want to delete this caption? This action cannot be
+					undone.
+				</div>
+				<DialogFooter>
+					<Button variant="secondary" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button variant="destructive" onClick={onConfirm}>
+						Delete
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}

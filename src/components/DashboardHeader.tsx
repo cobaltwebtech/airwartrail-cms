@@ -1,30 +1,28 @@
 import { Link } from '@tanstack/react-router';
 import { CircleUserRound } from 'lucide-react';
-import type React from 'react';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
 
-interface DashboardHeaderProps {
+export function DashboardHeader(props: {
 	heading: string;
 	text?: string;
 	children?: React.ReactNode;
-}
-
-export function DashboardHeader({
-	heading,
-	text,
-	children,
-}: DashboardHeaderProps) {
+}) {
 	const { data: session } = useSession();
+	const { heading, text, children } = props;
+
+	// Don't render if no heading is set
+	if (!heading) return null;
 
 	return (
-		<header className="flex items-center justify-between px-6 py-4">
-			<div>
-				<h1 className="font-heading text-3xl md:text-4xl">{heading}</h1>
-				{text && <p className="text-foreground text-lg font-bold">{text}</p>}
-			</div>
-			<div className="flex items-center gap-4">
-				{children}
+		<header className="space-y-2 mb-4">
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="font-bold text-3xl md:text-4xl">{heading}</h1>
+					{text && (
+						<p className="text-foreground text-lg font-semibold">{text}</p>
+					)}
+				</div>
 				{session?.user && (
 					<Button asChild>
 						<Link to="/user/$userId" params={{ userId: session.user.id }}>
@@ -33,6 +31,7 @@ export function DashboardHeader({
 					</Button>
 				)}
 			</div>
+			{children}
 		</header>
 	);
 }
