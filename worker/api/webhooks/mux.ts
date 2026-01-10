@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
-import { video, muxLibrary } from "@/db/video-schema";
+import { video, muxLibrary, videoTrack } from "@/db/video-schema";
 import { generateVideoId } from "@/worker/lib/generate-id";
 import { decrypt } from "@/worker/lib/encryption";
+import { generateTrackId} from "@/worker/lib/generate-id";
 
 /**
  * Mux Webhook Handler
@@ -67,6 +68,7 @@ interface MuxUploadData {
 	cors_origin?: string;
 	url?: string;
 	test?: boolean;
+	created_at?: string;
 }
 
 interface MuxAssetData {
@@ -109,6 +111,25 @@ interface MuxAssetData {
 	test?: boolean;
 	max_resolution_tier?: string;
 	encoding_tier?: string;
+}
+
+interface MuxTrackData {
+	id: string;
+	type: "video" | "audio" | "text";
+	text_type?: "subtitles";
+	text_source?: "uploaded" | "embedded" | "generated_vod" | "generated_live" | "generated_live_final";
+	language_code?: string;
+	name?: string;
+	status?: "preparing" | "ready" | "errored" | "deleted";
+	closed_captions?: boolean;
+	passthrough?: string;
+	max_width?: number;
+	max_height?: number;
+	max_frame_rate?: number;
+	duration?: number;
+	max_channels?: number;
+	max_channel_layout?: string;
+	asset_id: string;
 }
 
 // ============================================================================
@@ -269,6 +290,171 @@ async function getWebhookSecretForEnvironment(
 // ============================================================================
 
 /**
+ * Handle video.upload.created event
+ * 
+ * This event fires when a direct upload URL is created (before the file is uploaded).
+ * We log this for monitoring but don't create database records yet - we wait for
+ * asset_created to avoid orphaned records from abandoned uploads.
+ * 
+ * @see https://docs.mux.com/guides/direct-upload#monitor-upload-status
+ */
+async function handleUploadCreated(
+	_db: ReturnType<typeof getVideosDb>,
+	data: MuxUploadData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: uploadId, timeout, cors_origin, new_asset_settings } = data;
+
+	console.log(`Upload created: ${uploadId}`, {
+		timeout,
+		corsOrigin: cors_origin,
+		videoQuality: new_asset_settings?.video_quality,
+		title: new_asset_settings?.meta?.title,
+	});
+
+	// We intentionally don't create a database record here.
+	// If the upload is abandoned (user refreshes, goes back, etc.),
+	// it will automatically time out on Mux's side without leaving
+	// orphaned records in our database.
+
+	return {
+		success: true,
+		message: `Upload ${uploadId} created and waiting for file`,
+	};
+}
+
+/**
+ * Handle video.upload.cancelled event
+ * 
+ * This event fires when an upload is explicitly cancelled.
+ */
+async function handleUploadCancelled(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxUploadData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: uploadId } = data;
+
+	console.log(`Upload cancelled: ${uploadId}`);
+
+	// Check if we have any video record with this upload ID (shouldn't normally exist)
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxUploadId, uploadId))
+		.limit(1);
+
+	if (existingVideo.length > 0) {
+		// Mark as errored if somehow a record exists
+		await db
+			.update(video)
+			.set({
+				status: "errored",
+				errorType: "upload_cancelled",
+				errorMessages: JSON.stringify(["Upload was cancelled"]),
+				updatedAt: new Date(),
+			})
+			.where(eq(video.muxUploadId, uploadId));
+
+		return {
+			success: true,
+			message: `Upload ${uploadId} cancelled, marked video ${existingVideo[0].id} as errored`,
+		};
+	}
+
+	return {
+		success: true,
+		message: `Upload ${uploadId} cancelled (no database record to update)`,
+	};
+}
+
+/**
+ * Handle video.upload.errored event
+ * 
+ * This event fires when an upload fails due to an error.
+ */
+async function handleUploadErrored(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxUploadData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: uploadId, error } = data;
+
+	console.log(`Upload errored: ${uploadId}`, error);
+
+	// Check if we have any video record with this upload ID
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxUploadId, uploadId))
+		.limit(1);
+
+	if (existingVideo.length > 0) {
+		await db
+			.update(video)
+			.set({
+				status: "errored",
+				errorType: error?.type ?? "upload_error",
+				errorMessages: JSON.stringify([error?.message ?? "Upload failed"]),
+				updatedAt: new Date(),
+			})
+			.where(eq(video.muxUploadId, uploadId));
+
+		return {
+			success: true,
+			message: `Upload ${uploadId} errored, marked video ${existingVideo[0].id} as errored`,
+		};
+	}
+
+	return {
+		success: true,
+		message: `Upload ${uploadId} errored: ${error?.message ?? "unknown error"}`,
+	};
+}
+
+/**
+ * Handle video.upload.timed_out event
+ * 
+ * This event fires when an upload times out (default: 1 hour).
+ * This is the normal outcome for abandoned uploads.
+ */
+async function handleUploadTimedOut(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxUploadData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: uploadId, timeout } = data;
+
+	console.log(`Upload timed out: ${uploadId} (timeout: ${timeout}s)`);
+
+	// Check if we have any video record with this upload ID
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxUploadId, uploadId))
+		.limit(1);
+
+	if (existingVideo.length > 0) {
+		await db
+			.update(video)
+			.set({
+				status: "errored",
+				errorType: "upload_timed_out",
+				errorMessages: JSON.stringify(["Upload timed out - file was not uploaded in time"]),
+				updatedAt: new Date(),
+			})
+			.where(eq(video.muxUploadId, uploadId));
+
+		return {
+			success: true,
+			message: `Upload ${uploadId} timed out, marked video ${existingVideo[0].id} as errored`,
+		};
+	}
+
+	// This is the normal case for abandoned uploads - no action needed
+	return {
+		success: true,
+		message: `Upload ${uploadId} timed out (abandoned upload, no cleanup needed)`,
+	};
+}
+
+/**
  * Handle video.upload.asset_created event
  * 
  * This event fires when a direct upload completes and an asset is created.
@@ -337,6 +523,71 @@ async function handleUploadAssetCreated(
 	return { 
 		success: true, 
 		message: `Upload ${uploadId} completed with asset ${assetId}, awaiting sync or asset.ready` 
+	};
+}
+
+/**
+ * Handle video.asset.created event
+ * 
+ * This event fires when a new asset is created in Mux.
+ * This happens before the asset is fully processed (before asset.ready).
+ * We log this for monitoring but typically wait for asset.ready to create records.
+ */
+async function handleAssetCreated(
+	_db: ReturnType<typeof getVideosDb>,
+	data: MuxAssetData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: assetId, upload_id, meta, status } = data;
+
+	console.log(`Asset created: ${assetId}`, {
+		uploadId: upload_id,
+		status,
+		title: meta?.title,
+	});
+
+	// We intentionally don't create a database record here.
+	// We wait for asset.ready to ensure the video is fully processed.
+	// If we created records here, we might have incomplete metadata.
+
+	return {
+		success: true,
+		message: `Asset ${assetId} created with status "${status}", waiting for asset.ready`,
+	};
+}
+
+/**
+ * Handle video.asset.non_standard_input_detected event
+ * 
+ * This event fires when Mux detects non-standard input in the uploaded video.
+ * This is informational - the video will still be processed but may have
+ * suboptimal quality or compatibility.
+ * 
+ * @see https://docs.mux.com/guides/video-quality#non-standard-inputs
+ */
+async function handleNonStandardInputDetected(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxAssetData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: assetId } = data;
+
+	console.log(`Non-standard input detected for asset: ${assetId}`);
+
+	// Try to find the video and add a note about non-standard input
+	// This is optional - we're just logging for now
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxAssetId, assetId))
+		.limit(1);
+
+	if (existingVideo.length > 0) {
+		// Could optionally store this info in a metadata field if needed
+		console.log(`Video ${existingVideo[0].id} has non-standard input`);
+	}
+
+	return {
+		success: true,
+		message: `Non-standard input detected for asset ${assetId}. Video will still process but may have suboptimal quality.`,
 	};
 }
 
@@ -643,6 +894,238 @@ async function handleAssetDeleted(
 	};
 }
 
+/**
+ * Handle video.asset.track.ready event
+ * 
+ * This event fires when a track (including auto-generated captions) is ready.
+ * We use this to store track information in our database.
+ * 
+ * @see https://docs.mux.com/guides/add-autogenerated-captions
+ */
+async function handleTrackReady(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxTrackData,
+): Promise<{ success: boolean; message: string }> {
+	const {
+		id: muxTrackId,
+		type,
+		text_type,
+		text_source,
+		language_code,
+		name,
+		closed_captions,
+		passthrough,
+		asset_id: assetId,
+	} = data;
+
+	console.log(`Processing track.ready: track=${muxTrackId}, asset=${assetId}, type=${type}, text_source=${text_source}`);
+
+	// Find the video in our database by asset ID
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxAssetId, assetId))
+		.limit(1);
+
+	if (existingVideo.length === 0) {
+		console.log(`No video found for asset ${assetId}, skipping track storage`);
+		return {
+			success: true,
+			message: `Track ${muxTrackId} ready but no matching video found for asset ${assetId}`,
+		};
+	}
+
+	const videoId = existingVideo[0].id;
+
+	// Check if this track already exists in our database
+	const existingTrack = await db
+		.select({ id: videoTrack.id })
+		.from(videoTrack)
+		.where(eq(videoTrack.muxTrackId, muxTrackId))
+		.limit(1);
+
+	if (existingTrack.length > 0) {
+		// Update existing track status to ready
+		await db
+			.update(videoTrack)
+			.set({
+				status: "ready",
+				name: name ?? undefined,
+				languageCode: language_code ?? undefined,
+				updatedAt: new Date(),
+			})
+			.where(eq(videoTrack.muxTrackId, muxTrackId));
+
+		return {
+			success: true,
+			message: `Updated track ${muxTrackId} status to ready`,
+		};
+	}
+
+	// Insert new track record
+	const trackId = generateTrackId();
+	await db.insert(videoTrack).values({
+		id: trackId,
+		videoId,
+		muxTrackId,
+		type: type as "video" | "audio" | "text",
+		textType: text_type as "subtitles" | undefined,
+		textSource: text_source as "uploaded" | "embedded" | "generated_vod" | "generated_live" | "generated_live_final" | undefined,
+		languageCode: language_code ?? null,
+		name: name ?? null,
+		status: "ready",
+		closedCaptions: closed_captions ?? false,
+		isPrimary: false,
+		passthrough: passthrough ?? null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	});
+
+	const isAutoGenerated = text_source === "generated_vod" || text_source === "generated_live";
+	const trackDescription = isAutoGenerated ? "auto-generated caption" : `${type} track`;
+
+	return {
+		success: true,
+		message: `Stored ${trackDescription} ${muxTrackId} for video ${videoId}`,
+	};
+}
+
+/**
+ * Handle video.asset.track.created event
+ * 
+ * This event fires when a track is created (but may still be processing).
+ * We use this to create a "preparing" track record.
+ */
+async function handleTrackCreated(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxTrackData,
+): Promise<{ success: boolean; message: string }> {
+	const {
+		id: muxTrackId,
+		type,
+		text_type,
+		text_source,
+		language_code,
+		name,
+		closed_captions,
+		passthrough,
+		asset_id: assetId,
+	} = data;
+
+	console.log(`Processing track.created: track=${muxTrackId}, asset=${assetId}, type=${type}, text_source=${text_source}`);
+
+	// Find the video in our database by asset ID
+	const existingVideo = await db
+		.select({ id: video.id })
+		.from(video)
+		.where(eq(video.muxAssetId, assetId))
+		.limit(1);
+
+	if (existingVideo.length === 0) {
+		console.log(`No video found for asset ${assetId}, skipping track storage`);
+		return {
+			success: true,
+			message: `Track ${muxTrackId} created but no matching video found for asset ${assetId}`,
+		};
+	}
+
+	const videoId = existingVideo[0].id;
+
+	// Check if this track already exists
+	const existingTrack = await db
+		.select({ id: videoTrack.id })
+		.from(videoTrack)
+		.where(eq(videoTrack.muxTrackId, muxTrackId))
+		.limit(1);
+
+	if (existingTrack.length > 0) {
+		return {
+			success: true,
+			message: `Track ${muxTrackId} already exists`,
+		};
+	}
+
+	// Insert new track with "preparing" status
+	const trackId = generateTrackId();
+	await db.insert(videoTrack).values({
+		id: trackId,
+		videoId,
+		muxTrackId,
+		type: type as "video" | "audio" | "text",
+		textType: text_type as "subtitles" | undefined,
+		textSource: text_source as "uploaded" | "embedded" | "generated_vod" | "generated_live" | "generated_live_final" | undefined,
+		languageCode: language_code ?? null,
+		name: name ?? null,
+		status: "preparing",
+		closedCaptions: closed_captions ?? false,
+		isPrimary: false,
+		passthrough: passthrough ?? null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	});
+
+	return {
+		success: true,
+		message: `Created track record ${muxTrackId} with status "preparing"`,
+	};
+}
+
+/**
+ * Handle video.asset.track.errored event
+ * 
+ * This event fires when track processing fails.
+ */
+async function handleTrackErrored(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxTrackData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: muxTrackId, asset_id: assetId } = data;
+
+	console.log(`Processing track.errored: track=${muxTrackId}, asset=${assetId}`);
+
+	// Update track status if it exists
+	await db
+		.update(videoTrack)
+		.set({
+			status: "errored",
+			updatedAt: new Date(),
+		})
+		.where(eq(videoTrack.muxTrackId, muxTrackId));
+
+	return {
+		success: true,
+		message: `Track ${muxTrackId} marked as errored`,
+	};
+}
+
+/**
+ * Handle video.asset.track.deleted event
+ * 
+ * This event fires when a track is deleted.
+ */
+async function handleTrackDeleted(
+	db: ReturnType<typeof getVideosDb>,
+	data: MuxTrackData,
+): Promise<{ success: boolean; message: string }> {
+	const { id: muxTrackId, asset_id: assetId } = data;
+
+	console.log(`Processing track.deleted: track=${muxTrackId}, asset=${assetId}`);
+
+	// Update track status to deleted (soft delete)
+	await db
+		.update(videoTrack)
+		.set({
+			status: "deleted",
+			updatedAt: new Date(),
+		})
+		.where(eq(videoTrack.muxTrackId, muxTrackId));
+
+	return {
+		success: true,
+		message: `Track ${muxTrackId} marked as deleted`,
+	};
+}
+
 // ============================================================================
 // Router
 // ============================================================================
@@ -707,8 +1190,32 @@ muxWebhookRouter.post("/", async (c) => {
 	let result: { success: boolean; message: string };
 
 	switch (type) {
+		case "video.upload.created":
+			result = await handleUploadCreated(db, data as unknown as MuxUploadData);
+			break;
+
+		case "video.upload.cancelled":
+			result = await handleUploadCancelled(db, data as unknown as MuxUploadData);
+			break;
+
+		case "video.upload.errored":
+			result = await handleUploadErrored(db, data as unknown as MuxUploadData);
+			break;
+
+		case "video.upload.timed_out":
+			result = await handleUploadTimedOut(db, data as unknown as MuxUploadData);
+			break;
+
 		case "video.upload.asset_created":
 			result = await handleUploadAssetCreated(db, data as unknown as MuxUploadData);
+			break;
+
+		case "video.asset.created":
+			result = await handleAssetCreated(db, data as unknown as MuxAssetData);
+			break;
+
+		case "video.asset.non_standard_input_detected":
+			result = await handleNonStandardInputDetected(db, data as unknown as MuxAssetData);
 			break;
 
 		case "video.asset.ready":
@@ -725,6 +1232,22 @@ muxWebhookRouter.post("/", async (c) => {
 
 		case "video.asset.deleted":
 			result = await handleAssetDeleted(db, data as unknown as MuxAssetData);
+			break;
+
+		case "video.asset.track.created":
+			result = await handleTrackCreated(db, data as unknown as MuxTrackData);
+			break;
+
+		case "video.asset.track.ready":
+			result = await handleTrackReady(db, data as unknown as MuxTrackData);
+			break;
+
+		case "video.asset.track.errored":
+			result = await handleTrackErrored(db, data as unknown as MuxTrackData);
+			break;
+
+		case "video.asset.track.deleted":
+			result = await handleTrackDeleted(db, data as unknown as MuxTrackData);
 			break;
 
 		default:

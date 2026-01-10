@@ -1,9 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { CheckCircle, CloudOff, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
-import { Badge } from '@/components/ui/badge';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -11,7 +8,6 @@ import {
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Button } from '@/components/ui/button';
 import VideoEditor from '@/components/video-editor/VideoEditor';
 import { trpc } from '@/lib/trpc';
 
@@ -21,9 +17,9 @@ export const Route = createFileRoute(
 	component: VideoEditorPage,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId, videoId } = params;
-		// Prefetch video details
+		// Prefetch video details using internal database ID
 		await queryClient.ensureQueryData(
-			trpc.mux.getAsset.queryOptions({ assetId: videoId, libraryId }),
+			trpc.mux.getVideoById.queryOptions({ videoId, libraryId }),
 		);
 		return { videoId, libraryId };
 	},
@@ -31,27 +27,19 @@ export const Route = createFileRoute(
 
 function VideoEditorPage() {
 	const { videoId, libraryId } = Route.useParams();
-	const queryClient = useQueryClient();
 
+	// Fetch video by internal database ID
 	const {
-		data: muxAsset,
+		data: videoData,
 		isLoading: videoLoading,
 		error: videoError,
-	} = useQuery(trpc.mux.getAsset.queryOptions({ assetId: videoId, libraryId }));
+	} = useQuery(trpc.mux.getVideoById.queryOptions({ videoId, libraryId }));
 
-	// Fetch view count from Mux Data API
+	// Fetch view count from Mux Data API (using muxAssetId)
 	const { data: viewCountData } = useQuery(
 		trpc.mux.getAssetViewCount.queryOptions(
-			{ muxAssetId: videoId, libraryId },
-			{ enabled: !!muxAsset },
-		),
-	);
-
-	// Check sync status
-	const { data: syncStatus, isLoading: syncStatusLoading } = useQuery(
-		trpc.mux.getVideoSyncStatus.queryOptions(
-			{ muxAssetId: videoId, libraryId },
-			{ enabled: !!muxAsset },
+			{ muxAssetId: videoData?.muxAssetId ?? '', libraryId },
+			{ enabled: !!videoData?.muxAssetId },
 		),
 	);
 
@@ -60,63 +48,43 @@ function VideoEditorPage() {
 		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
 	);
 
-	// Fetch video data from database
-	const { data: videoData } = useQuery(
-		trpc.mux.getVideoFromDatabase.queryOptions(
-			{ muxAssetId: videoId, libraryId },
-			{ enabled: !!muxAsset },
-		),
-	);
-
-	// Sync mutation
-	const syncMutation = useMutation(
-		trpc.mux.syncSingleAsset.mutationOptions({
-			onSuccess: () => {
-				toast.success('Video synced to database');
-				queryClient.invalidateQueries({
-					queryKey: trpc.mux.getVideoSyncStatus.queryKey({
-						muxAssetId: videoId,
-						libraryId,
-					}),
-				});
-			},
-			onError: (error) => {
-				toast.error(`Sync failed: ${error.message}`);
-			},
-		}),
-	);
-
-	const handleSync = () => {
-		syncMutation.mutate({ muxAssetId: videoId, libraryId });
-	};
-
-	// Transform MuxAsset to VideoEditor video format
-	const video = muxAsset
+	// Transform to VideoEditor video format
+	const video = videoData
 		? {
-				title: muxAsset.title || 'Untitled',
-				duration: muxAsset.duration || 0,
-				statusText: muxAsset.status === 'ready' ? 'Ready' : 'Processing',
-				views: viewCountData?.views ?? 0,
-				dateUploaded: muxAsset.createdAt || new Date().toISOString(),
-				isPublished: Boolean(muxAsset.metadata?.isPublished),
-				captions: muxAsset.captions?.map((cap) => ({
+				title: videoData.title || 'Untitled',
+				duration: videoData.duration || 0,
+				statusText:
+					videoData.status === 'ready'
+						? 'Ready'
+						: videoData.status === 'errored'
+							? 'Error'
+							: 'Processing',
+				views: viewCountData?.views ?? videoData.views ?? 0,
+				dateUploaded: videoData.createdAt || new Date().toISOString(),
+				isPublished: videoData.isPublished,
+				captions: videoData.captions?.map((cap) => ({
 					label: cap.name || cap.language || 'Caption',
 					srclang: cap.languageCode || 'en',
 				})),
-				resolutionTier: muxAsset.resolutionTier,
-				aspectRatio: muxAsset.aspectRatio,
-				videoQuality: muxAsset.videoQuality,
-				maxStoredFrameRate: muxAsset.maxStoredFrameRate,
-				maxWidth: muxAsset.maxWidth,
-				maxHeight: muxAsset.maxHeight,
-				id: videoData?.id,
-				muxAssetId: videoData?.muxAssetId,
-				muxPlaybackId: videoData?.muxPlaybackId ?? undefined,
-				muxEnvironmentId: library?.muxEnvironmentId ?? undefined,
-				createdAt: videoData?.createdAt.toISOString(),
-				updatedAt: videoData?.updatedAt.toISOString(),
-				viewCountSyncedAt: videoData?.viewCountSyncedAt?.toISOString(),
-				libraryName: library?.name,
+				resolutionTier: videoData.resolutionTier,
+				aspectRatio: videoData.aspectRatio,
+				videoQuality: videoData.videoQuality,
+				maxStoredFrameRate: videoData.maxStoredFrameRate,
+				maxWidth: videoData.maxWidth,
+				maxHeight: videoData.maxHeight,
+				id: videoData.id,
+				muxAssetId: videoData.muxAssetId,
+				muxPlaybackId: videoData.muxPlaybackId ?? undefined,
+				muxEnvironmentId: videoData.muxEnvironmentId ?? undefined,
+				createdAt: videoData.createdAt,
+				updatedAt: videoData.updatedAt,
+				viewCountSyncedAt: videoData.viewCountSyncedAt,
+				libraryName: videoData.libraryName ?? library?.name,
+				description: videoData.description ?? undefined,
+				tags: videoData.tags ?? [],
+				errorType: videoData.errorType ?? undefined,
+				errorMessages: videoData.errorMessages ?? undefined,
+				playbackPolicy: videoData.policy ?? undefined,
 			}
 		: null;
 
@@ -149,35 +117,6 @@ function VideoEditorPage() {
 							<BreadcrumbItem>{video?.title}</BreadcrumbItem>
 						</BreadcrumbList>
 					</Breadcrumb>
-					{/* Sync Status Indicator */}
-					{!syncStatusLoading && syncStatus && (
-						<div>
-							{syncStatus.isSynced ? (
-								<Badge variant="accent">
-									<CheckCircle className="size-4" />
-									Synced
-								</Badge>
-							) : (
-								<div className="flex items-center gap-2">
-									<Badge variant="destructive">
-										<CloudOff className="size-4" />
-										Not Synced
-									</Badge>
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={handleSync}
-										disabled={syncMutation.isPending}
-									>
-										<RefreshCw
-											className={`mr-2 size-4 ${syncMutation.isPending ? 'animate-spin' : ''}`}
-										/>
-										{syncMutation.isPending ? 'Syncing...' : 'Sync to Database'}
-									</Button>
-								</div>
-							)}
-						</div>
-					)}
 				</div>
 			</DashboardHeader>
 

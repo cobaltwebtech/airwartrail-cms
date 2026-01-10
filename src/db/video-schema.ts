@@ -30,7 +30,7 @@ export const muxLibrary = sqliteTable(
 		webhookSecret: text('webhook_secret'),
 		// Library settings
 		defaultPlaybackPolicy: text('default_playback_policy', {
-			enum: ['public', 'signed', 'drm'],
+			enum: ['public', 'signed'],
 		})
 			.default('public')
 			.notNull(),
@@ -100,7 +100,7 @@ export const video = sqliteTable(
 		}),
 		// Playback settings
 		playbackPolicy: text('playback_policy', {
-			enum: ['public', 'signed', 'drm'],
+			enum: ['public', 'signed'],
 		}).default('public'),
 		// Custom thumbnail (optional, otherwise Mux auto-generates)
 		customThumbnailTime: real('custom_thumbnail_time'),

@@ -275,7 +275,7 @@ function SidebarTrigger({
 	const { toggleSidebar, state } = useSidebar();
 
 	return (
-		<div className="mt-4 ml-4">
+		<div>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button

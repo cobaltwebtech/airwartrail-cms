@@ -35,6 +35,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			icon: Upload,
 		},
 		{
+			title: 'Create Library',
+			url: '/library/new',
+			icon: Plus,
+		},
+		{
 			title: 'Video Libraries',
 			url: '/',
 			icon: LibraryBig,
@@ -45,11 +50,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 						title: library.name,
 						url: `/library/${library.id}/videos`,
 					})) || [],
-		},
-		{
-			title: 'Create Library',
-			url: '/library/new',
-			icon: Plus,
 		},
 	];
 

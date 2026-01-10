@@ -7,34 +7,39 @@ import VideoInfo from '@/components/video-editor/VideoInfo';
 import VideoPlayer from '@/components/video-editor/VideoPlayer';
 import CaptionEditor from './CaptionEditor';
 import DescriptionEditor from './DescriptionEditor';
+import TagEditor from './TagEditor';
 import VideoData from './VideoData';
 
 interface VideoEditorProps {
-	videoId: string;
-	libraryId?: string;
+	videoId: string; // Internal database ID
+	libraryId: string;
 	video: {
 		title: string;
 		description?: string;
+		tags?: string[];
 		duration: number;
 		statusText: string;
 		views?: number;
 		dateUploaded: string;
 		isPublished: boolean;
 		captions?: { label: string; srclang: string }[];
-		resolutionTier?: string;
-		aspectRatio?: string;
-		videoQuality?: string;
-		maxStoredFrameRate?: number;
-		maxWidth?: number;
-		maxHeight?: number;
+		resolutionTier?: string | null;
+		aspectRatio?: string | null;
+		videoQuality?: string | null;
+		maxStoredFrameRate?: number | null;
+		maxWidth?: number | null;
+		maxHeight?: number | null;
 		id?: string;
 		muxAssetId?: string;
-		muxPlaybackId?: string;
-		muxEnvironmentId?: string;
+		muxPlaybackId?: string | null;
+		muxEnvironmentId?: string | null;
 		createdAt?: string;
 		updatedAt?: string;
-		viewCountSyncedAt?: string;
+		viewCountSyncedAt?: string | null;
 		libraryName?: string;
+		errorType?: string | null;
+		errorMessages?: string | null;
+		playbackPolicy?: 'public' | 'signed';
 	} | null;
 }
 
@@ -50,19 +55,23 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
 	const views = video?.views || 0;
 	const statusText = video?.statusText || '';
 	const captions = video?.captions || [];
-	const resolutionTier = video?.resolutionTier;
-	const aspectRatio = video?.aspectRatio;
-	const videoQuality = video?.videoQuality;
-	const maxStoredFrameRate = video?.maxStoredFrameRate;
-	const maxWidth = video?.maxWidth;
-	const maxHeight = video?.maxHeight;
+	const resolutionTier = video?.resolutionTier ?? undefined;
+	const aspectRatio = video?.aspectRatio ?? undefined;
+	const videoQuality = video?.videoQuality ?? undefined;
+	const maxStoredFrameRate = video?.maxStoredFrameRate ?? undefined;
+	const maxWidth = video?.maxWidth ?? undefined;
+	const maxHeight = video?.maxHeight ?? undefined;
 	const internalId = video?.id || '';
 	const muxAssetId = video?.muxAssetId || videoId;
 	const muxPlaybackId = video?.muxPlaybackId || '';
 	const muxEnvironmentId = video?.muxEnvironmentId || '';
 	const createdAt = video?.createdAt;
 	const updatedAt = video?.updatedAt;
-	const viewCountSyncedAt = video?.viewCountSyncedAt;
+	const viewCountSyncedAt = video?.viewCountSyncedAt ?? undefined;
+	const errorType = video?.errorType ?? undefined;
+	const errorMessages = video?.errorMessages ?? undefined;
+	const playbackPolicy = video?.playbackPolicy;
+	const tags = video?.tags || [];
 	const handleTitleUpdate = (newTitle: string) => {
 		setTitle(newTitle);
 	};
@@ -86,13 +95,20 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
 				maxStoredFrameRate={maxStoredFrameRate}
 				maxWidth={maxWidth}
 				maxHeight={maxHeight}
+				errorType={errorType}
+				errorMessages={errorMessages}
+				playbackPolicy={playbackPolicy}
 			/>
 			<PublishStatus
 				videoId={videoId}
 				libraryId={libraryId}
 				initialPublishStatus={video?.isPublished}
 			/>
-			<VideoPlayer videoId={videoId} libraryId={libraryId} />
+			<VideoPlayer
+				muxAssetId={muxAssetId}
+				libraryId={libraryId}
+				internalVideoId={internalId}
+			/>
 			<TitleEditor
 				videoId={videoId}
 				libraryId={libraryId}
@@ -105,19 +121,20 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
 				initialDescription={description}
 				onDescriptionUpdate={handleDescriptionUpdate}
 			/>
+			<TagEditor videoId={videoId} libraryId={libraryId} initialTags={tags} />
 			<CaptionEditor
-				videoId={videoId}
+				muxAssetId={muxAssetId}
 				libraryId={libraryId}
 				initialCaptions={captions}
 			/>
 			<ChapterEditor
-				videoId={videoId}
+				videoId={internalId}
 				libraryId={libraryId}
 				videoDuration={duration}
 			/>
 			<VideoData
 				internalId={internalId}
-				libraryId={libraryId || 'n/a'}
+				libraryId={libraryId}
 				muxAssetId={muxAssetId}
 				muxPlaybackId={muxPlaybackId}
 				muxEnvironmentId={muxEnvironmentId}

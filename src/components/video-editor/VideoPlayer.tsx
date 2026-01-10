@@ -1,24 +1,31 @@
 import MuxPlayer, { type MuxPlayerRefAttributes } from '@mux/mux-player-react';
 import { useQuery } from '@tanstack/react-query';
 import type React from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trpc } from '@/lib/trpc';
 
 interface VideoPlayerProps {
-	videoId: string;
+	muxAssetId: string; // Mux Asset ID for fetching video from Mux
 	libraryId?: string;
+	internalVideoId?: string; // Internal database ID for chapters (optional)
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
+	muxAssetId,
+	libraryId,
+	internalVideoId,
+}) => {
 	const playerRef = useRef<MuxPlayerRefAttributes | null>(null);
 
 	const {
 		data: video,
 		isLoading,
 		isError,
-	} = useQuery(trpc.mux.getAsset.queryOptions({ assetId: videoId, libraryId }));
+	} = useQuery(
+		trpc.mux.getAsset.queryOptions({ assetId: muxAssetId, libraryId }),
+	);
 
 	// Fetch tokens for signed videos using tRPC client
 	const { data: tokens, isLoading: tokensLoading } = useQuery(
@@ -34,44 +41,50 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, libraryId }) => {
 		),
 	);
 
-	// Fetch chapters for the video
-	const { data: chapters } = useQuery(
+	// Fetch chapters for the video using internal ID if available
+	const { data: chapters, isLoading: chaptersLoading } = useQuery(
 		trpc.mux.getChapters.queryOptions(
-			{ videoId, libraryId },
-			{ enabled: !!videoId },
+			{ videoId: internalVideoId || '', libraryId },
+			{ enabled: !!internalVideoId },
 		),
 	);
 
-	// Add chapters to the player when they're loaded
+	// Effect Event to add chapters - always reads latest chapters without causing re-runs
+	const onLoadedMetadata = useEffectEvent(() => {
+		const player = playerRef.current;
+		if (!player || !chapters || chapters.length === 0 || chaptersLoading)
+			return;
+
+		// Convert chapters to Mux Player format
+		const muxChapters = chapters.map((chapter) => ({
+			startTime: chapter.startTime,
+			endTime: chapter.endTime ?? undefined,
+			value: chapter.title,
+		}));
+
+		// Add chapters to the player
+		player.addChapters(muxChapters);
+	});
+
+	// Add chapters when player loads metadata, re-run only when video changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: muxAssetId triggers re-setup when video changes, onLoadedMetadata is an Effect Event
 	useEffect(() => {
 		const player = playerRef.current;
-		if (!player || !chapters || chapters.length === 0) return;
+		if (!player) return;
 
-		// Wait for metadata to be loaded before adding chapters
-		const addChaptersToPlayer = () => {
-			if (player.readyState >= 1) {
-				// Convert chapters to Mux Player format
-				const muxChapters = chapters.map((chapter) => ({
-					startTime: chapter.startTime,
-					endTime: chapter.endTime ?? undefined,
-					value: chapter.title,
-				}));
-				player.addChapters(muxChapters);
-			}
-		};
+		const handleMetadata = () => onLoadedMetadata();
 
+		player.addEventListener('loadedmetadata', handleMetadata);
+
+		// If already loaded, add chapters immediately
 		if (player.readyState >= 1) {
-			addChaptersToPlayer();
-		} else {
-			player.addEventListener('loadedmetadata', addChaptersToPlayer, {
-				once: true,
-			});
+			onLoadedMetadata();
 		}
 
 		return () => {
-			player.removeEventListener('loadedmetadata', addChaptersToPlayer);
+			player.removeEventListener('loadedmetadata', handleMetadata);
 		};
-	}, [chapters]);
+	}, [muxAssetId, onLoadedMetadata]);
 
 	if (isLoading) {
 		return (

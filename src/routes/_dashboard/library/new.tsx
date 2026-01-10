@@ -53,7 +53,7 @@ function CreateLibraryPage() {
 	const [signingKeyId, setSigningKeyId] = useState('');
 	const [signingKeyPrivate, setSigningKeyPrivate] = useState('');
 	const [defaultPlaybackPolicy, setDefaultPlaybackPolicy] = useState<
-		'public' | 'signed' | 'drm'
+		'public' | 'signed'
 	>('public');
 	const [defaultVideoQuality, setDefaultVideoQuality] = useState<
 		'basic' | 'plus' | 'premium'
@@ -207,9 +207,7 @@ function CreateLibraryPage() {
 								<Select
 									value={defaultPlaybackPolicy}
 									onValueChange={(value) =>
-										setDefaultPlaybackPolicy(
-											value as 'public' | 'signed' | 'drm',
-										)
+										setDefaultPlaybackPolicy(value as 'public' | 'signed')
 									}
 								>
 									<SelectTrigger id="playbackPolicy">
@@ -218,12 +216,11 @@ function CreateLibraryPage() {
 									<SelectContent>
 										<SelectItem value="public">Public</SelectItem>
 										<SelectItem value="signed">Signed</SelectItem>
-										<SelectItem value="drm">DRM Protected</SelectItem>
 									</SelectContent>
 								</Select>
 								<p className="text-muted-foreground text-xs">
 									Public videos can be accessed by anyone. Signed videos require
-									a token. DRM adds additional content protection.
+									a token.
 								</p>
 							</div>
 

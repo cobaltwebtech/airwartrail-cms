@@ -17,9 +17,9 @@ export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 	component: VideosPage,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
-		// Prefetch videos on the server/during navigation
+		// Prefetch videos from database on the server/during navigation
 		await queryClient.ensureQueryData(
-			trpc.mux.listAssets.queryOptions({ libraryId }),
+			trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
 		);
 		// Also prefetch library info
 		await queryClient.ensureQueryData(
@@ -33,11 +33,22 @@ function VideosPage() {
 	const { libraryId } = Route.useParams();
 	const queryClient = useQueryClient();
 
+	// Fetch videos from internal database (uses internal IDs)
 	const {
 		data: videos,
 		isLoading,
 		error,
-	} = useQuery(trpc.mux.listAssets.queryOptions({ libraryId }));
+	} = useQuery({
+		...trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
+		// Poll every 5 seconds while any video is still processing
+		refetchInterval: (query) => {
+			const data = query.state.data;
+			const hasProcessingVideos = data?.some(
+				(video) => video.status === 'preparing',
+			);
+			return hasProcessingVideos ? 5000 : false;
+		},
+	});
 
 	const { data: library } = useQuery(
 		trpc.mux.getLibrary.queryOptions({ libraryId }),
@@ -60,9 +71,9 @@ function VideosPage() {
 						);
 					}
 					toast.success(messages.join(', '));
-					// Refresh the video list
+					// Refresh the video list from database
 					queryClient.invalidateQueries({
-						queryKey: trpc.mux.listAssets.queryKey({ libraryId }),
+						queryKey: trpc.mux.listVideosFromDatabase.queryKey({ libraryId }),
 					});
 				} else {
 					toast.info('All videos are already synced');

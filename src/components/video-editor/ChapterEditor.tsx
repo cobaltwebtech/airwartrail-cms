@@ -281,7 +281,7 @@ const ChapterEditor: React.FC<ChapterEditorProps> = ({
 	return (
 		<Card className="col-span-full w-full justify-between">
 			<CardHeader>
-				<CardTitle>Edit Chapters</CardTitle>
+				<CardTitle>Chapters</CardTitle>
 				<CardDescription>
 					Chapters are displayed in the timeline and allow viewers to more
 					easily navigate through the video. Title and start time are required.

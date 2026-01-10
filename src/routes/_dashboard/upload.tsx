@@ -1,13 +1,16 @@
-import MuxUploader, {
-	type MuxUploaderRefAttributes,
-} from '@mux/mux-uploader-react';
+import MuxUploader, { MuxUploaderPause } from '@mux/mux-uploader-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { CheckCircle, ChevronLeft, Loader2, Upload } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { CheckCircle, Loader2, Upload } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-
 import { DashboardHeader } from '@/components/DashboardHeader';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -28,6 +31,35 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { trpc } from '@/lib/trpc';
+
+// Supported languages for auto-generated captions
+// Languages marked as (Beta) may have lower accuracy
+const SUPPORTED_LANGUAGES = [
+	{ code: 'en', name: 'English', status: 'stable' },
+	{ code: 'es', name: 'Spanish', status: 'stable' },
+	{ code: 'it', name: 'Italian', status: 'stable' },
+	{ code: 'pt', name: 'Portuguese', status: 'stable' },
+	{ code: 'de', name: 'German', status: 'stable' },
+	{ code: 'fr', name: 'French', status: 'stable' },
+	{ code: 'pl', name: 'Polish', status: 'beta' },
+	{ code: 'ru', name: 'Russian', status: 'beta' },
+	{ code: 'nl', name: 'Dutch', status: 'beta' },
+	{ code: 'ca', name: 'Catalan', status: 'beta' },
+	{ code: 'tr', name: 'Turkish', status: 'beta' },
+	{ code: 'sv', name: 'Swedish', status: 'beta' },
+	{ code: 'uk', name: 'Ukrainian', status: 'beta' },
+	{ code: 'no', name: 'Norwegian', status: 'beta' },
+	{ code: 'fi', name: 'Finnish', status: 'beta' },
+	{ code: 'sk', name: 'Slovak', status: 'beta' },
+	{ code: 'el', name: 'Greek', status: 'beta' },
+	{ code: 'cs', name: 'Czech', status: 'beta' },
+	{ code: 'hr', name: 'Croatian', status: 'beta' },
+	{ code: 'da', name: 'Danish', status: 'beta' },
+	{ code: 'ro', name: 'Romanian', status: 'beta' },
+	{ code: 'bg', name: 'Bulgarian', status: 'beta' },
+] as const;
+
+type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 export const Route = createFileRoute('/_dashboard/upload')({
 	loader: async ({ context: { queryClient } }) => {
@@ -50,6 +82,7 @@ function UploadPage() {
 		'default' | 'public' | 'signed'
 	>('default');
 	const [autoCaptions, setAutoCaptions] = useState(false);
+	const [captionLanguage, setCaptionLanguage] = useState<LanguageCode>('en');
 
 	// Upload state
 	const [uploadUrl, setUploadUrl] = useState<string | null>(null);
@@ -58,7 +91,6 @@ function UploadPage() {
 	const [isSyncing, setIsSyncing] = useState(false);
 	const [syncComplete, setSyncComplete] = useState(false);
 	const [syncedVideoId, setSyncedVideoId] = useState<string | null>(null);
-	const uploaderRef = useRef<MuxUploaderRefAttributes | null>(null);
 
 	// Fetch libraries for selector
 	const {
@@ -112,6 +144,29 @@ function UploadPage() {
 		),
 	);
 
+	// Also poll our local database to check if webhook already created the video
+	// This handles the race condition where webhook creates video before frontend syncs
+	const { data: videoSyncStatus } = useQuery(
+		trpc.mux.getVideoSyncStatus.queryOptions(
+			{ muxAssetId: uploadStatus?.assetId ?? '', libraryId: selectedLibraryId },
+			{
+				enabled:
+					!!uploadStatus?.assetId &&
+					!!selectedLibraryId &&
+					uploadComplete &&
+					!syncComplete,
+				refetchInterval: (query) => {
+					const data = query.state.data;
+					// Stop polling once video is found in our database
+					if (data?.isSynced && data?.videoId) {
+						return false;
+					}
+					return 2000; // Poll every 2 seconds
+				},
+			},
+		),
+	);
+
 	// Sync asset to database mutation
 	const syncAssetMutation = useMutation(
 		trpc.mux.syncSingleAsset.mutationOptions({
@@ -139,12 +194,35 @@ function UploadPage() {
 	);
 
 	// When upload status shows asset_created, sync to database
+	// OR if webhook already created the video, mark as complete
 	useEffect(() => {
+		// If webhook already created the video, mark as complete
+		if (
+			videoSyncStatus?.isSynced &&
+			videoSyncStatus?.videoId &&
+			!syncComplete
+		) {
+			setSyncComplete(true);
+			setIsSyncing(false);
+			setSyncedVideoId(videoSyncStatus.videoId);
+			toast.success('Video uploaded and synced!', {
+				description: `"${title}" is now available in your library`,
+			});
+			queryClient.invalidateQueries({
+				queryKey: trpc.mux.listAssets.queryKey({
+					libraryId: selectedLibraryId,
+				}),
+			});
+			return;
+		}
+
+		// Otherwise, try to sync manually if we have an assetId
 		if (
 			uploadStatus?.status === 'asset_created' &&
 			uploadStatus?.assetId &&
 			!isSyncing &&
-			!syncComplete
+			!syncComplete &&
+			!videoSyncStatus?.isSynced // Don't sync if webhook already did it
 		) {
 			setIsSyncing(true);
 			syncAssetMutation.mutate({
@@ -154,27 +232,14 @@ function UploadPage() {
 		}
 	}, [
 		uploadStatus,
+		videoSyncStatus,
 		isSyncing,
 		syncComplete,
 		selectedLibraryId,
 		syncAssetMutation,
+		title,
+		queryClient,
 	]);
-
-	// Listen for upload success event from MuxUploader
-	useEffect(() => {
-		const uploader = uploaderRef.current;
-		if (!uploader) return;
-
-		const handleSuccess = () => {
-			setUploadComplete(true);
-			toast.info('Upload complete, processing video...');
-		};
-
-		uploader.addEventListener('success', handleSuccess);
-		return () => {
-			uploader.removeEventListener('success', handleSuccess);
-		};
-	}, []);
 
 	const handleCreateUpload = async () => {
 		if (!title.trim()) {
@@ -196,9 +261,9 @@ function UploadPage() {
 			...(videoQuality !== 'default' && { videoQuality }),
 			// Only pass playbackPolicy if not using library default
 			...(playbackPolicy !== 'default' && { playbackPolicy }),
-			// Only pass autoCaptions if enabled
+			// Only pass autoCaptions if enabled with selected language
 			...(autoCaptions && {
-				autoCaptions: { enabled: true, languageCode: 'en' },
+				autoCaptions: { enabled: true, languageCode: captionLanguage },
 			}),
 		});
 	};
@@ -208,6 +273,7 @@ function UploadPage() {
 		setVideoQuality('default');
 		setPlaybackPolicy('default');
 		setAutoCaptions(false);
+		setCaptionLanguage('en');
 		setUploadUrl(null);
 		setUploadId(null);
 		setUploadComplete(false);
@@ -227,15 +293,16 @@ function UploadPage() {
 				heading="Upload Video"
 				text="Upload a video to your selected library."
 			>
-				<Button variant="outline" asChild>
-					<Link to="/">
-						<ChevronLeft className="mr-2 h-4 w-4" />
-						Back to Libraries
-					</Link>
-				</Button>
+				<Breadcrumb>
+					<BreadcrumbList>
+						<BreadcrumbItem>
+							<BreadcrumbLink href="/">&larr; Back to Libraries</BreadcrumbLink>
+						</BreadcrumbItem>
+					</BreadcrumbList>
+				</Breadcrumb>
 			</DashboardHeader>
 
-			<div className="max-w-2xl mx-auto p-4 lg:p-6">
+			<div className="w-full max-w-2xl mx-auto p-4 lg:p-6">
 				{librariesError ? (
 					<Card>
 						<CardContent className="py-8">
@@ -321,7 +388,20 @@ function UploadPage() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
-							<MuxUploader ref={uploaderRef} endpoint={uploadUrl} />
+							<p className="text-sm text-muted-foreground">
+								Upload your video by dragging and dropping it into the area
+								below or selecting the video file. Do not close or refresh the
+								browser during the upload process or you will lose your progress
+								and have to start over.
+							</p>
+							<MuxUploader
+								endpoint={uploadUrl}
+								chunkSize={16384} // specify in KB (16MB = 16 * 1024)
+								onSuccess={() => {
+									setUploadComplete(true);
+									toast.info('Upload complete, processing video...');
+								}}
+							></MuxUploader>
 							{uploadComplete && (
 								<div className="flex items-center justify-center gap-2 text-muted-foreground">
 									<Loader2 className="h-4 w-4 animate-spin" />
@@ -461,21 +541,56 @@ function UploadPage() {
 								</p>
 							</div>
 
-							<div className="flex items-center justify-between rounded-lg border p-4">
-								<div className="space-y-0.5">
-									<Label htmlFor="autoCaptions">Auto-generate captions</Label>
-									<p className="text-xs text-muted-foreground max-w-sm">
-										This will generate captions of the language of the audio
-										track. Do not use for mixed-language content, if you plan to
-										upload your own captions, or translation of languages.
-									</p>
+							<div className="space-y-4 rounded-lg border p-4">
+								<div className="flex items-center justify-between">
+									<div className="space-y-0.5">
+										<Label htmlFor="autoCaptions">Auto-generate captions</Label>
+										<p className="text-xs text-muted-foreground max-w-sm">
+											Generate captions automatically using AI speech
+											recognition. Select the language of the audio in your
+											video.
+										</p>
+									</div>
+									<Switch
+										id="autoCaptions"
+										checked={autoCaptions}
+										onCheckedChange={setAutoCaptions}
+										disabled={isCreatingUpload}
+									/>
 								</div>
-								<Switch
-									id="autoCaptions"
-									checked={autoCaptions}
-									onCheckedChange={setAutoCaptions}
-									disabled={isCreatingUpload}
-								/>
+								{autoCaptions && (
+									<div className="space-y-2 pt-2 border-t">
+										<Label htmlFor="captionLanguage">Audio Language</Label>
+										<Select
+											value={captionLanguage}
+											onValueChange={(value) =>
+												setCaptionLanguage(value as LanguageCode)
+											}
+											disabled={isCreatingUpload}
+										>
+											<SelectTrigger id="captionLanguage" className="w-full">
+												<SelectValue placeholder="Select audio language" />
+											</SelectTrigger>
+											<SelectContent>
+												{SUPPORTED_LANGUAGES.map((lang) => (
+													<SelectItem key={lang.code} value={lang.code}>
+														{lang.name}
+														{lang.status === 'beta' && (
+															<span className="text-muted-foreground ml-2 text-xs">
+																(Beta)
+															</span>
+														)}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<p className="text-xs text-muted-foreground">
+											Select the primary language spoken in your video. Captions
+											will be auto-generated in this language. Do not use for
+											mixed-language content.
+										</p>
+									</div>
+								)}
 							</div>
 
 							<div className="flex justify-end gap-3">

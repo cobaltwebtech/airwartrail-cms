@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Save } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 
 interface DescriptionEditorProps {
-	videoId: string;
-	libraryId?: string;
+	videoId: string; // Internal database ID
+	libraryId: string;
 	initialDescription?: string;
 	onDescriptionUpdate?: (description: string) => void;
 }
@@ -40,33 +40,18 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 	const [isEditing, setIsEditing] = useState(false);
 	const [errors, setErrors] = useState<string[]>([]);
 
-	// Query the local database for the video description
-	const { data: videoData } = useQuery(
-		trpc.mux.getVideoFromDatabase.queryOptions({
-			muxAssetId: videoId,
-			libraryId,
-		}),
-	);
-
-	// Update description when data is loaded from database
-	useEffect(() => {
-		if (videoData?.description !== undefined) {
-			setDescription(videoData.description || '');
-		}
-	}, [videoData]);
-
-	const updateVideoMetadataMutation = useMutation(
-		trpc.mux.updateVideoMetadata.mutationOptions({
+	const updateVideoMutation = useMutation(
+		trpc.mux.updateVideoById.mutationOptions({
 			onSuccess: () => {
 				toast.success('Description updated successfully');
 				setIsEditing(false);
 				setErrors([]);
 				// Invalidate queries to refresh data
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getAsset']],
+					queryKey: [['mux', 'getVideoById']],
 				});
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getVideoFromDatabase']],
+					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 				if (onDescriptionUpdate) {
 					onDescriptionUpdate(description);
@@ -94,16 +79,16 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 
 		setErrors([]);
 
-		// Update via tRPC - saves to local database with line breaks preserved
-		updateVideoMetadataMutation.mutate({
-			muxAssetId: videoId,
+		// Update via tRPC - saves to local database using internal ID
+		updateVideoMutation.mutate({
+			videoId,
 			libraryId,
 			description,
 		});
 	};
 
 	const handleCancel = () => {
-		setDescription(videoData?.description || initialDescription);
+		setDescription(initialDescription);
 		setIsEditing(false);
 		setErrors([]);
 	};
@@ -115,7 +100,7 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 	return (
 		<Card className="col-span-4">
 			<CardHeader>
-				<CardTitle>Edit Description</CardTitle>
+				<CardTitle>Description</CardTitle>
 				<CardDescription>
 					Description of the video which is displayed on the front-end website
 					video player. Maximum of 5000 characters.
@@ -174,20 +159,20 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 						<Button
 							variant="outline"
 							onClick={handleCancel}
-							disabled={updateVideoMetadataMutation.isPending}
+							disabled={updateVideoMutation.isPending}
 						>
 							Cancel
 						</Button>
 						<Button
 							onClick={handleSave}
 							disabled={
-								updateVideoMetadataMutation.isPending ||
+								updateVideoMutation.isPending ||
 								isOverLimit ||
 								description === initialDescription
 							}
 						>
 							<Save />
-							{updateVideoMetadataMutation.isPending ? 'Saving...' : 'Save'}
+							{updateVideoMutation.isPending ? 'Saving...' : 'Save'}
 						</Button>
 					</div>
 				</CardContent>

@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
 	Card,
@@ -14,8 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { trpc } from '@/lib/trpc';
 
 interface PublishStatusProps {
-	videoId: string;
-	libraryId?: string;
+	videoId: string; // Internal database ID
+	libraryId: string;
 	initialPublishStatus?: boolean;
 	onPublishStatusUpdate?: (isPublished: boolean) => void;
 }
@@ -29,32 +29,17 @@ const PublishStatus: React.FC<PublishStatusProps> = ({
 	const queryClient = useQueryClient();
 	const [isPublished, setIsPublished] = useState(initialPublishStatus);
 
-	// Query the local database for the video publish status
-	const { data: videoData } = useQuery(
-		trpc.mux.getVideoFromDatabase.queryOptions({
-			muxAssetId: videoId,
-			libraryId,
-		}),
-	);
-
-	// Update publish status when data is loaded from database
-	useEffect(() => {
-		if (videoData?.isPublished !== undefined) {
-			setIsPublished(videoData.isPublished);
-		}
-	}, [videoData]);
-
 	const updatePublishStatusMutation = useMutation(
-		trpc.mux.updateVideoMetadata.mutationOptions({
+		trpc.mux.updateVideoById.mutationOptions({
 			onSuccess: () => {
 				const status = isPublished ? 'published' : 'unpublished';
 				toast.success(`Video ${status} successfully`);
 				// Invalidate queries to refresh data
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getAsset']],
+					queryKey: [['mux', 'getVideoById']],
 				});
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getVideoFromDatabase']],
+					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 				if (onPublishStatusUpdate) {
 					onPublishStatusUpdate(isPublished);
@@ -75,9 +60,9 @@ const PublishStatus: React.FC<PublishStatusProps> = ({
 		// Optimistically update the UI
 		setIsPublished(checked);
 
-		// Update via tRPC - saves to local database
+		// Update via tRPC - saves to local database using internal ID
 		updatePublishStatusMutation.mutate({
-			muxAssetId: videoId,
+			videoId,
 			libraryId,
 			isPublished: checked,
 			publishedAt: checked ? new Date().toISOString() : null,

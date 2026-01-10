@@ -15,3 +15,15 @@ export const generateVideoId = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   24,
 );
+
+// Video Chapter ID
+export const generateChapterId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);
+
+// Video Track ID
+export const generateTrackId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);

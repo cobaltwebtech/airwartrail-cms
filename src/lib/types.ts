@@ -16,25 +16,38 @@ export interface MuxTrack {
 	closed_captions?: boolean;
 }
 
-// Updated Video interface to use Mux Asset structure
+// Updated Video interface to use internal database IDs as primary identifier
 export interface Video {
+	// Internal database ID (primary identifier for navigation)
 	id: string;
-	playbackId: string;
+	// Mux identifiers
+	muxAssetId?: string;
+	playbackId: string | null;
+	// Status and metadata
 	status: MuxAssetStatus;
 	title: string;
+	description?: string | null;
 	thumbnail?: string;
 	duration: number;
 	createdAt: string;
 	updatedAt?: string;
 	captions?: MuxTrack[];
 	metadata?: Record<string, unknown>;
-	policy?: 'public' | 'signed';
+	policy?: 'public' | 'signed' | null;
 	isPublished?: boolean;
+	publishedAt?: string | null;
+	// Video properties
+	aspectRatio?: string | null;
+	maxWidth?: number | null;
+	maxHeight?: number | null;
+	resolutionTier?: string | null;
+	videoQuality?: string | null;
+	// Analytics
+	views?: number | null;
 	// Deprecated fields kept for backward compatibility
 	guid?: string;
 	thumbnailFileName?: string;
 	collectionId?: string;
-	views?: number;
 	storageSize?: number;
 	statusText?: string;
 	dateUploaded?: string;

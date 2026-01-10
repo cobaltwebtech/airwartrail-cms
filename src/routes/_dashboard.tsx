@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { DashboardFooter } from '@/components/DashboardFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -23,7 +24,10 @@ function DashboardLayout() {
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset>
-				<SidebarTrigger />
+				<div className="flex items-center justify-between mx-4 mt-4">
+					<SidebarTrigger />
+					<ThemeToggle />
+				</div>
 				<main className="flex flex-1 flex-col px-6 py-4">
 					<Outlet />
 				</main>

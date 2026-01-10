@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 
 interface EditTitleProps {
-	videoId: string;
-	libraryId?: string;
+	videoId: string; // Internal database ID
+	libraryId: string;
 	initialTitle: string;
 	onTitleUpdate: (newTitle: string) => void; // Callback to update the parent state
 }
@@ -28,46 +28,28 @@ const EditTitle: React.FC<EditTitleProps> = ({
 	// Derived state - calculated directly instead of via useEffect
 	const isButtonDisabled = title.trim() === '' || title === initialTitle;
 
-	// Update Mux asset with new title
-	const updateMuxAssetMutation = useMutation(
-		trpc.mux.updateAsset.mutationOptions({
-			onSuccess: () => {
-				// After Mux is updated, update local database
-				updateLocalDatabaseMutation.mutate({
-					muxAssetId: videoId,
-					libraryId,
-					title,
-				});
-			},
-			onError: (err) => {
-				const errorMessage =
-					err instanceof Error ? err.message : 'Unknown error';
-				setError(errorMessage);
-				toast.error('Failed to update title in Mux!', {
-					description: errorMessage,
-				});
-			},
-		}),
-	);
-
-	// Update local database with new title
-	const updateLocalDatabaseMutation = useMutation(
-		trpc.mux.updateVideoMetadata.mutationOptions({
+	// Update video by internal ID (updates both database and Mux)
+	const updateVideoMutation = useMutation(
+		trpc.mux.updateVideoById.mutationOptions({
 			onSuccess: () => {
 				setError(null);
 				toast.success('Title updated successfully!', {
-					description: 'The video title has been updated in Mux and database.',
+					description: 'The video title has been updated.',
 				});
 				onTitleUpdate(title);
+				// Invalidate video queries to refresh data
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getAsset']],
+					queryKey: [['mux', 'getVideoById']],
+				});
+				queryClient.invalidateQueries({
+					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 			},
 			onError: (err) => {
 				const errorMessage =
 					err instanceof Error ? err.message : 'Unknown error';
 				setError(errorMessage);
-				toast.error('Failed to update title in database!', {
+				toast.error('Failed to update title!', {
 					description: errorMessage,
 				});
 			},
@@ -83,9 +65,9 @@ const EditTitle: React.FC<EditTitleProps> = ({
 			return;
 		}
 
-		// First update Mux, then chain to local database update
-		updateMuxAssetMutation.mutate({
-			assetId: videoId,
+		// Update video using internal ID
+		updateVideoMutation.mutate({
+			videoId,
 			libraryId,
 			title,
 		});
@@ -94,7 +76,7 @@ const EditTitle: React.FC<EditTitleProps> = ({
 	return (
 		<Card className="col-span-4">
 			<CardHeader>
-				<CardTitle>Edit Title</CardTitle>
+				<CardTitle>Title</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleTitleChange} className="space-y-2">
@@ -114,17 +96,10 @@ const EditTitle: React.FC<EditTitleProps> = ({
 					<div className="flex justify-end pt-2">
 						<Button
 							type="submit"
-							disabled={
-								updateMuxAssetMutation.isPending ||
-								updateLocalDatabaseMutation.isPending ||
-								isButtonDisabled
-							}
+							disabled={updateVideoMutation.isPending || isButtonDisabled}
 						>
 							<Save />
-							{updateMuxAssetMutation.isPending ||
-							updateLocalDatabaseMutation.isPending
-								? 'Saving...'
-								: 'Save Title'}
+							{updateVideoMutation.isPending ? 'Saving...' : 'Save Title'}
 						</Button>
 					</div>
 					{error && <p className="text-destructive mt-2 text-sm">{error}</p>}

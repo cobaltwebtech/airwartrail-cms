@@ -4,21 +4,16 @@ import { t, protectedProcedure } from "../trpc-init";
 import Mux from "@mux/mux-node";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, inArray, asc } from "drizzle-orm";
-import { generateLibraryId, generateVideoId } from "@/worker/lib/generate-id";
-import { customAlphabet } from "nanoid";
+import { generateLibraryId, generateVideoId, generateTrackId, generateChapterId } from "@/worker/lib/generate-id";
 import {
 	muxLibrary,
 	video,
 	videoChapter,
+	videoTrack,
 	type MuxLibrary,
 } from "@/db/video-schema";
 import { encrypt, decrypt } from "@/worker/lib/encryption";
 
-// Generate chapter IDs
-const generateChapterId = customAlphabet(
-	"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-	16,
-);
 
 // ============================================================================
 // Language Code Mapping
@@ -188,6 +183,25 @@ export interface DirectUpload {
  */
 function getVideosDb(env: Env) {
 	return drizzle(env.DB_VIDEOS);
+}
+
+function parseTagsColumn(value?: string | null): string[] {
+	if (!value) {
+		return [];
+	}
+
+	try {
+		const parsed = JSON.parse(value);
+		if (Array.isArray(parsed)) {
+			return parsed
+				.map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+				.filter((entry) => entry.length > 0);
+		}
+	} catch (error) {
+		console.warn("Failed to parse tags from database:", error);
+	}
+
+	return [];
 }
 
 /**
@@ -453,7 +467,7 @@ export const muxRouter = t.router({
 				signingKeyPrivate: z.string().optional(),
 				webhookSecret: z.string().optional(),
 				defaultPlaybackPolicy: z
-					.enum(["public", "signed", "drm"])
+					.enum(["public", "signed"])
 					.default("public"),
 				defaultVideoQuality: z
 					.enum(["basic", "plus", "premium"])
@@ -544,7 +558,7 @@ export const muxRouter = t.router({
 				signingKeyPrivate: z.string().optional().nullable(),
 				webhookSecret: z.string().optional().nullable(),
 				defaultPlaybackPolicy: z
-					.enum(["public", "signed", "drm"])
+					.enum(["public", "signed"])
 					.optional(),
 				defaultVideoQuality: z
 					.enum(["basic", "plus", "premium"])
@@ -984,6 +998,64 @@ export const muxRouter = t.router({
 		}),
 
 	/**
+	 * Get video tracks (captions, audio, etc.) from local database
+	 */
+	getVideoTracks: protectedProcedure
+		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { library } = await getMuxClient(env, input.libraryId);
+
+				// First find the video
+				const [videoRecord] = await db
+					.select({ id: video.id })
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.muxAssetId, input.muxAssetId),
+						),
+					)
+					.limit(1);
+
+				if (!videoRecord) {
+					return [];
+				}
+
+				// Fetch all tracks for this video
+				const tracks = await db
+					.select({
+						id: videoTrack.id,
+						muxTrackId: videoTrack.muxTrackId,
+						type: videoTrack.type,
+						textType: videoTrack.textType,
+						languageCode: videoTrack.languageCode,
+						name: videoTrack.name,
+						status: videoTrack.status,
+						textSource: videoTrack.textSource,
+						closedCaptions: videoTrack.closedCaptions,
+						isPrimary: videoTrack.isPrimary,
+						createdAt: videoTrack.createdAt,
+						updatedAt: videoTrack.updatedAt,
+					})
+					.from(videoTrack)
+					.where(eq(videoTrack.videoId, videoRecord.id));
+
+				return tracks;
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting video tracks:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get video tracks",
+				});
+			}
+		}),
+
+	/**
 	 * Check if a video is synced to the local database
 	 */
 	getVideoSyncStatus: protectedProcedure
@@ -1074,7 +1146,7 @@ export const muxRouter = t.router({
 
 				const playbackId = asset.playback_ids?.[0]?.id || null;
 				const playbackPolicy =
-					(asset.playback_ids?.[0]?.policy as "public" | "signed" | "drm") ||
+					(asset.playback_ids?.[0]?.policy as "public" | "signed") ||
 					library.defaultPlaybackPolicy;
 
 				const newVideoId = generateVideoId();
@@ -1397,10 +1469,17 @@ export const muxRouter = t.router({
 		.input(z.object({ assetId: z.string(), trackId: z.string(), libraryId: z.string().optional() }))
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
 			const { env } = ctx;
+			const db = getVideosDb(env);
 
 			try {
 				const { mux } = await getMuxClient(env, input.libraryId);
 				await mux.video.assets.deleteTrack(input.assetId, input.trackId);
+				
+				// Also delete from our database if it exists
+				await db
+					.delete(videoTrack)
+					.where(eq(videoTrack.muxTrackId, input.trackId));
+				
 				return { success: true };
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;
@@ -1408,6 +1487,134 @@ export const muxRouter = t.router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete caption",
+				});
+			}
+		}),
+
+	/**
+	 * Generate auto-captions for an existing asset using Mux's ASR
+	 * This uses OpenAI's Whisper model to generate captions from the audio track
+	 */
+	generateCaptions: protectedProcedure
+		.input(
+			z.object({
+				assetId: z.string(),
+				libraryId: z.string().optional(),
+				languageCode: z.enum([
+					'en', 'es', 'it', 'pt', 'de', 'fr', 'pl', 'ru', 'nl', 'ca',
+					'tr', 'sv', 'uk', 'no', 'fi', 'sk', 'el', 'cs', 'hr', 'da', 'ro', 'bg'
+				]).default('en'),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean; trackId?: string; message: string }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+
+			try {
+				const { mux, library } = await getMuxClient(env, input.libraryId);
+				
+				// First, get the asset to find the audio track ID
+				const asset = await mux.video.assets.retrieve(input.assetId);
+				
+				if (asset.status !== 'ready') {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "Asset must be in 'ready' status before generating captions",
+					});
+				}
+				
+				// Find the audio track
+				const audioTrack = asset.tracks?.find((track) => track.type === 'audio');
+				
+				if (!audioTrack?.id) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "No audio track found on this asset",
+					});
+				}
+
+				// Generate the caption name based on language
+				const languageName = getLanguageName(input.languageCode);
+				const captionName = `${languageName} (auto-generated)`;
+
+				// Call Mux API to generate subtitles
+				// POST /video/v1/assets/${ASSET_ID}/tracks/${AUDIO_TRACK_ID}/generate-subtitles
+				const response = await fetch(
+					`https://api.mux.com/video/v1/assets/${input.assetId}/tracks/${audioTrack.id}/generate-subtitles`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'Authorization': `Basic ${btoa(`${library.tokenId}:${library.tokenSecret}`)}`,
+						},
+						body: JSON.stringify({
+							generated_subtitles: [
+								{
+									language_code: input.languageCode,
+									name: captionName,
+								},
+							],
+						}),
+					}
+				);
+
+				if (!response.ok) {
+					const errorData = await response.json().catch(() => ({}));
+					console.error("Mux generate-subtitles error:", errorData);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: `Failed to generate captions: ${(errorData as { error?: { messages?: string[] } }).error?.messages?.[0] || response.statusText}`,
+					});
+				}
+
+				const result = await response.json() as { data: Array<{ id: string }> };
+				const generatedTrack = result.data?.[0];
+
+				// Save the track to our database with "preparing" status
+				if (generatedTrack?.id) {
+					// Find the video in our database
+					const [videoRecord] = await db
+						.select({ id: video.id })
+						.from(video)
+						.where(
+							and(
+								eq(video.libraryId, library.id),
+								eq(video.muxAssetId, input.assetId),
+							),
+						)
+						.limit(1);
+
+					if (videoRecord) {
+						const trackId = generateTrackId();
+						await db.insert(videoTrack).values({
+							id: trackId,
+							videoId: videoRecord.id,
+							muxTrackId: generatedTrack.id,
+							type: "text",
+							textType: "subtitles",
+							textSource: "generated_vod",
+							languageCode: input.languageCode,
+							name: captionName,
+							status: "preparing",
+							closedCaptions: false,
+							isPrimary: false,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						});
+					}
+				}
+
+				return {
+					success: true,
+					trackId: generatedTrack?.id,
+					message: `Caption generation started for ${languageName}. This may take a few minutes depending on the video length.`,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error generating captions:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to generate captions",
 				});
 			}
 		}),
@@ -1619,8 +1826,7 @@ export const muxRouter = t.router({
 						const playbackPolicy =
 							(asset.playback_ids?.[0]?.policy as
 								| "public"
-								| "signed"
-								| "drm") || library.defaultPlaybackPolicy;
+								| "signed" ) || library.defaultPlaybackPolicy;
 
 						const newVideoId = generateVideoId();
 
@@ -1822,12 +2028,12 @@ export const muxRouter = t.router({
 	// ============================================================================
 
 	/**
-	 * Get chapters for a video
+	 * Get chapters for a video by internal video ID
 	 */
 	getChapters: protectedProcedure
 		.input(
 			z.object({
-				videoId: z.string(),
+				videoId: z.string(), // Internal database video ID
 				libraryId: z.string().optional(),
 			}),
 		)
@@ -1837,10 +2043,10 @@ export const muxRouter = t.router({
 
 			const db = getVideosDb(env);
 
-			// First, find the video record by muxAssetId
+			// Verify video exists with the given internal ID
 			const whereClause = libraryId
-				? and(eq(video.muxAssetId, videoId), eq(video.libraryId, libraryId))
-				: eq(video.muxAssetId, videoId);
+				? and(eq(video.id, videoId), eq(video.libraryId, libraryId))
+				: eq(video.id, videoId);
 
 			const [videoRecord] = await db
 				.select({ id: video.id })
@@ -1870,12 +2076,12 @@ export const muxRouter = t.router({
 		}),
 
 	/**
-	 * Save chapters for a video (replace all existing chapters)
+	 * Save chapters for a video by internal video ID (replace all existing chapters)
 	 */
 	saveChapters: protectedProcedure
 		.input(
 			z.object({
-				videoId: z.string(),
+				videoId: z.string(), // Internal database video ID
 				libraryId: z.string().optional(),
 				chapters: z.array(
 					z.object({
@@ -1895,10 +2101,10 @@ export const muxRouter = t.router({
 
 			const db = getVideosDb(env);
 
-			// Find the video record by muxAssetId
+			// Verify video exists with the given internal ID
 			const whereClause = libraryId
-				? and(eq(video.muxAssetId, videoId), eq(video.libraryId, libraryId))
-				: eq(video.muxAssetId, videoId);
+				? and(eq(video.id, videoId), eq(video.libraryId, libraryId))
+				: eq(video.id, videoId);
 
 			const [videoRecord] = await db
 				.select({ id: video.id })
@@ -1968,5 +2174,383 @@ export const muxRouter = t.router({
 			await db.delete(videoChapter).where(eq(videoChapter.id, chapterId));
 
 			return { success: true };
+		}),
+
+	/**
+	 * List all videos from the internal database (not directly from Mux)
+	 * This returns videos with internal IDs for navigation
+	 */
+	listVideosFromDatabase: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				limit: z.number().min(1).max(100).default(50),
+				offset: z.number().min(0).default(0),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { libraryId, limit, offset } = input;
+
+			try {
+				// Verify library exists and get credentials
+				const { library } = await getMuxClient(env, libraryId);
+
+				// Fetch videos from database
+				const videos = await db
+					.select({
+						id: video.id,
+						libraryId: video.libraryId,
+						muxAssetId: video.muxAssetId,
+						muxPlaybackId: video.muxPlaybackId,
+						status: video.status,
+						title: video.title,
+						description: video.description,
+						duration: video.duration,
+						aspectRatio: video.aspectRatio,
+						maxWidth: video.maxWidth,
+						maxHeight: video.maxHeight,
+						resolutionTier: video.resolutionTier,
+						videoQuality: video.videoQuality,
+						playbackPolicy: video.playbackPolicy,
+						isPublished: video.isPublished,
+						publishedAt: video.publishedAt,
+						viewCount: video.viewCount,
+						createdAt: video.createdAt,
+						updatedAt: video.updatedAt,
+					})
+					.from(video)
+					.where(
+						and(
+							eq(video.libraryId, library.id),
+							eq(video.isDeleted, false),
+						),
+					)
+					.orderBy(asc(video.createdAt))
+					.limit(limit)
+					.offset(offset);
+
+				// Map to a consistent format
+				return videos.map((v) => ({
+					id: v.id, // Internal database ID
+					muxAssetId: v.muxAssetId,
+					playbackId: v.muxPlaybackId,
+					status: v.status as MuxAssetState,
+					title: v.title,
+					description: v.description,
+					duration: v.duration ?? 0,
+					aspectRatio: v.aspectRatio,
+					maxWidth: v.maxWidth,
+					maxHeight: v.maxHeight,
+					resolutionTier: v.resolutionTier,
+					videoQuality: v.videoQuality,
+					policy: v.playbackPolicy as "public" | "signed" | undefined,
+					isPublished: v.isPublished,
+					publishedAt: v.publishedAt?.toISOString(),
+					views: v.viewCount ?? 0,
+					createdAt: v.createdAt.toISOString(),
+					updatedAt: v.updatedAt.toISOString(),
+				}));
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error listing videos from database:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to list videos from database",
+				});
+			}
+		}),
+
+	/**
+	 * Get a single video by internal database ID
+	 * This combines database metadata with Mux asset data
+	 */
+	getVideoById: protectedProcedure
+		.input(z.object({ videoId: z.string(), libraryId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { videoId, libraryId } = input;
+
+			try {
+				// Fetch video from database by internal ID
+				const [videoRecord] = await db
+					.select()
+					.from(video)
+					.where(
+						and(
+							eq(video.id, videoId),
+							eq(video.libraryId, libraryId),
+							eq(video.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!videoRecord) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: `Video ${videoId} not found`,
+					});
+				}
+
+				// Get Mux client and fetch asset details from Mux
+				const { mux, library } = await getMuxClient(env, libraryId);
+				
+				let muxAsset: MuxAsset | null = null;
+				try {
+					const asset = await mux.video.assets.retrieve(videoRecord.muxAssetId);
+					muxAsset = mapMuxAssetToVideo(asset);
+				} catch (muxError) {
+					console.warn("Could not fetch Mux asset details:", muxError);
+					// Continue without Mux data - use database data only
+				}
+
+				// Combine database and Mux data
+				return {
+					// Internal database fields
+					id: videoRecord.id,
+					libraryId: videoRecord.libraryId,
+					muxAssetId: videoRecord.muxAssetId,
+					muxPlaybackId: videoRecord.muxPlaybackId,
+					muxEnvironmentId: library.muxEnvironmentId,
+					// Status from database (may be synced from Mux)
+					status: videoRecord.status,
+					// Error information
+					errorType: videoRecord.errorType,
+					errorMessages: videoRecord.errorMessages,
+					// Metadata
+					title: videoRecord.title,
+					description: videoRecord.description,
+					// Video properties (prefer Mux data if available, fallback to database)
+					duration: muxAsset?.duration ?? videoRecord.duration ?? 0,
+					aspectRatio: muxAsset?.aspectRatio ?? videoRecord.aspectRatio,
+					maxWidth: muxAsset?.maxWidth ?? videoRecord.maxWidth,
+					maxHeight: muxAsset?.maxHeight ?? videoRecord.maxHeight,
+					maxStoredFrameRate: muxAsset?.maxStoredFrameRate ?? videoRecord.maxFrameRate,
+					resolutionTier: muxAsset?.resolutionTier ?? videoRecord.resolutionTier,
+					videoQuality: muxAsset?.videoQuality ?? videoRecord.videoQuality,
+					// Playback
+					playbackId: videoRecord.muxPlaybackId ?? muxAsset?.playbackId,
+					policy: videoRecord.playbackPolicy ?? muxAsset?.policy ?? "public",
+					// Captions from Mux
+					captions: muxAsset?.captions,
+					// Publishing status
+					isPublished: videoRecord.isPublished,
+					publishedAt: videoRecord.publishedAt?.toISOString(),
+					// Analytics
+					views: videoRecord.viewCount ?? 0,
+					viewCountSyncedAt: videoRecord.viewCountSyncedAt?.toISOString(),
+					tags: parseTagsColumn(videoRecord.tags),
+					// Timestamps
+					createdAt: videoRecord.createdAt.toISOString(),
+					updatedAt: videoRecord.updatedAt.toISOString(),
+					// Library info
+					libraryName: library.name,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error fetching video by ID:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch video",
+				});
+			}
+		}),
+
+	/**
+	 * Update video metadata by internal database ID
+	 */
+	updateVideoById: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.string(),
+				libraryId: z.string(),
+				title: z.string().optional(),
+				description: z.string().optional(),
+				isPublished: z.boolean().optional(),
+				publishedAt: z.string().nullable().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { videoId, libraryId, ...updateFields } = input;
+
+			try {
+				// Verify video exists
+				const [existingVideo] = await db
+					.select({ id: video.id, muxAssetId: video.muxAssetId })
+					.from(video)
+					.where(
+						and(
+							eq(video.id, videoId),
+							eq(video.libraryId, libraryId),
+						),
+					)
+					.limit(1);
+
+				if (!existingVideo) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video not found",
+					});
+				}
+
+				// Build update object
+				const updateData: Partial<typeof video.$inferInsert> = {};
+				if (updateFields.title !== undefined) {
+					updateData.title = updateFields.title;
+				}
+				if (updateFields.description !== undefined) {
+					updateData.description = updateFields.description;
+				}
+				if (updateFields.isPublished !== undefined) {
+					updateData.isPublished = updateFields.isPublished;
+				}
+				if (updateFields.publishedAt !== undefined) {
+					updateData.publishedAt = updateFields.publishedAt ? new Date(updateFields.publishedAt) : null;
+				}
+
+				if (Object.keys(updateData).length === 0) {
+					return { success: true };
+				}
+
+				// Update the database record
+				await db
+					.update(video)
+					.set(updateData)
+					.where(eq(video.id, videoId));
+
+				// Also update Mux asset title if title changed
+				if (updateFields.title !== undefined) {
+					try {
+						const { mux } = await getMuxClient(env, libraryId);
+						await mux.video.assets.update(existingVideo.muxAssetId, {
+							meta: { title: updateFields.title },
+						});
+					} catch (muxError) {
+						console.warn("Could not update Mux asset title:", muxError);
+						// Don't fail - database update succeeded
+					}
+				}
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating video:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update video",
+				});
+			}
+		}),
+
+	/**
+	 * Update tags on a video
+	 */
+	updateVideoTags: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.string(),
+				libraryId: z.string(),
+				tags: z
+					.array(
+						z
+							.string()
+							.trim()
+							.min(1, "Tag cannot be empty")
+							.max(32, "Tags must be 32 characters or less")
+							.regex(/^[a-zA-Z0-9:@._\- ]+$/, "Tags may only contain letters, numbers, spaces, and : @ . _ -"),
+						)
+					.max(12, "You can add up to 12 tags")
+					.default([]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { videoId, libraryId, tags } = input;
+
+			const [existingVideo] = await db
+				.select({ id: video.id })
+				.from(video)
+				.where(
+					and(eq(video.id, videoId), eq(video.libraryId, libraryId)),
+				)
+				.limit(1);
+
+			if (!existingVideo) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Video not found",
+				});
+			}
+
+			const uniqueTags = tags.filter((tag, index) => tags.indexOf(tag) === index);
+			const serializedTags = uniqueTags.length > 0 ? JSON.stringify(uniqueTags) : null;
+
+			await db
+				.update(video)
+				.set({ tags: serializedTags })
+				.where(eq(video.id, videoId));
+
+			return { success: true, tags: uniqueTags };
+		}),
+
+	/**
+	 * Delete a video by internal database ID
+	 */
+	deleteVideoById: protectedProcedure
+		.input(z.object({ videoId: z.string(), libraryId: z.string() }))
+		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { videoId, libraryId } = input;
+
+			try {
+				// Find the video to get the Mux asset ID
+				const [videoRecord] = await db
+					.select({ id: video.id, muxAssetId: video.muxAssetId })
+					.from(video)
+					.where(
+						and(
+							eq(video.id, videoId),
+							eq(video.libraryId, libraryId),
+						),
+					)
+					.limit(1);
+
+				if (!videoRecord) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video not found",
+					});
+				}
+
+				// Delete from Mux
+				try {
+					const { mux } = await getMuxClient(env, libraryId);
+					await mux.video.assets.delete(videoRecord.muxAssetId);
+				} catch (muxError) {
+					console.warn("Could not delete Mux asset:", muxError);
+					// Continue with database deletion even if Mux fails
+				}
+
+				// Soft delete in database
+				await db
+					.update(video)
+					.set({ isDeleted: true, deletedAt: new Date() })
+					.where(eq(video.id, videoId));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error deleting video:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete video",
+				});
+			}
 		}),
 });

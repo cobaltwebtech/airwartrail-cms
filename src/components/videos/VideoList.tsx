@@ -9,14 +9,17 @@ import {
 	useReactTable,
 } from '@tanstack/react-table';
 import {
+	AlertCircle,
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	CheckCircle,
 	Copy,
 	Eye,
 	Film,
 	Grid3X3,
 	List,
+	Loader2,
 	MoreHorizontal,
 	Pencil,
 	Play,
@@ -282,14 +285,14 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 		};
 	}, [viewMode, sortCriteria, sortDirection, tableSorting]);
 
-	// Delete mutation using tRPC
+	// Delete mutation using tRPC with internal video ID
 	const deleteVideoMutation = useMutation(
-		trpc.mux.deleteAsset.mutationOptions({
+		trpc.mux.deleteVideoById.mutationOptions({
 			onSuccess: () => {
 				toast.success('Video deleted successfully');
-				// Invalidate the videos query to refetch
+				// Invalidate the videos query to refetch from database
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'listAssets']],
+					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 			},
 			onError: (error) => {
@@ -352,7 +355,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const handleDeleteConfirm = async () => {
 		if (videoToDelete) {
 			await deleteVideoMutation.mutateAsync({
-				assetId: videoToDelete.id,
+				videoId: videoToDelete.id,
 				libraryId,
 			});
 			setVideoToDelete(null);
@@ -380,7 +383,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								className="h-full w-full object-cover"
 								width={160}
 								height={90}
-								policy={row.original.policy}
+								policy={row.original.policy ?? undefined}
 								libraryId={libraryId}
 							/>
 						</Link>
@@ -444,6 +447,36 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 						{row.original.views?.toLocaleString() ?? 0}
 					</Badge>
 				),
+			},
+			{
+				accessorKey: 'status',
+				header: 'Status',
+				cell: ({ row }) => {
+					const status = row.original.status;
+					return (
+						<Badge
+							variant={
+								status === 'ready'
+									? 'default'
+									: status === 'errored'
+										? 'destructive'
+										: 'secondary'
+							}
+							className="gap-1"
+						>
+							{status === 'ready' && <CheckCircle className="size-3" />}
+							{status === 'errored' && <AlertCircle className="size-3" />}
+							{status === 'preparing' && (
+								<Loader2 className="size-3 animate-spin" />
+							)}
+							{status === 'ready'
+								? 'Ready'
+								: status === 'errored'
+									? 'Error'
+									: 'Processing'}
+						</Badge>
+					);
+				},
 			},
 			{
 				accessorKey: 'isPublished',
@@ -658,7 +691,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									alt={video.title}
 									className="aspect-video w-full object-cover"
 									aspectVideo
-									policy={video.policy}
+									policy={video.policy ?? undefined}
 									libraryId={libraryId}
 								/>
 								<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
@@ -725,6 +758,36 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								<CardDescription>
 									<div className="space-y-1">
 										<div>
+											{' '}
+											Status:{' '}
+											<Badge
+												variant={
+													video.status === 'ready'
+														? 'default'
+														: video.status === 'errored'
+															? 'destructive'
+															: 'secondary'
+												}
+												className="gap-1"
+											>
+												{video.status === 'ready' && (
+													<CheckCircle className="size-3" />
+												)}
+												{video.status === 'errored' && (
+													<AlertCircle className="size-3" />
+												)}
+												{video.status === 'preparing' && (
+													<Loader2 className="size-3 animate-spin" />
+												)}
+												{video.status === 'ready'
+													? 'Ready'
+													: video.status === 'errored'
+														? 'Error'
+														: 'Processing'}
+											</Badge>
+										</div>
+										<div>
+											{' '}
 											Views:{' '}
 											<Badge variant="secondary">
 												{(video.views ?? 0).toLocaleString()}

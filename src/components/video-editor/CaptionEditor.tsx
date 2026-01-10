@@ -1,8 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Upload } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Loader2, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -20,8 +21,14 @@ import {
 	DialogOverlay,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -32,285 +39,363 @@ import {
 } from '@/components/ui/table';
 import { trpc } from '@/lib/trpc';
 
+// Supported languages for auto-generated captions
+// Languages marked as (Beta) may have lower accuracy
+const SUPPORTED_LANGUAGES = [
+	{ code: 'en', name: 'English', status: 'stable' },
+	{ code: 'es', name: 'Spanish', status: 'stable' },
+	{ code: 'it', name: 'Italian', status: 'stable' },
+	{ code: 'pt', name: 'Portuguese', status: 'stable' },
+	{ code: 'de', name: 'German', status: 'stable' },
+	{ code: 'fr', name: 'French', status: 'stable' },
+	{ code: 'pl', name: 'Polish', status: 'beta' },
+	{ code: 'ru', name: 'Russian', status: 'beta' },
+	{ code: 'nl', name: 'Dutch', status: 'beta' },
+	{ code: 'ca', name: 'Catalan', status: 'beta' },
+	{ code: 'tr', name: 'Turkish', status: 'beta' },
+	{ code: 'sv', name: 'Swedish', status: 'beta' },
+	{ code: 'uk', name: 'Ukrainian', status: 'beta' },
+	{ code: 'no', name: 'Norwegian', status: 'beta' },
+	{ code: 'fi', name: 'Finnish', status: 'beta' },
+	{ code: 'sk', name: 'Slovak', status: 'beta' },
+	{ code: 'el', name: 'Greek', status: 'beta' },
+	{ code: 'cs', name: 'Czech', status: 'beta' },
+	{ code: 'hr', name: 'Croatian', status: 'beta' },
+	{ code: 'da', name: 'Danish', status: 'beta' },
+	{ code: 'ro', name: 'Romanian', status: 'beta' },
+	{ code: 'bg', name: 'Bulgarian', status: 'beta' },
+] as const;
+
+type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
+
 interface CaptionEditorProps {
-	videoId: string;
+	muxAssetId: string; // Mux Asset ID for direct Mux API calls
 	libraryId?: string;
 	initialCaptions: { label: string; srclang: string }[];
 }
 
 const CaptionEditor: React.FC<CaptionEditorProps> = ({
-	videoId,
+	muxAssetId,
 	libraryId,
 	initialCaptions,
 }) => {
 	const queryClient = useQueryClient();
-	const [file, setFile] = useState<File | null>(null);
-	const [captionLabel, setCaptionLabel] = useState<string>('');
-	const [languageCode, setLanguageCode] = useState<string>('');
-	const [captions, setCaptions] = useState(initialCaptions);
+	const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const [captionToDelete, setCaptionToDelete] = useState<string | null>(null);
+	const [trackToDelete, setTrackToDelete] = useState<{
+		muxTrackId: string;
+		name: string;
+	} | null>(null);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (e.target.files && e.target.files.length > 0) {
-			const selectedFile = e.target.files[0];
-
-			// Validate file type
-			const validExtensions = ['.srt', '.vtt'];
-			const fileExtension = selectedFile.name
-				.slice(selectedFile.name.lastIndexOf('.'))
-				.toLowerCase();
-
-			if (!validExtensions.includes(fileExtension)) {
-				toast.error('File must be a .srt or .vtt file');
-				console.log(
-					'Invalid file type:',
-					selectedFile.type,
-					'or extension:',
-					fileExtension,
-				);
-				return;
-			}
-
-			setFile(selectedFile);
-		}
-	};
-
-	// Add caption mutation using tRPC
-	const addCaptionMutation = useMutation({
-		mutationFn: async (formData: {
-			file: File;
-			label: string;
-			language: string;
-		}) => {
-			// Note: tRPC might not support file uploads directly
-			// For now, we'll implement this as a two-step process:
-			// 1. Upload the file via multipart form
-			// 2. Create the track via tRPC
-			const data = new FormData();
-			data.append('file', formData.file);
-
-			// This would be replaced with actual file upload implementation
-			return trpc.mux.addCaption.mutate({
-				assetId: videoId,
-				libraryId,
-				name: formData.label,
-				language: formData.language,
-				textType: 'subtitles',
-			});
-		},
-		onSuccess: () => {
-			toast.success('Caption uploaded successfully!');
-			setCaptions([
-				...captions,
-				{
-					label: captionLabel,
-					srclang: languageCode,
-				},
-			]);
-			setFile(null);
-			setCaptionLabel('');
-			setLanguageCode('');
-			queryClient.invalidateQueries({
-				queryKey: [['mux', 'getAsset']],
-			});
-		},
-		onError: (error) => {
-			console.error('Error uploading caption:', error);
-			toast.error(
-				error instanceof Error ? error.message : 'Error uploading caption',
+	// Fetch tracks from database
+	const {
+		data: tracks,
+		isLoading: tracksLoading,
+		refetch: refetchTracks,
+	} = useQuery({
+		...trpc.mux.getVideoTracks.queryOptions({
+			muxAssetId,
+			libraryId,
+		}),
+		// Poll every 5 seconds while there are tracks in "preparing" status
+		refetchInterval: (query) => {
+			const data = query.state.data;
+			const hasPending = data?.some(
+				(track) => track.type === 'text' && track.status === 'preparing',
 			);
+			return hasPending ? 5000 : false;
 		},
 	});
 
-	// Delete caption mutation using tRPC
-	const deleteCaptionMutation = useMutation({
-		mutationFn: (trackId: string) =>
-			trpc.mux.deleteCaption.mutate({
-				assetId: videoId,
-				libraryId,
-				trackId,
-			}),
-		onSuccess: () => {
-			if (captionToDelete) {
-				setCaptions(
-					captions.filter((caption) => caption.srclang !== captionToDelete),
-				);
-				toast.success('Caption deleted successfully!');
+	// Filter to only show text tracks (captions/subtitles)
+	const captionTracks = tracks?.filter((track) => track.type === 'text') ?? [];
+
+	// Check if any tracks are still preparing (for polling)
+	const hasPendingTracks = captionTracks.some(
+		(track) => track.status === 'preparing',
+	);
+
+	// Generate captions mutation using tRPC
+	const generateCaptionsMutation = useMutation(
+		trpc.mux.generateCaptions.mutationOptions({
+			onSuccess: (data) => {
+				toast.success(data.message);
+				// Invalidate tracks query to refresh the list
+				queryClient.invalidateQueries({
+					queryKey: [['mux', 'getVideoTracks']],
+				});
 				queryClient.invalidateQueries({
 					queryKey: [['mux', 'getAsset']],
 				});
-			}
-			setIsDeleteDialogOpen(false);
-			setCaptionToDelete(null);
-		},
-		onError: (error) => {
-			console.error('Error deleting caption:', error);
-			toast.error(
-				error instanceof Error ? error.message : 'Error deleting caption',
-			);
-		},
-	});
+			},
+			onError: (error) => {
+				console.error('Error generating captions:', error);
+				toast.error(error.message || 'Error generating captions');
+			},
+		}),
+	);
 
-	const handleUpload = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!file) {
-			toast.error('Please select a file to upload.');
-			return;
-		}
+	// Delete caption mutation using tRPC
+	const deleteCaptionMutation = useMutation(
+		trpc.mux.deleteCaption.mutationOptions({
+			onSuccess: () => {
+				toast.success('Caption deleted successfully!');
+				// Invalidate tracks query to refresh the list
+				queryClient.invalidateQueries({
+					queryKey: [['mux', 'getVideoTracks']],
+				});
+				queryClient.invalidateQueries({
+					queryKey: [['mux', 'getAsset']],
+				});
+				setIsDeleteDialogOpen(false);
+				setTrackToDelete(null);
+			},
+			onError: (error) => {
+				console.error('Error deleting caption:', error);
+				toast.error(error.message || 'Error deleting caption');
+			},
+		}),
+	);
 
-		if (!captionLabel) {
-			toast.error('Please enter a label.');
-			return;
-		}
-
-		if (!languageCode) {
-			toast.error('Please enter a language code.');
-			return;
-		}
-
-		addCaptionMutation.mutate({
-			file,
-			label: captionLabel,
-			language: languageCode,
+	const handleGenerateCaptions = () => {
+		generateCaptionsMutation.mutate({
+			assetId: muxAssetId,
+			libraryId,
+			languageCode: selectedLanguage,
 		});
 	};
 
-	const handleDeleteRequest = (srclang: string) => {
-		setCaptionToDelete(srclang);
+	const handleDeleteRequest = (muxTrackId: string, name: string | null) => {
+		setTrackToDelete({ muxTrackId, name: name ?? 'Unknown' });
 		setIsDeleteDialogOpen(true);
 	};
 
-	const handleDeleteConfirm = async () => {
-		if (captionToDelete) {
-			deleteCaptionMutation.mutate(captionToDelete);
+	const handleDeleteConfirm = () => {
+		if (trackToDelete) {
+			deleteCaptionMutation.mutate({
+				assetId: muxAssetId,
+				libraryId,
+				trackId: trackToDelete.muxTrackId,
+			});
 		}
 	};
+
+	const handleRefresh = () => {
+		refetchTracks();
+	};
+
+	// Helper to get status badge variant
+	const getStatusBadge = (status: string | null) => {
+		switch (status) {
+			case 'ready':
+				return <Badge variant="accent">Ready</Badge>;
+			case 'preparing':
+				return (
+					<Badge variant="secondary" className="animate-pulse">
+						<Loader2 className="mr-1 size-3 animate-spin" />
+						Preparing
+					</Badge>
+				);
+			case 'errored':
+				return <Badge variant="destructive">Error</Badge>;
+			case 'deleted':
+				return <Badge variant="outline">Deleted</Badge>;
+			default:
+				return <Badge variant="outline">Unknown</Badge>;
+		}
+	};
+
+	// Helper to get source badge
+	const getSourceBadge = (textSource: string | null) => {
+		if (textSource === 'generated_vod' || textSource === 'generated_live') {
+			return (
+				<Badge variant="outline" className="ml-2 text-xs">
+					Auto-generated
+				</Badge>
+			);
+		}
+		if (textSource === 'uploaded') {
+			return (
+				<Badge variant="outline" className="ml-2 text-xs">
+					Uploaded
+				</Badge>
+			);
+		}
+		return null;
+	};
+
+	// Combine database tracks with initial captions from Mux API
+	// Use database tracks if available, otherwise fall back to initial captions
+	const displayTracks =
+		captionTracks.length > 0
+			? captionTracks
+			: initialCaptions.map((cap) => ({
+					id: cap.srclang,
+					muxTrackId: cap.srclang,
+					name: cap.label,
+					languageCode: cap.srclang,
+					status: 'ready' as const,
+					textSource: null,
+					type: 'text' as const,
+					textType: 'subtitles' as const,
+					closedCaptions: false,
+					isPrimary: false,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				}));
 
 	return (
 		<Card className="col-span-4 w-full">
 			<CardHeader>
-				<CardTitle>Edit Captions</CardTitle>
-				<CardDescription>Upload caption files to the video.</CardDescription>
+				<div className="flex items-center justify-between">
+					<div>
+						<CardTitle>Captions</CardTitle>
+						<CardDescription>
+							Generate auto-captions for your video using AI speech recognition.
+						</CardDescription>
+					</div>
+					{hasPendingTracks && (
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handleRefresh}
+							title="Refresh to check caption status"
+						>
+							<RefreshCw className="size-4" />
+						</Button>
+					)}
+				</div>
 			</CardHeader>
 			<CardContent>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						handleUpload();
-					}}
-				>
-					<div className="flex flex-col space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="caption">Upload Caption File</Label>
-							<CardDescription className="text-xs">
-								Caption files must be .srt or .vtt format.
-							</CardDescription>
-							<Input
-								id="caption"
-								className="file:bg-primary file:text-primary-foreground border-0 bg-transparent shadow-none file:rounded-sm file:px-4"
-								type="file"
-								accept=".vtt,.srt"
-								onChange={handleFileChange}
-							/>
-						</div>
-						<div className="flex flex-row justify-between gap-x-2">
-							<div className="space-y-2">
-								<Label htmlFor="label">Caption Label</Label>
-								<Input
-									id="label"
-									type="text"
-									placeholder="Caption Language"
-									value={captionLabel}
-									onChange={(e) => setCaptionLabel(e.target.value)}
-								/>
-								<CardDescription className="text-xs">
-									Specify the language of the caption.
-								</CardDescription>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="srclang">Language Short Code</Label>
-								<Input
-									id="srclang"
-									type="text"
-									className="w-fit"
-									placeholder="Language Code"
-									value={languageCode}
-									onChange={(e) => setLanguageCode(e.target.value)}
-								/>
-								<CardDescription className="text-xs">
-									For example use "en" for English, "es" for Spanish, etc.
-								</CardDescription>
-							</div>
-						</div>
+				<div className="flex flex-col space-y-4">
+					<div className="space-y-2">
+						<Label htmlFor="language">Select Language</Label>
+						<CardDescription className="text-xs">
+							Select the primary language spoken in your video. Captions will be
+							auto-generated in this language. Do not use for mixed-language
+							content.
+						</CardDescription>
+						<Select
+							value={selectedLanguage}
+							onValueChange={(value) =>
+								setSelectedLanguage(value as LanguageCode)
+							}
+						>
+							<SelectTrigger className="w-70">
+								<SelectValue placeholder="Select a language" />
+							</SelectTrigger>
+							<SelectContent>
+								{SUPPORTED_LANGUAGES.map((lang) => (
+									<SelectItem key={lang.code} value={lang.code}>
+										{lang.name}
+										{lang.status === 'beta' && (
+											<span className="text-muted-foreground ml-2 text-xs">
+												(Beta)
+											</span>
+										)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
-				</form>
+				</div>
 			</CardContent>
-			<CardFooter className="flex justify-between">
+			<CardFooter className="flex justify-end">
 				<Button
-					onClick={(e) => handleUpload(e as React.FormEvent<HTMLButtonElement>)}
-					disabled={addCaptionMutation.isPending || !file}
+					onClick={handleGenerateCaptions}
+					disabled={generateCaptionsMutation.isPending}
 				>
-					<Upload className="size-4" />
-					{addCaptionMutation.isPending ? 'Uploading...' : 'Upload Caption'}
+					<Wand2 className="size-4" />
+					{generateCaptionsMutation.isPending
+						? 'Generating...'
+						: 'Generate Captions'}
 				</Button>
 			</CardFooter>
-			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Caption Label</TableHead>
-							<TableHead>Language Code</TableHead>
-							<TableHead className="text-right">Delete Caption</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{captions.map((caption) => (
-							<TableRow key={caption.srclang}>
-								<TableCell>{caption.label}</TableCell>
-								<TableCell>{caption.srclang}</TableCell>
-								<TableCell className="text-right">
-									<Button
-										onClick={() => handleDeleteRequest(caption.srclang)}
-										variant="destructive"
-									>
-										<Trash2 className="size-4" />
-										<span className="sr-only">Delete</span>
-									</Button>
-								</TableCell>
+
+			{/* Caption Tracks Table */}
+			{tracksLoading ? (
+				<CardContent>
+					<div className="text-muted-foreground flex items-center gap-2 text-sm">
+						<Loader2 className="size-4 animate-spin" />
+						Loading caption tracks...
+					</div>
+				</CardContent>
+			) : displayTracks.length > 0 ? (
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Caption</TableHead>
+								<TableHead>Language</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
 							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</CardContent>
-			<CaptionDelete />
+						</TableHeader>
+						<TableBody>
+							{displayTracks.map((track) => (
+								<TableRow key={track.muxTrackId}>
+									<TableCell>
+										<div className="flex items-center">
+											{track.name || 'Untitled'}
+											{getSourceBadge(track.textSource)}
+										</div>
+									</TableCell>
+									<TableCell>{track.languageCode || 'Unknown'}</TableCell>
+									<TableCell>{getStatusBadge(track.status)}</TableCell>
+									<TableCell className="text-right">
+										<Button
+											onClick={() =>
+												handleDeleteRequest(track.muxTrackId, track.name)
+											}
+											variant="destructive"
+											size="sm"
+											disabled={
+												track.status === 'preparing' ||
+												track.status === 'deleted'
+											}
+										>
+											<Trash2 className="size-4" />
+											<span className="sr-only">Delete</span>
+										</Button>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</CardContent>
+			) : null}
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+				<DialogOverlay />
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Confirm Deletion</DialogTitle>
+					</DialogHeader>
+					<div className="py-4">
+						Are you sure you want to delete the caption "
+						{trackToDelete?.name || 'this caption'}"? This action cannot be
+						undone.
+					</div>
+					<DialogFooter>
+						<Button
+							variant="secondary"
+							onClick={() => setIsDeleteDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={handleDeleteConfirm}
+							disabled={deleteCaptionMutation.isPending}
+						>
+							{deleteCaptionMutation.isPending ? 'Deleting...' : 'Delete'}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</Card>
 	);
 };
 
 export default CaptionEditor;
-
-function CaptionDelete() {
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogOverlay />
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Confirm Deletion</DialogTitle>
-				</DialogHeader>
-				<div className="py-4">
-					Are you sure you want to delete this caption? This action cannot be
-					undone.
-				</div>
-				<DialogFooter>
-					<Button variant="secondary" onClick={() => onOpenChange(false)}>
-						Cancel
-					</Button>
-					<Button variant="destructive" onClick={onConfirm}>
-						Delete
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
-	);
-}
