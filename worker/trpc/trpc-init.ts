@@ -17,7 +17,7 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
 /**
- * Protected procedure - requires authentication
+ * Protected procedure - requires authentication (session or API key)
  * Throws UNAUTHORIZED error if user is not logged in
  * Use this for endpoints that require a logged-in user
  */
@@ -40,6 +40,73 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 		},
 	});
 });
+
+/**
+ * API Key procedure - requires API key authentication
+ * Throws UNAUTHORIZED error if no valid API key is provided
+ * Use this for endpoints that should be accessed via API key (e.g., external app integrations)
+ */
+export const apiKeyProcedure = t.procedure.use(async ({ ctx, next }) => {
+	// Check if authenticated via API key
+	if (ctx.authType !== 'api-key' || !ctx.session?.user || !ctx.apiKey) {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "A valid API key is required to access this resource",
+		});
+	}
+
+	return next({
+		ctx: {
+			...ctx,
+			session: ctx.session,
+			user: ctx.session.user,
+			authType: 'api-key' as const,
+			apiKey: ctx.apiKey,
+		},
+	});
+});
+
+/**
+ * Helper to create an API key procedure with required permissions
+ * @param resource - The resource name (e.g., 'mux', 'videos')
+ * @param actions - Required actions (e.g., ['read'], ['read', 'write'])
+ */
+export const createApiKeyProcedureWithPermissions = (
+	resource: string,
+	actions: string[]
+) => {
+	return apiKeyProcedure.use(async ({ ctx, next }) => {
+		const permissions = ctx.apiKey.permissions;
+
+		if (!permissions) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: `API key does not have any permissions`,
+			});
+		}
+
+		const resourcePermissions = permissions[resource];
+		if (!resourcePermissions) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: `API key does not have permissions for resource: ${resource}`,
+			});
+		}
+
+		const hasAllActions = actions.every((action) =>
+			resourcePermissions.includes(action)
+		);
+
+		if (!hasAllActions) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: `API key missing required permissions: ${actions.join(', ')} for resource: ${resource}`,
+			});
+		}
+
+		return next();
+	});
+};
 
 /**
  * Admin procedure - requires authentication AND admin role

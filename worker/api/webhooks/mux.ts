@@ -348,7 +348,7 @@ async function handleUploadCancelled(
 			.update(video)
 			.set({
 				status: "errored",
-				errorType: "upload_cancelled",
+				errorCategory: "upload_cancelled",
 				errorMessages: JSON.stringify(["Upload was cancelled"]),
 				updatedAt: new Date(),
 			})
@@ -391,7 +391,7 @@ async function handleUploadErrored(
 			.update(video)
 			.set({
 				status: "errored",
-				errorType: error?.type ?? "upload_error",
+				errorCategory: error?.type ?? "upload_error",
 				errorMessages: JSON.stringify([error?.message ?? "Upload failed"]),
 				updatedAt: new Date(),
 			})
@@ -435,7 +435,7 @@ async function handleUploadTimedOut(
 			.update(video)
 			.set({
 				status: "errored",
-				errorType: "upload_timed_out",
+				errorCategory: "upload_timed_out",
 				errorMessages: JSON.stringify(["Upload timed out - file was not uploaded in time"]),
 				updatedAt: new Date(),
 			})
@@ -474,25 +474,31 @@ async function handleUploadAssetCreated(
 
 	// Check if we already have a video with this upload ID
 	const existingByUpload = await db
-		.select({ id: video.id })
+		.select({ id: video.id, status: video.status })
 		.from(video)
 		.where(eq(video.muxUploadId, uploadId))
 		.limit(1);
 
 	if (existingByUpload.length > 0) {
-		// Update existing video with the asset ID
+		// Only update status to "preparing" if video isn't already in a terminal state
+		// This prevents webhook retries from overwriting "ready" or "errored" status
+		const currentStatus = existingByUpload[0].status;
+		const isTerminalStatus = currentStatus === "ready" || currentStatus === "errored";
+		
 		await db
 			.update(video)
 			.set({
 				muxAssetId: assetId,
-				status: "preparing",
+				...(isTerminalStatus ? {} : { status: "preparing" }),
 				updatedAt: new Date(),
 			})
 			.where(eq(video.muxUploadId, uploadId));
 
 		return { 
 			success: true, 
-			message: `Updated video ${existingByUpload[0].id} with asset ID ${assetId}` 
+			message: isTerminalStatus 
+				? `Video ${existingByUpload[0].id} already ${currentStatus}, only updated asset ID`
+				: `Updated video ${existingByUpload[0].id} with asset ID ${assetId}` 
 		};
 	}
 
@@ -606,14 +612,13 @@ async function handleAssetReady(
 		playback_ids,
 		duration,
 		aspect_ratio,
-		max_stored_resolution,
-		max_stored_frame_rate,
 		resolution_tier,
 		video_quality,
 		upload_id,
 		ingest_type,
 		meta,
 		test,
+		tracks,
 	} = data;
 
 	const playbackId = playback_ids?.[0]?.id ?? null;
@@ -636,14 +641,11 @@ async function handleAssetReady(
 			.limit(1);
 	}
 
-	// Parse resolution dimensions
-	let maxWidth: number | null = null;
-	let maxHeight: number | null = null;
-	if (max_stored_resolution && max_stored_resolution !== "Audio only") {
-		const [w, h] = max_stored_resolution.split("x").map(Number);
-		maxWidth = w || null;
-		maxHeight = h || null;
-	}
+	// Get dimensions from video track (max_stored_resolution is deprecated)
+	const videoTrackData = tracks?.find((t) => t.type === "video");
+	const maxWidth = videoTrackData?.max_width ?? null;
+	const maxHeight = videoTrackData?.max_height ?? null;
+	const maxFrameRate = videoTrackData?.max_frame_rate ?? null;
 
 	if (existingVideo.length > 0) {
 		// Update existing video with ready status and all metadata
@@ -658,11 +660,11 @@ async function handleAssetReady(
 				aspectRatio: aspect_ratio ?? null,
 				maxWidth,
 				maxHeight,
-				maxFrameRate: max_stored_frame_rate ?? null,
+				maxFrameRate,
 				resolutionTier: resolution_tier as "audio-only" | "720p" | "1080p" | "1440p" | "2160p" | null,
 				videoQuality: video_quality as "basic" | "plus" | "premium" | null,
 				playbackPolicy: playbackPolicy as "public" | "signed",
-				ingestType: ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
+				ingestCategory: ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
 				isTest: test ?? false,
 				updatedAt: new Date(),
 			})
@@ -704,13 +706,13 @@ async function handleAssetReady(
 		aspectRatio: aspect_ratio ?? null,
 		maxWidth,
 		maxHeight,
-		maxFrameRate: max_stored_frame_rate ?? null,
+		maxFrameRate,
 		resolutionTier: resolution_tier as "audio-only" | "720p" | "1080p" | "1440p" | "2160p" | null,
 		videoQuality: (video_quality as "basic" | "plus" | "premium") ?? defaultLibrary[0].defaultVideoQuality,
 		playbackPolicy: playbackPolicy as "public" | "signed",
 		passthrough: newVideoId,
 		externalId: newVideoId,
-		ingestType: ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
+		ingestCategory: ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
 		isTest: test ?? false,
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -755,7 +757,7 @@ async function handleAssetErrored(
 			.update(video)
 			.set({
 				status: "errored",
-				errorType: errors?.type ?? "unknown",
+				errorCategory: errors?.type ?? "unknown",
 				errorMessages: JSON.stringify(errors?.messages ?? []),
 				updatedAt: new Date(),
 			})
@@ -788,7 +790,6 @@ async function handleAssetUpdated(
 		playback_ids,
 		duration,
 		aspect_ratio,
-		max_stored_frame_rate,
 		resolution_tier,
 		video_quality,
 		meta,
@@ -820,14 +821,11 @@ async function handleAssetUpdated(
 		};
 	}
 
-	// Extract resolution from video track
-	let maxWidth: number | null = null;
-	let maxHeight: number | null = null;
-	const videoTrack = tracks?.find((t) => t.type === "video");
-	if (videoTrack) {
-		maxWidth = videoTrack.max_width ?? null;
-		maxHeight = videoTrack.max_height ?? null;
-	}
+	// Extract resolution and frame rate from video track (max_stored_* fields are deprecated)
+	const videoTrackData = tracks?.find((t) => t.type === "video");
+	const maxWidth = videoTrackData?.max_width ?? null;
+	const maxHeight = videoTrackData?.max_height ?? null;
+	const maxFrameRate = videoTrackData?.max_frame_rate ?? null;
 
 	const playbackId = playback_ids?.[0]?.id ?? null;
 	const playbackPolicy = playback_ids?.[0]?.policy ?? "public";
@@ -849,7 +847,7 @@ async function handleAssetUpdated(
 	if (aspect_ratio) updateData.aspectRatio = aspect_ratio;
 	if (maxWidth !== null) updateData.maxWidth = maxWidth;
 	if (maxHeight !== null) updateData.maxHeight = maxHeight;
-	if (max_stored_frame_rate) updateData.maxFrameRate = max_stored_frame_rate;
+	if (maxFrameRate !== null) updateData.maxFrameRate = maxFrameRate;
 	if (resolution_tier) updateData.resolutionTier = resolution_tier as "audio-only" | "720p" | "1080p" | "1440p" | "2160p";
 	if (video_quality) updateData.videoQuality = video_quality as "basic" | "plus" | "premium";
 
@@ -968,8 +966,8 @@ async function handleTrackReady(
 		id: trackId,
 		videoId,
 		muxTrackId,
-		type: type as "video" | "audio" | "text",
-		textType: text_type as "subtitles" | undefined,
+		trackCategory: type as "video" | "audio" | "text",
+		textCategory: text_type as "subtitles" | undefined,
 		textSource: text_source as "uploaded" | "embedded" | "generated_vod" | "generated_live" | "generated_live_final" | undefined,
 		languageCode: language_code ?? null,
 		name: name ?? null,
@@ -1051,8 +1049,8 @@ async function handleTrackCreated(
 		id: trackId,
 		videoId,
 		muxTrackId,
-		type: type as "video" | "audio" | "text",
-		textType: text_type as "subtitles" | undefined,
+		trackCategory: type as "video" | "audio" | "text",
+		textCategory: text_type as "subtitles" | undefined,
 		textSource: text_source as "uploaded" | "embedded" | "generated_vod" | "generated_live" | "generated_live_final" | undefined,
 		languageCode: language_code ?? null,
 		name: name ?? null,
@@ -1189,71 +1187,81 @@ muxWebhookRouter.post("/", async (c) => {
 
 	let result: { success: boolean; message: string };
 
-	switch (type) {
-		case "video.upload.created":
-			result = await handleUploadCreated(db, data as unknown as MuxUploadData);
-			break;
+	try {
+		switch (type) {
+			case "video.upload.created":
+				result = await handleUploadCreated(db, data as unknown as MuxUploadData);
+				break;
 
-		case "video.upload.cancelled":
-			result = await handleUploadCancelled(db, data as unknown as MuxUploadData);
-			break;
+			case "video.upload.cancelled":
+				result = await handleUploadCancelled(db, data as unknown as MuxUploadData);
+				break;
 
-		case "video.upload.errored":
-			result = await handleUploadErrored(db, data as unknown as MuxUploadData);
-			break;
+			case "video.upload.errored":
+				result = await handleUploadErrored(db, data as unknown as MuxUploadData);
+				break;
 
-		case "video.upload.timed_out":
-			result = await handleUploadTimedOut(db, data as unknown as MuxUploadData);
-			break;
+			case "video.upload.timed_out":
+				result = await handleUploadTimedOut(db, data as unknown as MuxUploadData);
+				break;
 
-		case "video.upload.asset_created":
-			result = await handleUploadAssetCreated(db, data as unknown as MuxUploadData);
-			break;
+			case "video.upload.asset_created":
+				result = await handleUploadAssetCreated(db, data as unknown as MuxUploadData);
+				break;
 
-		case "video.asset.created":
-			result = await handleAssetCreated(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.created":
+				result = await handleAssetCreated(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.non_standard_input_detected":
-			result = await handleNonStandardInputDetected(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.non_standard_input_detected":
+				result = await handleNonStandardInputDetected(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.ready":
-			result = await handleAssetReady(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.ready":
+				result = await handleAssetReady(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.errored":
-			result = await handleAssetErrored(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.errored":
+				result = await handleAssetErrored(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.updated":
-			result = await handleAssetUpdated(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.updated":
+				result = await handleAssetUpdated(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.deleted":
-			result = await handleAssetDeleted(db, data as unknown as MuxAssetData);
-			break;
+			case "video.asset.deleted":
+				result = await handleAssetDeleted(db, data as unknown as MuxAssetData);
+				break;
 
-		case "video.asset.track.created":
-			result = await handleTrackCreated(db, data as unknown as MuxTrackData);
-			break;
+			case "video.asset.track.created":
+				result = await handleTrackCreated(db, data as unknown as MuxTrackData);
+				break;
 
-		case "video.asset.track.ready":
-			result = await handleTrackReady(db, data as unknown as MuxTrackData);
-			break;
+			case "video.asset.track.ready":
+				result = await handleTrackReady(db, data as unknown as MuxTrackData);
+				break;
 
-		case "video.asset.track.errored":
-			result = await handleTrackErrored(db, data as unknown as MuxTrackData);
-			break;
+			case "video.asset.track.errored":
+				result = await handleTrackErrored(db, data as unknown as MuxTrackData);
+				break;
 
-		case "video.asset.track.deleted":
-			result = await handleTrackDeleted(db, data as unknown as MuxTrackData);
-			break;
+			case "video.asset.track.deleted":
+				result = await handleTrackDeleted(db, data as unknown as MuxTrackData);
+				break;
 
-		default:
-			// Log unhandled events for debugging
-			console.log(`Unhandled webhook event type: ${type}`);
-			result = { success: true, message: `Event ${type} acknowledged but not processed` };
+			default:
+				// Log unhandled events for debugging
+				console.log(`Unhandled webhook event type: ${type}`);
+				result = { success: true, message: `Event ${type} acknowledged but not processed` };
+		}
+	} catch (error) {
+		// Log error but still return 200 to acknowledge receipt
+		// This prevents Mux from retrying which could cause duplicate processing
+		console.error(`Error processing webhook ${type}:`, error);
+		result = { 
+			success: false, 
+			message: `Error processing ${type}: ${error instanceof Error ? error.message : "Unknown error"}` 
+		};
 	}
 
 	console.log(`Webhook ${type} processed:`, result);

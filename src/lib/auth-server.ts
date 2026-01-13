@@ -2,11 +2,12 @@ import { env } from 'cloudflare:workers';
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { captcha, twoFactor } from 'better-auth/plugins';
+import { apiKey, captcha, twoFactor } from 'better-auth/plugins';
 import { drizzle } from 'drizzle-orm/d1';
 import { Resend } from 'resend';
 import { PasswordReset } from '@/components/email/PasswordReset';
 import * as authSchema from '@/db/auth-schema';
+import { API_KEY_LENGTH, generateApiKey } from '@/lib/api-key-generate';
 
 // Initialize Drizzle with the Cloudflare D1 database
 export const createDrizzle = (db: D1Database) =>
@@ -73,6 +74,37 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
+		apiKey({
+			// Enable API key to create mock sessions for the user
+			enableSessionForAPIKeys: true,
+			// Custom API key header (default is x-api-key)
+			apiKeyHeaders: ['x-api-key'],
+			// Default prefix for generated API keys
+			defaultPrefix: 'awt_',
+			// Custom key generator using nanoid
+			customKeyGenerator: generateApiKey,
+			// Set the default key length since we're using a custom generator
+			defaultKeyLength: API_KEY_LENGTH,
+			// Store more starting characters for easier identification (includes prefix)
+			startingCharactersConfig: {
+				shouldStore: true,
+				charactersLength: 8,
+			},
+			// Rate limiting configuration
+			rateLimit: {
+				enabled: true,
+				timeWindow: 1000 * 60 * 60, // 1 hour
+				maxRequests: 1000, // 1000 requests per hour
+			},
+			// Default permissions for new API keys
+			permissions: {
+				defaultPermissions: {
+					mux: ['read'], // Default to read-only access
+				},
+			},
+			// Enable metadata storage
+			enableMetadata: true,
+		}),
 		passkey(),
 		twoFactor({
 			otpOptions: {

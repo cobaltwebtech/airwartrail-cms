@@ -88,7 +88,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
 	if (isLoading) {
 		return (
-			<Card className="col-span-4 col-start-5 w-full">
+			<Card className="col-span-4 col-start-3 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -103,7 +103,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
 	if (isError || !video?.playbackId) {
 		return (
-			<Card className="col-span-4 col-start-5 w-full">
+			<Card className="col-span-4 col-start-3 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -121,7 +121,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 	// For signed videos, wait for tokens to be generated
 	if (video.policy === 'signed' && tokensLoading) {
 		return (
-			<Card className="col-span-4 col-start-5 row-span-2 w-full">
+			<Card className="col-span-4 col-start-3 row-span-2 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -135,7 +135,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 	}
 
 	return (
-		<Card className="col-span-4 col-start-5 row-span-2 w-full">
+		<Card className="col-span-4 col-start-3 row-span-2 w-full">
 			<CardHeader>
 				<CardTitle>Video Preview</CardTitle>
 			</CardHeader>

@@ -70,13 +70,13 @@ const PublishStatus: React.FC<PublishStatusProps> = ({
 	};
 
 	return (
-		<Card className="col-span-4">
+		<Card className="col-span-2">
 			<CardHeader>
 				<CardTitle>Publish Status</CardTitle>
 				<CardDescription>
 					{isPublished
-						? 'This video is currently published and visible to viewers'
-						: 'This video is currently unpublished and not visible to viewers'}
+						? 'This video is currently published and visible to viewers on airwartrail.com'
+						: 'This video is currently unpublished and not visible to viewers on airwartrail.com'}
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex items-center justify-between">

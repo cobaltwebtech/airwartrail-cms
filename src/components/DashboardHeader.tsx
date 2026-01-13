@@ -24,7 +24,7 @@ export function DashboardHeader(props: {
 					)}
 				</div>
 				{session?.user && (
-					<Button asChild>
+					<Button asChild variant="secondary">
 						<Link to="/user/$userId" params={{ userId: session.user.id }}>
 							<CircleUserRound /> Account
 						</Link>

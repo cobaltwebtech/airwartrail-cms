@@ -98,12 +98,12 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 	const percentUsed = (characterCount / 5000) * 100;
 
 	return (
-		<Card className="col-span-4">
+		<Card className="col-span-3">
 			<CardHeader>
 				<CardTitle>Description</CardTitle>
 				<CardDescription>
-					Description of the video which is displayed on the front-end website
-					video player. Maximum of 5000 characters.
+					Description of the video which is displayed on the the airwartrail.com
+					website video player. Maximum of 5000 characters.
 				</CardDescription>
 				{!isEditing && (
 					<CardAction>

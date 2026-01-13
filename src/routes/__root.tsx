@@ -1,13 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import {
-	createRootRouteWithContext,
-	Link,
-	Outlet,
-} from '@tanstack/react-router';
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { NotFound } from '@/components/NotFound';
 
 // Initialize theme before React hydrates to prevent flash
 const getThemePreference = () => {
@@ -32,17 +28,7 @@ export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
 }>()({
 	component: RootComponent,
-	notFoundComponent: () => {
-		return (
-			<main className="flex flex-col min-h-svh justify-center items-center p-4 space-y-4">
-				<h1 className="text-4xl font-bold">404 Error</h1>
-				<p>Page not found</p>
-				<Button asChild size="lg">
-					<Link to="/">Go to Home</Link>
-				</Button>
-			</main>
-		);
-	},
+	notFoundComponent: () => <NotFound />,
 });
 
 function RootComponent() {

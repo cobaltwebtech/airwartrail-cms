@@ -27,3 +27,15 @@ export const generateTrackId = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   24,
 );
+
+// Playlist ID
+export const generatePlaylistId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  16,
+);
+
+// Playlist Item ID
+export const generatePlaylistItemId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);

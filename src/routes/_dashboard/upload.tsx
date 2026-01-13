@@ -30,36 +30,8 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { type LanguageCode, SUPPORTED_LANGUAGES } from '@/lib/constants';
 import { trpc } from '@/lib/trpc';
-
-// Supported languages for auto-generated captions
-// Languages marked as (Beta) may have lower accuracy
-const SUPPORTED_LANGUAGES = [
-	{ code: 'en', name: 'English', status: 'stable' },
-	{ code: 'es', name: 'Spanish', status: 'stable' },
-	{ code: 'it', name: 'Italian', status: 'stable' },
-	{ code: 'pt', name: 'Portuguese', status: 'stable' },
-	{ code: 'de', name: 'German', status: 'stable' },
-	{ code: 'fr', name: 'French', status: 'stable' },
-	{ code: 'pl', name: 'Polish', status: 'beta' },
-	{ code: 'ru', name: 'Russian', status: 'beta' },
-	{ code: 'nl', name: 'Dutch', status: 'beta' },
-	{ code: 'ca', name: 'Catalan', status: 'beta' },
-	{ code: 'tr', name: 'Turkish', status: 'beta' },
-	{ code: 'sv', name: 'Swedish', status: 'beta' },
-	{ code: 'uk', name: 'Ukrainian', status: 'beta' },
-	{ code: 'no', name: 'Norwegian', status: 'beta' },
-	{ code: 'fi', name: 'Finnish', status: 'beta' },
-	{ code: 'sk', name: 'Slovak', status: 'beta' },
-	{ code: 'el', name: 'Greek', status: 'beta' },
-	{ code: 'cs', name: 'Czech', status: 'beta' },
-	{ code: 'hr', name: 'Croatian', status: 'beta' },
-	{ code: 'da', name: 'Danish', status: 'beta' },
-	{ code: 'ro', name: 'Romanian', status: 'beta' },
-	{ code: 'bg', name: 'Bulgarian', status: 'beta' },
-] as const;
-
-type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 export const Route = createFileRoute('/_dashboard/upload')({
 	loader: async ({ context: { queryClient } }) => {
@@ -179,7 +151,7 @@ function UploadPage() {
 				});
 				// Invalidate video list to show new video
 				queryClient.invalidateQueries({
-					queryKey: trpc.mux.listAssets.queryKey({
+					queryKey: trpc.mux.listVideosFromDatabase.queryKey({
 						libraryId: selectedLibraryId,
 					}),
 				});
@@ -209,7 +181,7 @@ function UploadPage() {
 				description: `"${title}" is now available in your library`,
 			});
 			queryClient.invalidateQueries({
-				queryKey: trpc.mux.listAssets.queryKey({
+				queryKey: trpc.mux.listVideosFromDatabase.queryKey({
 					libraryId: selectedLibraryId,
 				}),
 			});
@@ -332,7 +304,7 @@ function UploadPage() {
 								Create a library first to upload videos.
 							</p>
 							<Button className="mt-6" asChild>
-								<Link to="/library/new">Create Library</Link>
+								<Link to="/library/create-library">Create Library</Link>
 							</Button>
 						</CardContent>
 					</Card>

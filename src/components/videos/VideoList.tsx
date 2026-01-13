@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
@@ -52,7 +52,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Table,
 	TableBody,
@@ -61,6 +60,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { VideoThumbnail } from '@/components/VideoThumbnail';
 import { trpc } from '@/lib/trpc';
 import type { Video } from '@/lib/types';
 import { copyVideoUrl, formatDate, formatDuration } from '@/lib/video-helpers';
@@ -70,134 +70,6 @@ import { VideoDialog } from './VideoDialog';
 interface VideoListProps {
 	videos: Video[] | null | undefined;
 	libraryId: string;
-}
-
-interface MuxThumbnailOptions {
-	width?: number;
-	height?: number;
-	time?: number;
-	fitMode?: 'preserve' | 'stretch' | 'crop' | 'smartcrop' | 'pad';
-	format?: 'png' | 'jpg' | 'webp';
-	token?: string;
-}
-
-/**
- * Generates a Mux thumbnail URL from a playback ID
- * @see https://docs.mux.com/guides/get-images-from-a-video
- */
-function getMuxThumbnailUrl(
-	playbackId: string | null | undefined,
-	options: MuxThumbnailOptions = {},
-): string | null {
-	if (!playbackId) return null;
-
-	const {
-		width,
-		height,
-		time,
-		fitMode = 'smartcrop',
-		format = 'webp',
-		token,
-	} = options;
-
-	const params = new URLSearchParams();
-	if (width) params.set('width', width.toString());
-	if (height) params.set('height', height.toString());
-	if (time !== undefined) params.set('time', time.toString());
-	if (fitMode) params.set('fit_mode', fitMode);
-	if (token) params.set('token', token);
-
-	const queryString = params.toString();
-	return `https://image.mux.com/${playbackId}/thumbnail.${format}${queryString ? `?${queryString}` : ''}`;
-}
-
-interface VideoThumbnailProps {
-	playbackId: string | null | undefined;
-	alt: string;
-	className?: string;
-	aspectVideo?: boolean;
-	width?: number;
-	height?: number;
-	policy?: 'public' | 'signed';
-	libraryId?: string;
-}
-
-function VideoThumbnail({
-	playbackId,
-	alt,
-	className = '',
-	aspectVideo = false,
-	width,
-	height,
-	policy = 'public',
-	libraryId,
-}: VideoThumbnailProps) {
-	const [isLoaded, setIsLoaded] = useState(false);
-	const [hasError, setHasError] = useState(false);
-
-	// Fetch signed token if the video has a signed policy
-	const { data: signedTokens, isLoading: isLoadingToken } = useQuery(
-		trpc.mux.generateSignedTokens.queryOptions(
-			{ playbackId: playbackId ?? '', libraryId },
-			{
-				enabled: policy === 'signed' && !!playbackId,
-				staleTime: 30 * 60 * 1000, // Cache for 30 minutes (tokens expire in 1 hour by default)
-			},
-		),
-	);
-
-	const thumbnailUrl = getMuxThumbnailUrl(playbackId, {
-		width: width ?? (aspectVideo ? 640 : 160),
-		height: height ?? (aspectVideo ? 360 : 90),
-		fitMode: 'smartcrop',
-		token: policy === 'signed' ? signedTokens?.thumbnail : undefined,
-	});
-
-	// If no playbackId, loading token for signed video, or error, show skeleton
-	if (!playbackId || hasError || (policy === 'signed' && isLoadingToken)) {
-		return (
-			<Skeleton
-				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
-			/>
-		);
-	}
-
-	// For signed videos, wait until we have the token
-	if (policy === 'signed' && !signedTokens?.thumbnail) {
-		return (
-			<Skeleton
-				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
-			/>
-		);
-	}
-
-	// At this point thumbnailUrl is guaranteed to be non-null
-	if (!thumbnailUrl) {
-		return (
-			<Skeleton
-				className={`${aspectVideo ? 'aspect-video w-full' : 'h-full w-full'}`}
-			/>
-		);
-	}
-
-	return (
-		<div
-			className={`relative ${aspectVideo ? 'aspect-video' : 'h-full w-full'}`}
-		>
-			{!isLoaded && (
-				<Skeleton
-					className={`absolute inset-0 ${aspectVideo ? 'aspect-video' : 'h-full w-full'}`}
-				/>
-			)}
-			<img
-				src={thumbnailUrl}
-				alt={alt}
-				className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}
-				onLoad={() => setIsLoaded(true)}
-				onError={() => setHasError(true)}
-			/>
-		</div>
-	);
 }
 
 type ViewMode = 'grid' | 'table';

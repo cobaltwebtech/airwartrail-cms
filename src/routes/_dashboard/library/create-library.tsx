@@ -37,7 +37,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 
-export const Route = createFileRoute('/_dashboard/library/new')({
+export const Route = createFileRoute('/_dashboard/library/create-library')({
 	component: CreateLibraryPage,
 });
 
@@ -129,7 +129,7 @@ function CreateLibraryPage() {
 		<>
 			<DashboardHeader
 				heading="Create Video Library"
-				text="Set up a new Mux video library with your API credentials."
+				text="Set up a new video library"
 			>
 				<Breadcrumb>
 					<BreadcrumbList>
@@ -150,7 +150,7 @@ function CreateLibraryPage() {
 								General Settings
 							</CardTitle>
 							<CardDescription>
-								Basic information about your video library.
+								Basic information about video library.
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
@@ -255,11 +255,10 @@ function CreateLibraryPage() {
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
 								<KeyRound className="size-5" />
-								Mux API Credentials
+								API Credentials
 							</CardTitle>
 							<CardDescription>
-								Enter your Mux API credentials. You can find these in your Mux
-								dashboard under Settings → API Access Tokens.
+								Enter API credentials. Request them from technical support.
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-6">
@@ -275,7 +274,7 @@ function CreateLibraryPage() {
 											setTokenId(e.target.value);
 											setCredentialsVerified(false);
 										}}
-										placeholder="Enter your Mux Token ID"
+										placeholder="Enter Token ID"
 									/>
 								</div>
 
@@ -291,7 +290,7 @@ function CreateLibraryPage() {
 											setTokenSecret(e.target.value);
 											setCredentialsVerified(false);
 										}}
-										placeholder="Enter your Mux Token Secret"
+										placeholder="Enter Token Secret"
 									/>
 								</div>
 							</div>
@@ -326,9 +325,8 @@ function CreateLibraryPage() {
 									Signing Keys (Optional)
 								</h4>
 								<p className="text-muted-foreground mb-4 text-sm">
-									Signing keys are required for signed playback URLs. You can
-									generate these in your Mux dashboard under Settings → Signing
-									Keys.
+									Signing keys are required for signed playback URLs. Request
+									them from technical support.
 								</p>
 								<div className="grid gap-4 md:grid-cols-2">
 									<div className="space-y-2">
@@ -349,7 +347,7 @@ function CreateLibraryPage() {
 											id="signingKeyPrivate"
 											value={signingKeyPrivate}
 											onChange={(e) => setSigningKeyPrivate(e.target.value)}
-											placeholder="Paste your private key here"
+											placeholder="Paste private key here"
 											rows={3}
 											className="font-mono text-xs"
 										/>

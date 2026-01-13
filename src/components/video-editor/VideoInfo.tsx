@@ -17,7 +17,7 @@ interface VideoInfoProps {
 	maxStoredFrameRate?: number;
 	maxWidth?: number;
 	maxHeight?: number;
-	errorType?: string;
+	errorCategory?: string;
 	errorMessages?: string; // JSON string array of error messages
 	playbackPolicy?: 'public' | 'signed';
 }
@@ -35,7 +35,7 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 	maxStoredFrameRate,
 	maxWidth,
 	maxHeight,
-	errorType,
+	errorCategory,
 	errorMessages,
 	playbackPolicy,
 }) => {
@@ -55,9 +55,7 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 	return (
 		<Card className="col-span-full">
 			<CardHeader>
-				<CardTitle className="text-2xl font-bold text-center">
-					{initialTitle}
-				</CardTitle>
+				<CardTitle className="text-2xl">{initialTitle}</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{/* Error Alert */}
@@ -68,9 +66,9 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 							<div className="space-y-1">
 								<p className="font-medium text-destructive">
 									Video Processing Error
-									{errorType && (
+									{errorCategory && (
 										<span className="ml-2 text-sm font-normal text-muted-foreground">
-											({errorType.replace(/_/g, ' ')})
+											({errorCategory.replace(/_/g, ' ')})
 										</span>
 									)}
 								</p>
@@ -90,6 +88,10 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 				)}
 
 				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-muted-foreground text-sm">
+					<div>
+						<p className="text-xs uppercase tracking-wide mb-1">Views</p>
+						<Badge variant="secondary">{views}</Badge>
+					</div>
 					<div>
 						<p className="text-xs uppercase tracking-wide mb-1">Duration</p>
 						<Badge variant="secondary">{formatDuration(duration)}</Badge>
@@ -135,10 +137,6 @@ const VideoInfo: React.FC<VideoInfoProps> = ({
 						<Badge variant="secondary" className="capitalize">
 							{videoQuality || 'N/A'}
 						</Badge>
-					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">Views</p>
-						<Badge variant="secondary">{views}</Badge>
 					</div>
 					<div>
 						<p className="text-xs uppercase tracking-wide mb-1">

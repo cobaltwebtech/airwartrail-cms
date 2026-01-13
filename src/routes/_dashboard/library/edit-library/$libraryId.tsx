@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from '@tanstack/react-router';
+import { TRPCClientError } from '@trpc/client';
 import {
 	ArrowLeft,
 	CirclePlay,
@@ -12,6 +18,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { NotFound } from '@/components/NotFound';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -54,11 +61,25 @@ export const Route = createFileRoute(
 	'/_dashboard/library/edit-library/$libraryId',
 )({
 	component: LibrarySettingsPage,
+	notFoundComponent: NotFound,
 	loader: async ({ context: { queryClient }, params }) => {
-		await queryClient.ensureQueryData(
-			trpc.mux.getLibrary.queryOptions({ libraryId: params.libraryId }),
-		);
-		return { libraryId: params.libraryId };
+		try {
+			const library = await queryClient.ensureQueryData(
+				trpc.mux.getLibrary.queryOptions({ libraryId: params.libraryId }),
+			);
+			if (!library) {
+				throw notFound();
+			}
+			return { libraryId: params.libraryId };
+		} catch (error) {
+			if (
+				error instanceof TRPCClientError &&
+				error.data?.code === 'NOT_FOUND'
+			) {
+				throw notFound();
+			}
+			throw error;
+		}
 	},
 });
 

@@ -3,13 +3,15 @@ import { TRPCError } from "@trpc/server";
 import { t, protectedProcedure } from "../trpc-init";
 import Mux from "@mux/mux-node";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and, inArray, asc } from "drizzle-orm";
-import { generateLibraryId, generateVideoId, generateTrackId, generateChapterId } from "@/worker/lib/generate-id";
+import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
+import { generateLibraryId, generateVideoId, generateTrackId, generateChapterId, generatePlaylistId, generatePlaylistItemId } from "@/worker/lib/generate-id";
 import {
 	muxLibrary,
 	video,
 	videoChapter,
 	videoTrack,
+	playlist,
+	playlistItem,
 	type MuxLibrary,
 } from "@/db/video-schema";
 import { encrypt, decrypt } from "@/worker/lib/encryption";
@@ -278,10 +280,18 @@ async function getMuxClient(env: Env, libraryId?: string): Promise<{ mux: Mux; l
 	return { mux, library };
 }
 
+interface ThumbnailParams {
+	time?: number;
+	width?: number;
+	height?: number;
+	fit_mode?: string;
+}
+
 async function generateSignedTokens(
 	playbackId: string,
 	library: MuxLibrary,
 	expiresIn: number = 3600,
+	thumbnailParams?: ThumbnailParams,
 ): Promise<{ playback: string; thumbnail: string; storyboard: string }> {
 	const signingKeyId = library.signingKeyId;
 	const signingKeySecret = library.signingKeyPrivate;
@@ -307,9 +317,22 @@ async function generateSignedTokens(
 		type: "video",
 	});
 
+	// For thumbnail tokens, embed params in the JWT claims
+	// Per Mux docs: time, width, height, fit_mode must be in the token, not query string
+	// Convert thumbnailParams to Record<string, string> format expected by Mux SDK
+	const thumbnailParamsRecord: Record<string, string> | undefined =
+		thumbnailParams
+			? Object.fromEntries(
+					Object.entries(thumbnailParams)
+						.filter(([_, value]) => value !== undefined)
+						.map(([key, value]) => [key, String(value)]),
+				)
+			: undefined;
+
 	const thumbnailToken = await muxClient.jwt.signPlaybackId(playbackId, {
 		expiration: `${expiresIn}s`,
 		type: "thumbnail",
+		params: thumbnailParamsRecord,
 	});
 
 	const storyboardToken = await muxClient.jwt.signPlaybackId(playbackId, {
@@ -370,7 +393,7 @@ function mapMuxAssetToVideo(asset: any): MuxAsset {
 		resolutionTier: asset.resolution_tier,
 		aspectRatio: asset.aspect_ratio,
 		videoQuality: asset.video_quality,
-		maxStoredFrameRate: asset.max_stored_frame_rate,
+		maxStoredFrameRate: videoTrack?.max_frame_rate ?? asset.max_stored_frame_rate, // Prefer track data
 		maxWidth: videoTrack?.max_width,
 		maxHeight: videoTrack?.max_height,
 	};
@@ -1030,8 +1053,8 @@ export const muxRouter = t.router({
 					.select({
 						id: videoTrack.id,
 						muxTrackId: videoTrack.muxTrackId,
-						type: videoTrack.type,
-						textType: videoTrack.textType,
+						trackCategory: videoTrack.trackCategory,
+						textCategory: videoTrack.textCategory,
 						languageCode: videoTrack.languageCode,
 						name: videoTrack.name,
 						status: videoTrack.status,
@@ -1154,24 +1177,24 @@ export const muxRouter = t.router({
 				// Store the title, preserving existing title if any
 				const title = asset.meta?.title || asset.passthrough || "Untitled";
 
+				// Get dimensions from video track (max_stored_resolution is deprecated)
+				const videoTrackData = asset.tracks?.find((t) => t.type === "video");
+				const maxWidth = videoTrackData?.max_width ?? null;
+				const maxHeight = videoTrackData?.max_height ?? null;
+
 				await db.insert(video).values({
 					id: newVideoId,
 					libraryId: library.id,
 					muxAssetId: asset.id,
 					muxPlaybackId: playbackId,
+					muxUploadId: asset.upload_id ?? null,
 					status: asset.status as "preparing" | "ready" | "errored",
 					title,
 					duration: asset.duration || null,
 					aspectRatio: asset.aspect_ratio || null,
-					maxWidth:
-						asset.max_stored_resolution === "Audio only"
-							? null
-							: parseInt(asset.max_stored_resolution?.split("x")?.[0] || "0") || null,
-					maxHeight:
-						asset.max_stored_resolution === "Audio only"
-							? null
-							: parseInt(asset.max_stored_resolution?.split("x")?.[1] || "0") || null,
-					maxFrameRate: asset.max_stored_frame_rate || null,
+					maxWidth,
+					maxHeight,
+					maxFrameRate: videoTrackData?.max_frame_rate ?? null,
 					resolutionTier: asset.resolution_tier as
 						| "audio-only"
 						| "720p"
@@ -1185,7 +1208,7 @@ export const muxRouter = t.router({
 					playbackPolicy,
 					passthrough: newVideoId, // Store our internal ID as passthrough
 					externalId: newVideoId, // Also store in externalId field
-					ingestType: asset.ingest_type as
+					ingestCategory: asset.ingest_type as
 						| "on_demand_url"
 						| "on_demand_direct_upload"
 						| "on_demand_clip"
@@ -1590,8 +1613,8 @@ export const muxRouter = t.router({
 							id: trackId,
 							videoId: videoRecord.id,
 							muxTrackId: generatedTrack.id,
-							type: "text",
-							textType: "subtitles",
+							trackCategory: "text",
+							textCategory: "subtitles",
 							textSource: "generated_vod",
 							languageCode: input.languageCode,
 							name: captionName,
@@ -1657,6 +1680,13 @@ export const muxRouter = t.router({
 				playbackId: z.string(),
 				libraryId: z.string().optional(),
 				expiresIn: z.number().default(3600),
+				// Thumbnail params to embed in the JWT token (for signed videos)
+				thumbnailParams: z.object({
+					time: z.number().optional(),
+					width: z.number().optional(),
+					height: z.number().optional(),
+					fit_mode: z.string().optional(),
+				}).optional(),
 			}),
 		)
 		.query(
@@ -1676,6 +1706,7 @@ export const muxRouter = t.router({
 						input.playbackId,
 						library,
 						input.expiresIn,
+						input.thumbnailParams,
 					);
 				} catch (error) {
 					if (error instanceof TRPCError) throw error;
@@ -1830,24 +1861,28 @@ export const muxRouter = t.router({
 
 						const newVideoId = generateVideoId();
 
+						// Get dimensions from video track (max_stored_resolution is deprecated)
+						const videoTrackData = asset.tracks?.find((t: { type: string }) => t.type === "video");
+
 						return {
 							id: newVideoId,
 							libraryId: library.id,
 							muxAssetId: asset.id,
 							muxPlaybackId: playbackId,
+							muxUploadId: asset.upload_id ?? null,
 							status: asset.status as "preparing" | "ready" | "errored",
 							title: asset.meta?.title || asset.passthrough || "Untitled",
 							duration: asset.duration || null,
 							aspectRatio: asset.aspect_ratio || null,
-							maxWidth: asset.max_stored_resolution === "Audio only" ? null : parseInt(asset.max_stored_resolution?.split("x")?.[0] || "0") || null,
-							maxHeight: asset.max_stored_resolution === "Audio only" ? null : parseInt(asset.max_stored_resolution?.split("x")?.[1] || "0") || null,
-							maxFrameRate: asset.max_stored_frame_rate || null,
+							maxWidth: videoTrackData?.max_width ?? null,
+							maxHeight: videoTrackData?.max_height ?? null,
+							maxFrameRate: videoTrackData?.max_frame_rate ?? null,
 							resolutionTier: asset.resolution_tier as "audio-only" | "720p" | "1080p" | "1440p" | "2160p" | null,
 							videoQuality: (asset.video_quality as "basic" | "plus" | "premium") || library.defaultVideoQuality,
 							playbackPolicy,
 							passthrough: newVideoId, // Store our internal ID as passthrough
 							externalId: newVideoId, // Also store in externalId field
-							ingestType: asset.ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
+							ingestCategory: asset.ingest_type as "on_demand_url" | "on_demand_direct_upload" | "on_demand_clip" | "live_rtmp" | "live_srt" | null,
 							isTest: asset.test || false,
 							createdAt: asset.created_at ? new Date(Number(asset.created_at) * 1000) : new Date(),
 							updatedAt: new Date(),
@@ -2317,7 +2352,7 @@ export const muxRouter = t.router({
 					// Status from database (may be synced from Mux)
 					status: videoRecord.status,
 					// Error information
-					errorType: videoRecord.errorType,
+					errorCategory: videoRecord.errorCategory,
 					errorMessages: videoRecord.errorMessages,
 					// Metadata
 					title: videoRecord.title,
@@ -2499,6 +2534,107 @@ export const muxRouter = t.router({
 		}),
 
 	/**
+	 * Update the playback policy for a video
+	 * Creates a new playback ID with the desired policy and deletes the old one
+	 * to ensure only one playback ID exists per video
+	 */
+	updatePlaybackPolicy: protectedProcedure
+		.input(
+			z.object({
+				videoId: z.string(),
+				libraryId: z.string(),
+				playbackPolicy: z.enum(["public", "signed"]),
+			}),
+		)
+		.mutation(
+			async ({
+				ctx,
+				input,
+			}): Promise<{ success: boolean; playbackId: string }> => {
+				const { env } = ctx;
+				const db = getVideosDb(env);
+				const { videoId, libraryId, playbackPolicy } = input;
+
+				try {
+					// Get the video record
+					const [videoRecord] = await db
+						.select({
+							id: video.id,
+							muxAssetId: video.muxAssetId,
+							muxPlaybackId: video.muxPlaybackId,
+							playbackPolicy: video.playbackPolicy,
+						})
+						.from(video)
+						.where(
+							and(eq(video.id, videoId), eq(video.libraryId, libraryId)),
+						)
+						.limit(1);
+
+					if (!videoRecord) {
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Video not found",
+						});
+					}
+
+					// Check if policy is already the same
+					if (videoRecord.playbackPolicy === playbackPolicy) {
+						return {
+							success: true,
+							playbackId: videoRecord.muxPlaybackId || "",
+						};
+					}
+
+					const { mux } = await getMuxClient(env, libraryId);
+					const oldPlaybackId = videoRecord.muxPlaybackId;
+
+					// Create a new playback ID with the desired policy
+					const newPlaybackId = await mux.video.assets.createPlaybackId(
+						videoRecord.muxAssetId,
+						{ policy: playbackPolicy },
+					);
+
+					// Delete the old playback ID to ensure only one exists
+					if (oldPlaybackId) {
+						try {
+							await mux.video.assets.deletePlaybackId(
+								videoRecord.muxAssetId,
+								oldPlaybackId,
+							);
+						} catch (deleteError) {
+							console.warn(
+								"Could not delete old playback ID:",
+								deleteError,
+							);
+							// Continue - the new playback ID was created successfully
+						}
+					}
+
+					// Update the database with the new playback ID and policy
+					await db
+						.update(video)
+						.set({
+							muxPlaybackId: newPlaybackId.id,
+							playbackPolicy: playbackPolicy,
+						})
+						.where(eq(video.id, videoId));
+
+					return {
+						success: true,
+						playbackId: newPlaybackId.id,
+					};
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					console.error("Error updating playback policy:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to update playback policy",
+					});
+				}
+			},
+		),
+
+	/**
 	 * Delete a video by internal database ID
 	 */
 	deleteVideoById: protectedProcedure
@@ -2550,6 +2686,1028 @@ export const muxRouter = t.router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete video",
+				});
+			}
+		}),
+
+	// ============================================================================
+	// Playlist Procedures
+	// ============================================================================
+
+	/**
+	 * Create a new playlist
+	 */
+	createPlaylist: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				name: z.string().min(1).max(100),
+				slug: z.string().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+					message: "Slug must be lowercase with hyphens only (e.g., 'my-playlist')",
+				}),
+				description: z.string().max(1000).optional(),
+				category: z.enum(["featured", "interviews", "series", "short-form", "other"]).optional(),
+				thumbnailVideoId: z.string().optional(),
+				thumbnailTime: z.number().min(0).optional(),
+				tags: z.array(z.string()).optional(),
+				customMetadata: z.record(z.string(), z.unknown()).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const {
+				libraryId,
+				name,
+				slug,
+				description,
+				category,
+				thumbnailVideoId,
+				thumbnailTime,
+				tags,
+				customMetadata,
+			} = input;
+
+			try {
+				// Verify library exists
+				await getMuxLibrary(env, libraryId);
+
+				// Check if slug already exists for this library
+				const existingPlaylist = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.slug, slug),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (existingPlaylist.length > 0) {
+					throw new TRPCError({
+						code: "CONFLICT",
+						message: `A playlist with slug "${slug}" already exists in this library`,
+					});
+				}
+
+				// Verify thumbnail video exists if provided
+				if (thumbnailVideoId) {
+					const thumbnailVideo = await db
+						.select({ id: video.id })
+						.from(video)
+						.where(
+							and(
+								eq(video.id, thumbnailVideoId),
+								eq(video.libraryId, libraryId),
+								eq(video.isDeleted, false),
+							),
+						)
+						.limit(1);
+
+					if (thumbnailVideo.length === 0) {
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Thumbnail video not found",
+						});
+					}
+				}
+
+				// Get max sort order for new playlist
+				const maxOrderResult = await db
+					.select({ maxOrder: sql<number>`MAX(${playlist.sortOrder})` })
+					.from(playlist)
+					.where(and(eq(playlist.libraryId, libraryId), eq(playlist.isDeleted, false)));
+
+				const nextSortOrder = (maxOrderResult[0]?.maxOrder ?? -1) + 1;
+
+				const playlistId = generatePlaylistId();
+				const now = new Date();
+
+				await db.insert(playlist).values({
+					id: playlistId,
+					libraryId,
+					name,
+					slug,
+					description: description ?? null,
+					category,
+					thumbnailVideoId: thumbnailVideoId ?? null,
+					thumbnailTime: thumbnailTime ?? null,
+					sortOrder: nextSortOrder,
+					tags: tags ? JSON.stringify(tags) : null,
+					customMetadata: customMetadata ? JSON.stringify(customMetadata) : null,
+					isPublished: false,
+					isDeleted: false,
+					createdAt: now,
+					updatedAt: now,
+				});
+
+				return {
+					id: playlistId,
+					name,
+					slug,
+					category,
+					sortOrder: nextSortOrder,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error creating playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to create playlist",
+				});
+			}
+		}),
+
+	/**
+	 * List all playlists for a library
+	 */
+	listPlaylists: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				includeUnpublished: z.boolean().default(true),
+				category: z.enum(["featured", "interviews", "series", "short-form", "other"]).optional(),
+				limit: z.number().min(1).max(100).default(50),
+				offset: z.number().min(0).default(0),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { libraryId, includeUnpublished, category, limit, offset } = input;
+
+			try {
+				const conditions = [
+					eq(playlist.libraryId, libraryId),
+					eq(playlist.isDeleted, false),
+				];
+
+				if (!includeUnpublished) {
+					conditions.push(eq(playlist.isPublished, true));
+				}
+
+				if (category) {
+					conditions.push(eq(playlist.category, category));
+				}
+
+				const playlists = await db
+					.select({
+						id: playlist.id,
+						name: playlist.name,
+						slug: playlist.slug,
+						description: playlist.description,
+						category: playlist.category,
+						thumbnailVideoId: playlist.thumbnailVideoId,
+						thumbnailTime: playlist.thumbnailTime,
+						isPublished: playlist.isPublished,
+						publishedAt: playlist.publishedAt,
+						sortOrder: playlist.sortOrder,
+						tags: playlist.tags,
+						customMetadata: playlist.customMetadata,
+						createdAt: playlist.createdAt,
+						updatedAt: playlist.updatedAt,
+					})
+					.from(playlist)
+					.where(and(...conditions))
+					.orderBy(asc(playlist.sortOrder), desc(playlist.createdAt))
+					.limit(limit)
+					.offset(offset);
+
+				// Get video count for each playlist
+				const playlistIds = playlists.map((p) => p.id);
+				const videoCounts = playlistIds.length > 0
+					? await db
+						.select({
+							playlistId: playlistItem.playlistId,
+							count: sql<number>`COUNT(*)`,
+						})
+						.from(playlistItem)
+						.where(inArray(playlistItem.playlistId, playlistIds))
+						.groupBy(playlistItem.playlistId)
+					: [];
+
+				const countMap = new Map(videoCounts.map((vc) => [vc.playlistId, vc.count]));
+
+				// Get thumbnail info for playlists with thumbnailVideoId
+				const thumbnailVideoIds = playlists
+					.map((p) => p.thumbnailVideoId)
+					.filter((id): id is string => id !== null);
+
+				const thumbnailVideos = thumbnailVideoIds.length > 0
+					? await db
+						.select({
+							id: video.id,
+							muxPlaybackId: video.muxPlaybackId,
+							playbackPolicy: video.playbackPolicy,
+						})
+						.from(video)
+						.where(inArray(video.id, thumbnailVideoIds))
+					: [];
+
+				const thumbnailMap = new Map(thumbnailVideos.map((v) => [v.id, { playbackId: v.muxPlaybackId, policy: v.playbackPolicy }]));
+
+				// Get first video playback ID and policy for playlists without explicit thumbnail
+				const playlistsNeedingFirstVideo = playlists.filter((p) => !p.thumbnailVideoId);
+				const firstVideoMap = new Map<string, { playbackId: string | null; policy: string | null }>();
+
+				if (playlistsNeedingFirstVideo.length > 0) {
+					// For each playlist without a thumbnail, get the first video's playback ID and policy
+					for (const p of playlistsNeedingFirstVideo) {
+						const firstVideo = await db
+							.select({
+								muxPlaybackId: video.muxPlaybackId,
+								playbackPolicy: video.playbackPolicy,
+							})
+							.from(playlistItem)
+							.innerJoin(video, eq(playlistItem.videoId, video.id))
+							.where(eq(playlistItem.playlistId, p.id))
+							.orderBy(asc(playlistItem.sortOrder))
+							.limit(1);
+
+						firstVideoMap.set(p.id, {
+							playbackId: firstVideo[0]?.muxPlaybackId ?? null,
+							policy: firstVideo[0]?.playbackPolicy ?? null,
+						});
+					}
+				}
+
+				return playlists.map((p) => {
+					const thumbnailInfo = p.thumbnailVideoId
+						? thumbnailMap.get(p.thumbnailVideoId)
+						: firstVideoMap.get(p.id);
+
+					return {
+						...p,
+						tags: parseTagsColumn(p.tags),
+						customMetadata: p.customMetadata ? JSON.parse(p.customMetadata) : null,
+						videoCount: countMap.get(p.id) ?? 0,
+						thumbnailPlaybackId: thumbnailInfo?.playbackId ?? null,
+						thumbnailPolicy: (thumbnailInfo?.policy as "public" | "signed" | null) ?? null,
+					};
+				});
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error listing playlists:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to list playlists",
+				});
+			}
+		}),
+
+	/**
+	 * Get a single playlist by ID or slug with its videos
+	 */
+	getPlaylist: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				playlistId: z.string().optional(),
+				slug: z.string().optional(),
+				includeVideos: z.boolean().default(true),
+			}).refine((data) => data.playlistId || data.slug, {
+				message: "Either playlistId or slug must be provided",
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { libraryId, playlistId, slug, includeVideos } = input;
+
+			try {
+				const conditions = [
+					eq(playlist.libraryId, libraryId),
+					eq(playlist.isDeleted, false),
+				];
+
+				if (playlistId) {
+					conditions.push(eq(playlist.id, playlistId));
+				} else if (slug) {
+					conditions.push(eq(playlist.slug, slug));
+				}
+
+				const [playlistRecord] = await db
+					.select()
+					.from(playlist)
+					.where(and(...conditions))
+					.limit(1);
+
+				if (!playlistRecord) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Get thumbnail video info
+				let thumbnailPlaybackId: string | null = null;
+				if (playlistRecord.thumbnailVideoId) {
+					const [thumbnailVideo] = await db
+						.select({ muxPlaybackId: video.muxPlaybackId })
+						.from(video)
+						.where(eq(video.id, playlistRecord.thumbnailVideoId))
+						.limit(1);
+					thumbnailPlaybackId = thumbnailVideo?.muxPlaybackId ?? null;
+				}
+
+				let videos: Array<{
+					id: string;
+					title: string;
+					description: string | null;
+					muxPlaybackId: string | null;
+					playbackPolicy: "public" | "signed" | null;
+					duration: number | null;
+					status: string;
+					isPublished: boolean;
+					sortOrder: number;
+					customTitle: string | null;
+					customDescription: string | null;
+					addedAt: Date;
+				}> = [];
+
+				if (includeVideos) {
+					const playlistVideos = await db
+						.select({
+							// Video fields
+							id: video.id,
+							title: video.title,
+							description: video.description,
+							muxPlaybackId: video.muxPlaybackId,
+							playbackPolicy: video.playbackPolicy,
+							duration: video.duration,
+							status: video.status,
+							isPublished: video.isPublished,
+							aspectRatio: video.aspectRatio,
+							// Playlist item fields
+							sortOrder: playlistItem.sortOrder,
+							customTitle: playlistItem.customTitle,
+							customDescription: playlistItem.customDescription,
+							addedAt: playlistItem.addedAt,
+						})
+						.from(playlistItem)
+						.innerJoin(video, eq(playlistItem.videoId, video.id))
+						.where(
+							and(
+								eq(playlistItem.playlistId, playlistRecord.id),
+								eq(video.isDeleted, false),
+							),
+						)
+						.orderBy(asc(playlistItem.sortOrder));
+
+					videos = playlistVideos;
+				}
+
+				return {
+					...playlistRecord,
+					tags: parseTagsColumn(playlistRecord.tags),
+					customMetadata: playlistRecord.customMetadata
+						? JSON.parse(playlistRecord.customMetadata)
+						: null,
+					thumbnailPlaybackId,
+					videos,
+					videoCount: videos.length,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get playlist",
+				});
+			}
+		}),
+
+	/**
+	 * Update a playlist
+	 */
+	updatePlaylist: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				name: z.string().min(1).max(100).optional(),
+				slug: z.string().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+				description: z.string().max(1000).nullable().optional(),
+				category: z.enum(["featured", "interviews", "series", "short-form", "other"]).optional(),
+				thumbnailVideoId: z.string().nullable().optional(),
+				thumbnailTime: z.number().min(0).nullable().optional(),
+				tags: z.array(z.string()).nullable().optional(),
+				customMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
+				sortOrder: z.number().min(0).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, ...updates } = input;
+
+			try {
+				// Verify playlist exists
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id, slug: playlist.slug })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Check slug uniqueness if changing
+				if (updates.slug && updates.slug !== existingPlaylist.slug) {
+					const slugConflict = await db
+						.select({ id: playlist.id })
+						.from(playlist)
+						.where(
+							and(
+								eq(playlist.libraryId, libraryId),
+								eq(playlist.slug, updates.slug),
+								eq(playlist.isDeleted, false),
+							),
+						)
+						.limit(1);
+
+					if (slugConflict.length > 0) {
+						throw new TRPCError({
+							code: "CONFLICT",
+							message: `A playlist with slug "${updates.slug}" already exists`,
+						});
+					}
+				}
+
+				// Verify thumbnail video if provided
+				if (updates.thumbnailVideoId) {
+					const [thumbVideo] = await db
+						.select({ id: video.id })
+						.from(video)
+						.where(
+							and(
+								eq(video.id, updates.thumbnailVideoId),
+								eq(video.libraryId, libraryId),
+								eq(video.isDeleted, false),
+							),
+						)
+						.limit(1);
+
+					if (!thumbVideo) {
+						throw new TRPCError({
+							code: "NOT_FOUND",
+							message: "Thumbnail video not found",
+						});
+					}
+				}
+
+				// Build update object
+				const updateData: Record<string, unknown> = {
+					updatedAt: new Date(),
+				};
+
+				if (updates.name !== undefined) updateData.name = updates.name;
+				if (updates.slug !== undefined) updateData.slug = updates.slug;
+				if (updates.description !== undefined) updateData.description = updates.description;
+				if (updates.category !== undefined) updateData.category = updates.category;
+				if (updates.thumbnailVideoId !== undefined) updateData.thumbnailVideoId = updates.thumbnailVideoId;
+				if (updates.thumbnailTime !== undefined) updateData.thumbnailTime = updates.thumbnailTime;
+				if (updates.sortOrder !== undefined) updateData.sortOrder = updates.sortOrder;
+				if (updates.tags !== undefined) {
+					updateData.tags = updates.tags ? JSON.stringify(updates.tags) : null;
+				}
+				if (updates.customMetadata !== undefined) {
+					updateData.customMetadata = updates.customMetadata ? JSON.stringify(updates.customMetadata) : null;
+				}
+
+				await db
+					.update(playlist)
+					.set(updateData)
+					.where(eq(playlist.id, playlistId));
+
+				return { success: true, playlistId };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update playlist",
+				});
+			}
+		}),
+
+	/**
+	 * Publish or unpublish a playlist
+	 */
+	setPlaylistPublishStatus: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				isPublished: z.boolean(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, isPublished } = input;
+
+			try {
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				await db
+					.update(playlist)
+					.set({
+						isPublished,
+						publishedAt: isPublished ? new Date() : null,
+						updatedAt: new Date(),
+					})
+					.where(eq(playlist.id, playlistId));
+
+				return { success: true, isPublished };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating playlist publish status:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update playlist publish status",
+				});
+			}
+		}),
+
+	/**
+	 * Delete a playlist (soft delete)
+	 */
+	deletePlaylist: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId } = input;
+
+			try {
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				await db
+					.update(playlist)
+					.set({
+						isDeleted: true,
+						deletedAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.where(eq(playlist.id, playlistId));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error deleting playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to delete playlist",
+				});
+			}
+		}),
+
+	/**
+	 * Add a video to a playlist
+	 */
+	addVideoToPlaylist: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				videoId: z.string(),
+				customTitle: z.string().max(200).optional(),
+				customDescription: z.string().max(1000).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, videoId, customTitle, customDescription } = input;
+
+			try {
+				// Verify playlist exists
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Verify video exists
+				const [existingVideo] = await db
+					.select({ id: video.id })
+					.from(video)
+					.where(
+						and(
+							eq(video.id, videoId),
+							eq(video.libraryId, libraryId),
+							eq(video.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingVideo) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video not found",
+					});
+				}
+
+				// Check if video is already in playlist
+				const [existingItem] = await db
+					.select({ id: playlistItem.id })
+					.from(playlistItem)
+					.where(
+						and(
+							eq(playlistItem.playlistId, playlistId),
+							eq(playlistItem.videoId, videoId),
+						),
+					)
+					.limit(1);
+
+				if (existingItem) {
+					throw new TRPCError({
+						code: "CONFLICT",
+						message: "Video is already in this playlist",
+					});
+				}
+
+				// Check playlist video count limit (max 50 videos)
+				const MAX_PLAYLIST_VIDEOS = 50;
+				const [countResult] = await db
+					.select({ count: sql<number>`COUNT(*)` })
+					.from(playlistItem)
+					.where(eq(playlistItem.playlistId, playlistId));
+
+				if ((countResult?.count ?? 0) >= MAX_PLAYLIST_VIDEOS) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: `Playlist cannot have more than ${MAX_PLAYLIST_VIDEOS} videos`,
+					});
+				}
+
+				// Get max sort order
+				const maxOrderResult = await db
+					.select({ maxOrder: sql<number>`MAX(${playlistItem.sortOrder})` })
+					.from(playlistItem)
+					.where(eq(playlistItem.playlistId, playlistId));
+
+				const nextSortOrder = (maxOrderResult[0]?.maxOrder ?? -1) + 1;
+
+				const itemId = generatePlaylistItemId();
+				const now = new Date();
+
+				await db.insert(playlistItem).values({
+					id: itemId,
+					playlistId,
+					videoId,
+					sortOrder: nextSortOrder,
+					customTitle: customTitle ?? null,
+					customDescription: customDescription ?? null,
+					addedAt: now,
+				});
+
+				// Update playlist's updatedAt
+				await db
+					.update(playlist)
+					.set({ updatedAt: now })
+					.where(eq(playlist.id, playlistId));
+
+				return {
+					id: itemId,
+					playlistId,
+					videoId,
+					sortOrder: nextSortOrder,
+				};
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error adding video to playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to add video to playlist",
+				});
+			}
+		}),
+
+	/**
+	 * Remove a video from a playlist
+	 */
+	removeVideoFromPlaylist: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				videoId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, videoId } = input;
+
+			try {
+				// Verify playlist exists and belongs to library
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Delete the playlist item
+				await db
+					.delete(playlistItem)
+					.where(
+						and(
+							eq(playlistItem.playlistId, playlistId),
+							eq(playlistItem.videoId, videoId),
+						),
+					);
+
+				// Update playlist's updatedAt
+				await db
+					.update(playlist)
+					.set({ updatedAt: new Date() })
+					.where(eq(playlist.id, playlistId));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error removing video from playlist:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to remove video from playlist",
+				});
+			}
+		}),
+
+	/**
+	 * Reorder videos in a playlist
+	 */
+	reorderPlaylistVideos: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				videoIds: z.array(z.string()).min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, videoIds } = input;
+
+			try {
+				// Verify playlist exists
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Update sort order for each video
+				const now = new Date();
+				for (let i = 0; i < videoIds.length; i++) {
+					await db
+						.update(playlistItem)
+						.set({ sortOrder: i })
+						.where(
+							and(
+								eq(playlistItem.playlistId, playlistId),
+								eq(playlistItem.videoId, videoIds[i]),
+							),
+						);
+				}
+
+				// Update playlist's updatedAt
+				await db
+					.update(playlist)
+					.set({ updatedAt: now })
+					.where(eq(playlist.id, playlistId));
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error reordering playlist videos:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to reorder playlist videos",
+				});
+			}
+		}),
+
+	/**
+	 * Update a playlist item (custom title/description)
+	 */
+	updatePlaylistItem: protectedProcedure
+		.input(
+			z.object({
+				playlistId: z.string(),
+				libraryId: z.string(),
+				videoId: z.string(),
+				customTitle: z.string().max(200).nullable().optional(),
+				customDescription: z.string().max(1000).nullable().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { playlistId, libraryId, videoId, customTitle, customDescription } = input;
+
+			try {
+				// Verify playlist exists
+				const [existingPlaylist] = await db
+					.select({ id: playlist.id })
+					.from(playlist)
+					.where(
+						and(
+							eq(playlist.id, playlistId),
+							eq(playlist.libraryId, libraryId),
+							eq(playlist.isDeleted, false),
+						),
+					)
+					.limit(1);
+
+				if (!existingPlaylist) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Playlist not found",
+					});
+				}
+
+				// Find the playlist item
+				const [existingItem] = await db
+					.select({ id: playlistItem.id })
+					.from(playlistItem)
+					.where(
+						and(
+							eq(playlistItem.playlistId, playlistId),
+							eq(playlistItem.videoId, videoId),
+						),
+					)
+					.limit(1);
+
+				if (!existingItem) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Video not found in playlist",
+					});
+				}
+
+				// Build update object
+				const updateData: Record<string, unknown> = {};
+				if (customTitle !== undefined) updateData.customTitle = customTitle;
+				if (customDescription !== undefined) updateData.customDescription = customDescription;
+
+				if (Object.keys(updateData).length > 0) {
+					await db
+						.update(playlistItem)
+						.set(updateData)
+						.where(eq(playlistItem.id, existingItem.id));
+
+					// Update playlist's updatedAt
+					await db
+						.update(playlist)
+						.set({ updatedAt: new Date() })
+						.where(eq(playlist.id, playlistId));
+				}
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error updating playlist item:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to update playlist item",
+				});
+			}
+		}),
+
+	/**
+	 * Reorder playlists within a library
+	 */
+	reorderPlaylists: protectedProcedure
+		.input(
+			z.object({
+				libraryId: z.string(),
+				playlistIds: z.array(z.string()).min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { libraryId, playlistIds } = input;
+
+			try {
+				// Verify library exists
+				await getMuxLibrary(env, libraryId);
+
+				// Update sort order for each playlist
+				const now = new Date();
+				for (let i = 0; i < playlistIds.length; i++) {
+					await db
+						.update(playlist)
+						.set({ sortOrder: i, updatedAt: now })
+						.where(
+							and(
+								eq(playlist.id, playlistIds[i]),
+								eq(playlist.libraryId, libraryId),
+							),
+						);
+				}
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error reordering playlists:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to reorder playlists",
 				});
 			}
 		}),

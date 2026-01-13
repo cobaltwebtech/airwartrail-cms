@@ -30,12 +30,32 @@ App.on(["POST", "GET"], "/api/auth/*", (c) => {
 App.route("/api/webhooks/mux", muxWebhookRouter);
 
 App.use("/trpc/*", async (c, next) => {
+  // Check for API key in header first
+  const apiKey = c.req.header('x-api-key');
+  
+  // Better Auth's getSession handles both cookie sessions and API key sessions
+  // when enableSessionForAPIKeys is enabled in the apiKey plugin
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });
 
-  if (!session) {
+  // Allow access if either session cookie or API key is valid
+  if (!session && !apiKey) {
     return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  // If API key is provided but session is null, verify the API key directly
+  if (!session && apiKey) {
+    try {
+      const verifyResult = await auth.api.verifyApiKey({
+        body: { key: apiKey },
+      });
+      if (!verifyResult.valid) {
+        return c.json({ error: "Invalid API key" }, 401);
+      }
+    } catch {
+      return c.json({ error: "Invalid API key" }, 401);
+    }
   }
 
   await next();

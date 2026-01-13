@@ -1,10 +1,15 @@
 //Custom type declarations go here
 import type { $Infer } from './auth-client';
+import type {
+	DirectUploadStatus,
+	PlaybackPolicy,
+	VideoStatus,
+} from './constants';
 
 export type ActiveSession = typeof $Infer.Session;
 
-// Mux Asset Status
-export type MuxAssetStatus = 'preparing' | 'ready' | 'errored';
+// Re-export VideoStatus for backward compatibility
+export type MuxAssetStatus = VideoStatus;
 
 export interface MuxTrack {
 	id: string;
@@ -24,7 +29,7 @@ export interface Video {
 	muxAssetId?: string;
 	playbackId: string | null;
 	// Status and metadata
-	status: MuxAssetStatus;
+	status: VideoStatus;
 	title: string;
 	description?: string | null;
 	thumbnail?: string;
@@ -33,7 +38,7 @@ export interface Video {
 	updatedAt?: string;
 	captions?: MuxTrack[];
 	metadata?: Record<string, unknown>;
-	policy?: 'public' | 'signed' | null;
+	policy?: PlaybackPolicy | null;
 	isPublished?: boolean;
 	publishedAt?: string | null;
 	// Video properties
@@ -57,7 +62,7 @@ export interface Video {
 export interface DirectUpload {
 	id: string;
 	url: string;
-	status: 'waiting' | 'asset_created' | 'errored' | 'cancelled' | 'timed_out';
+	status: DirectUploadStatus;
 	timeout: number;
 	assetId?: string;
 }

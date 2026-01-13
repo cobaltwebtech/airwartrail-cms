@@ -5,6 +5,7 @@ import {
 	real,
 	sqliteTable,
 	text,
+	uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
 /**
@@ -123,7 +124,7 @@ export const video = sqliteTable(
 		}), // Last time we synced views from Mux
 		totalWatchTimeMs: integer('total_watch_time_ms').default(0), // Cumulative watch time in milliseconds
 		// Processing info
-		ingestType: text('ingest_type', {
+		ingestCategory: text('ingest_category', {
 			enum: [
 				'on_demand_url',
 				'on_demand_direct_upload',
@@ -133,7 +134,7 @@ export const video = sqliteTable(
 			],
 		}),
 		// Error information
-		errorType: text('error_type'),
+		errorCategory: text('error_category'),
 		errorMessages: text('error_messages'), // JSON array of error messages
 		// Test asset flag
 		isTest: integer('is_test', { mode: 'boolean' }).default(false).notNull(),
@@ -190,6 +191,8 @@ export const videoChapter = sqliteTable(
 	(table) => [
 		index('video_chapter_video_id_idx').on(table.videoId),
 		index('video_chapter_sort_order_idx').on(table.sortOrder),
+		// Composite index for fetching chapters in order for a video
+		index('video_chapter_video_sort_idx').on(table.videoId, table.sortOrder),
 	],
 );
 
@@ -206,12 +209,12 @@ export const videoTrack = sqliteTable(
 			.references(() => video.id, { onDelete: 'cascade' }),
 		// Mux track ID
 		muxTrackId: text('mux_track_id').notNull(),
-		// Track type
-		type: text('type', {
+		// Track category
+		trackCategory: text('track_category', {
 			enum: ['video', 'audio', 'text'],
 		}).notNull(),
 		// Text track specific fields
-		textType: text('text_type', {
+		textCategory: text('text_category', {
 			enum: ['subtitles'],
 		}),
 		languageCode: text('language_code'), // BCP 47 language code (e.g., "en-US")
@@ -249,27 +252,46 @@ export const videoTrack = sqliteTable(
 	(table) => [
 		index('video_track_video_id_idx').on(table.videoId),
 		index('video_track_mux_track_id_idx').on(table.muxTrackId),
-		index('video_track_type_idx').on(table.type),
+		index('video_track_track_category_idx').on(table.trackCategory),
 	],
 );
 
 /**
- * Video Collection Schema
- * Groups videos into collections/playlists
+ * Playlist Schema
+ * User-facing curated lists of videos (series, courses, featured content)
  */
-export const videoCollection = sqliteTable(
-	'video_collection',
+export const playlist = sqliteTable(
+	'playlist',
 	{
 		id: text('id').primaryKey(),
 		libraryId: text('library_id')
 			.notNull()
 			.references(() => muxLibrary.id, { onDelete: 'cascade' }),
+		// Playlist metadata
 		name: text('name').notNull(),
+		slug: text('slug').notNull(), // URL-friendly identifier
 		description: text('description'),
-		// Visibility
-		isPublic: integer('is_public', { mode: 'boolean' })
+		// Thumbnail can reference a specific video or custom time
+		thumbnailVideoId: text('thumbnail_video_id').references(() => video.id, {
+			onDelete: 'set null',
+		}),
+		thumbnailTime: real('thumbnail_time'), // Custom thumbnail time in seconds
+		// Playlist category for different use cases
+		category: text('category', {
+			enum: ['featured', 'interviews', 'series', 'short-form', 'other'],
+		})
+			.default('featured')
+			.notNull(),
+		// Visibility and publishing
+		isPublished: integer('is_published', { mode: 'boolean' })
 			.default(false)
 			.notNull(),
+		publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+		// Ordering for displaying playlists
+		sortOrder: integer('sort_order').default(0).notNull(),
+		// Optional metadata
+		tags: text('tags'), // JSON array of tags
+		customMetadata: text('custom_metadata'), // JSON object for extensibility
 		// Soft delete and timestamps
 		isDeleted: integer('is_deleted', { mode: 'boolean' })
 			.default(false)
@@ -284,34 +306,64 @@ export const videoCollection = sqliteTable(
 			.notNull(),
 	},
 	(table) => [
-		index('video_collection_library_id_idx').on(table.libraryId),
-		index('video_collection_name_idx').on(table.name),
+		index('playlist_library_id_idx').on(table.libraryId),
+		index('playlist_slug_idx').on(table.slug),
+		index('playlist_name_idx').on(table.name),
+		index('playlist_category_idx').on(table.category),
+		index('playlist_is_published_idx').on(table.isPublished),
+		index('playlist_sort_order_idx').on(table.sortOrder),
+		index('playlist_created_at_idx').on(table.createdAt),
+		// Composite index for common query: published playlists by category
+		index('playlist_published_category_idx').on(
+			table.isPublished,
+			table.category,
+		),
+		// Unique slug per library (enforced at database level)
+		uniqueIndex('playlist_library_slug_unique_idx').on(
+			table.libraryId,
+			table.slug,
+		),
 	],
 );
 
 /**
- * Video Collection Item Schema
- * Junction table for videos in collections (many-to-many)
+ * Playlist Item Schema
+ * Junction table for videos in playlists with ordering
  */
-export const videoCollectionItem = sqliteTable(
-	'video_collection_item',
+export const playlistItem = sqliteTable(
+	'playlist_item',
 	{
 		id: text('id').primaryKey(),
-		collectionId: text('collection_id')
+		playlistId: text('playlist_id')
 			.notNull()
-			.references(() => videoCollection.id, { onDelete: 'cascade' }),
+			.references(() => playlist.id, { onDelete: 'cascade' }),
 		videoId: text('video_id')
 			.notNull()
 			.references(() => video.id, { onDelete: 'cascade' }),
+		// Position in playlist (1-based for user display)
 		sortOrder: integer('sort_order').default(0).notNull(),
+		// Optional item-specific metadata
+		customTitle: text('custom_title'), // Override video title in this playlist
+		customDescription: text('custom_description'), // Override description
+		// Timestamps
 		addedAt: integer('added_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
 	},
 	(table) => [
-		index('video_collection_item_collection_id_idx').on(table.collectionId),
-		index('video_collection_item_video_id_idx').on(table.videoId),
-		index('video_collection_item_sort_order_idx').on(table.sortOrder),
+		index('playlist_item_playlist_id_idx').on(table.playlistId),
+		index('playlist_item_video_id_idx').on(table.videoId),
+		index('playlist_item_sort_order_idx').on(table.sortOrder),
+		// Composite index for fetching playlist videos in order
+		index('playlist_item_playlist_sort_idx').on(
+			table.playlistId,
+			table.sortOrder,
+		),
+		// Unique constraint: prevent duplicate videos in same playlist (enforced at database level)
+		uniqueIndex('playlist_item_playlist_video_unique_idx').on(
+			table.playlistId,
+			table.videoId,
+		),
 	],
 );
 
@@ -321,7 +373,7 @@ export const videoCollectionItem = sqliteTable(
 
 export const muxLibraryRelations = relations(muxLibrary, ({ many }) => ({
 	videos: many(video),
-	collections: many(videoCollection),
+	playlists: many(playlist),
 }));
 
 export const videoRelations = relations(video, ({ one, many }) => ({
@@ -331,7 +383,9 @@ export const videoRelations = relations(video, ({ one, many }) => ({
 	}),
 	chapters: many(videoChapter),
 	tracks: many(videoTrack),
-	collectionItems: many(videoCollectionItem),
+	playlistItems: many(playlistItem),
+	// Playlists that use this video as thumbnail
+	playlistThumbnails: many(playlist),
 }));
 
 export const videoChapterRelations = relations(videoChapter, ({ one }) => ({
@@ -348,30 +402,28 @@ export const videoTrackRelations = relations(videoTrack, ({ one }) => ({
 	}),
 }));
 
-export const videoCollectionRelations = relations(
-	videoCollection,
-	({ one, many }) => ({
-		library: one(muxLibrary, {
-			fields: [videoCollection.libraryId],
-			references: [muxLibrary.id],
-		}),
-		items: many(videoCollectionItem),
+export const playlistRelations = relations(playlist, ({ one, many }) => ({
+	library: one(muxLibrary, {
+		fields: [playlist.libraryId],
+		references: [muxLibrary.id],
 	}),
-);
+	thumbnailVideo: one(video, {
+		fields: [playlist.thumbnailVideoId],
+		references: [video.id],
+	}),
+	items: many(playlistItem),
+}));
 
-export const videoCollectionItemRelations = relations(
-	videoCollectionItem,
-	({ one }) => ({
-		collection: one(videoCollection, {
-			fields: [videoCollectionItem.collectionId],
-			references: [videoCollection.id],
-		}),
-		video: one(video, {
-			fields: [videoCollectionItem.videoId],
-			references: [video.id],
-		}),
+export const playlistItemRelations = relations(playlistItem, ({ one }) => ({
+	playlist: one(playlist, {
+		fields: [playlistItem.playlistId],
+		references: [playlist.id],
 	}),
-);
+	video: one(video, {
+		fields: [playlistItem.videoId],
+		references: [video.id],
+	}),
+}));
 
 // ============================================================================
 // Type Exports
@@ -389,8 +441,8 @@ export type NewVideoChapter = typeof videoChapter.$inferInsert;
 export type VideoTrack = typeof videoTrack.$inferSelect;
 export type NewVideoTrack = typeof videoTrack.$inferInsert;
 
-export type VideoCollection = typeof videoCollection.$inferSelect;
-export type NewVideoCollection = typeof videoCollection.$inferInsert;
+export type Playlist = typeof playlist.$inferSelect;
+export type NewPlaylist = typeof playlist.$inferInsert;
 
-export type VideoCollectionItem = typeof videoCollectionItem.$inferSelect;
-export type NewVideoCollectionItem = typeof videoCollectionItem.$inferInsert;
+export type PlaylistItem = typeof playlistItem.$inferSelect;
+export type NewPlaylistItem = typeof playlistItem.$inferInsert;

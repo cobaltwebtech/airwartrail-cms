@@ -166,7 +166,7 @@ const TagEditor: React.FC<TagEditorProps> = ({
 	const canAdd = inputValue.trim().length > 0 && tags.length < maxTags;
 
 	return (
-		<Card className="col-span-4">
+		<Card className="col-span-3">
 			<CardHeader>
 				<CardTitle>Tags</CardTitle>
 				<CardDescription>

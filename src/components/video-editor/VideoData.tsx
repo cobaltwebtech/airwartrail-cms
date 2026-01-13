@@ -27,9 +27,7 @@ const VideoData: React.FC<VideoDataProps> = ({
 	return (
 		<Card className="col-span-full">
 			<CardHeader>
-				<CardTitle className="text-lg font-semibold">
-					Database Information
-				</CardTitle>
+				<CardTitle>Database Information</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 text-muted-foreground text-sm">

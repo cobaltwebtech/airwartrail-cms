@@ -3,10 +3,18 @@ import { Save } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+
+// Zod schema for title validation
+const titleSchema = z
+	.string()
+	.min(1, 'Title cannot be empty')
+	.max(100, 'Title must be 100 characters or less')
+	.regex(/^[a-zA-Z0-9]+$/, 'Title can only contain letters and numbers');
 
 interface EditTitleProps {
 	videoId: string; // Internal database ID
@@ -59,9 +67,16 @@ const EditTitle: React.FC<EditTitleProps> = ({
 	const handleTitleChange = async (event: React.FormEvent) => {
 		event.preventDefault();
 
-		if (title.trim() === '') {
-			setError('Title cannot be empty');
-			toast.error('Title cannot be empty!');
+		// Validate using Zod schema
+		const validationResult = titleSchema.safeParse(title.trim());
+
+		if (!validationResult.success) {
+			const errorMessage =
+				validationResult.error.issues[0]?.message || 'Invalid title';
+			setError(errorMessage);
+			toast.error('Invalid title!', {
+				description: errorMessage,
+			});
 			return;
 		}
 
@@ -69,12 +84,12 @@ const EditTitle: React.FC<EditTitleProps> = ({
 		updateVideoMutation.mutate({
 			videoId,
 			libraryId,
-			title,
+			title: validationResult.data,
 		});
 	};
 
 	return (
-		<Card className="col-span-4">
+		<Card className="col-span-2">
 			<CardHeader>
 				<CardTitle>Title</CardTitle>
 			</CardHeader>

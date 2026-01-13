@@ -41,10 +41,12 @@ function VideosPage() {
 	} = useQuery({
 		...trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
 		// Poll every 5 seconds while any video is still processing
+		// Check for any non-terminal status (not ready or errored) to handle
+		// undefined, null, 'preparing', or any other interim status
 		refetchInterval: (query) => {
 			const data = query.state.data;
 			const hasProcessingVideos = data?.some(
-				(video) => video.status === 'preparing',
+				(video) => video.status !== 'ready' && video.status !== 'errored',
 			);
 			return hasProcessingVideos ? 5000 : false;
 		},

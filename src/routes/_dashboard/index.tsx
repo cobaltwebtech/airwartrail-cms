@@ -49,7 +49,7 @@ function IndexPage() {
 						</Link>
 					</Button>
 					<Button variant="secondary" asChild>
-						<Link to="/library/new">
+						<Link to="/library/create-library">
 							<Plus />
 							Create Library
 						</Link>
@@ -156,7 +156,7 @@ function EmptyLibraries() {
 					manage your video content.
 				</p>
 				<Button className="mt-6" asChild>
-					<Link to="/library/new">
+					<Link to="/library/create-library">
 						<Plus className="mr-2 size-4" />
 						Create Library
 					</Link>

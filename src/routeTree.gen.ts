@@ -15,10 +15,15 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
+import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
-import { Route as DashboardLibraryNewRouteImport } from './routes/_dashboard/library/new'
+import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
+import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
 import { Route as DashboardLibraryEditLibraryLibraryIdRouteImport } from './routes/_dashboard/library/edit-library/$libraryId'
 import { Route as DashboardLibraryLibraryIdVideosRouteImport } from './routes/_dashboard/library/$libraryId/videos'
+import { Route as DashboardLibraryLibraryIdPlaylistsRouteImport } from './routes/_dashboard/library/$libraryId/playlists'
+import { Route as DashboardLibraryLibraryIdCreatePlaylistRouteImport } from './routes/_dashboard/library/$libraryId/create-playlist'
+import { Route as DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport } from './routes/_dashboard/library/$libraryId/playlist/$playlistId'
 import { Route as DashboardLibraryLibraryIdEditVideoVideoIdRouteImport } from './routes/_dashboard/library/$libraryId/edit-video/$videoId'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -50,14 +55,25 @@ const DashboardUploadRoute = DashboardUploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardApiKeysIndexRoute = DashboardApiKeysIndexRouteImport.update({
+  id: '/api-keys/',
+  path: '/api-keys/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
   id: '/user/$userId',
   path: '/user/$userId',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardLibraryNewRoute = DashboardLibraryNewRouteImport.update({
-  id: '/library/new',
-  path: '/library/new',
+const DashboardLibraryCreateLibraryRoute =
+  DashboardLibraryCreateLibraryRouteImport.update({
+    id: '/library/create-library',
+    path: '/library/create-library',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardApiKeysKeyIdRoute = DashboardApiKeysKeyIdRouteImport.update({
+  id: '/api-keys/$keyId',
+  path: '/api-keys/$keyId',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardLibraryEditLibraryLibraryIdRoute =
@@ -70,6 +86,24 @@ const DashboardLibraryLibraryIdVideosRoute =
   DashboardLibraryLibraryIdVideosRouteImport.update({
     id: '/library/$libraryId/videos',
     path: '/library/$libraryId/videos',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdPlaylistsRoute =
+  DashboardLibraryLibraryIdPlaylistsRouteImport.update({
+    id: '/library/$libraryId/playlists',
+    path: '/library/$libraryId/playlists',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdCreatePlaylistRoute =
+  DashboardLibraryLibraryIdCreatePlaylistRouteImport.update({
+    id: '/library/$libraryId/create-playlist',
+    path: '/library/$libraryId/create-playlist',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdPlaylistPlaylistIdRoute =
+  DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport.update({
+    id: '/library/$libraryId/playlist/$playlistId',
+    path: '/library/$libraryId/playlist/$playlistId',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardLibraryLibraryIdEditVideoVideoIdRoute =
@@ -85,11 +119,16 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/': typeof DashboardIndexRoute
-  '/library/new': typeof DashboardLibraryNewRoute
+  '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
+  '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
+  '/api-keys': typeof DashboardApiKeysIndexRoute
+  '/library/$libraryId/create-playlist': typeof DashboardLibraryLibraryIdCreatePlaylistRoute
+  '/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
   '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
+  '/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
 }
 export interface FileRoutesByTo {
   '/upload': typeof DashboardUploadRoute
@@ -97,11 +136,16 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/': typeof DashboardIndexRoute
-  '/library/new': typeof DashboardLibraryNewRoute
+  '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
+  '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
+  '/api-keys': typeof DashboardApiKeysIndexRoute
+  '/library/$libraryId/create-playlist': typeof DashboardLibraryLibraryIdCreatePlaylistRoute
+  '/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
   '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
+  '/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -111,11 +155,16 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/_dashboard/': typeof DashboardIndexRoute
-  '/_dashboard/library/new': typeof DashboardLibraryNewRoute
+  '/_dashboard/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
+  '/_dashboard/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
+  '/_dashboard/api-keys/': typeof DashboardApiKeysIndexRoute
+  '/_dashboard/library/$libraryId/create-playlist': typeof DashboardLibraryLibraryIdCreatePlaylistRoute
+  '/_dashboard/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/_dashboard/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/_dashboard/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
   '/_dashboard/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
+  '/_dashboard/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,11 +174,16 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/reset-password'
     | '/'
-    | '/library/new'
+    | '/api-keys/$keyId'
+    | '/library/create-library'
     | '/user/$userId'
+    | '/api-keys'
+    | '/library/$libraryId/create-playlist'
+    | '/library/$libraryId/playlists'
     | '/library/$libraryId/videos'
     | '/library/edit-library/$libraryId'
     | '/library/$libraryId/edit-video/$videoId'
+    | '/library/$libraryId/playlist/$playlistId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/upload'
@@ -137,11 +191,16 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/reset-password'
     | '/'
-    | '/library/new'
+    | '/api-keys/$keyId'
+    | '/library/create-library'
     | '/user/$userId'
+    | '/api-keys'
+    | '/library/$libraryId/create-playlist'
+    | '/library/$libraryId/playlists'
     | '/library/$libraryId/videos'
     | '/library/edit-library/$libraryId'
     | '/library/$libraryId/edit-video/$videoId'
+    | '/library/$libraryId/playlist/$playlistId'
   id:
     | '__root__'
     | '/_dashboard'
@@ -150,11 +209,16 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/reset-password'
     | '/_dashboard/'
-    | '/_dashboard/library/new'
+    | '/_dashboard/api-keys/$keyId'
+    | '/_dashboard/library/create-library'
     | '/_dashboard/user/$userId'
+    | '/_dashboard/api-keys/'
+    | '/_dashboard/library/$libraryId/create-playlist'
+    | '/_dashboard/library/$libraryId/playlists'
     | '/_dashboard/library/$libraryId/videos'
     | '/_dashboard/library/edit-library/$libraryId'
     | '/_dashboard/library/$libraryId/edit-video/$videoId'
+    | '/_dashboard/library/$libraryId/playlist/$playlistId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/api-keys/': {
+      id: '/_dashboard/api-keys/'
+      path: '/api-keys'
+      fullPath: '/api-keys'
+      preLoaderRoute: typeof DashboardApiKeysIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/user/$userId': {
       id: '/_dashboard/user/$userId'
       path: '/user/$userId'
@@ -215,11 +286,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardUserUserIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/new': {
-      id: '/_dashboard/library/new'
-      path: '/library/new'
-      fullPath: '/library/new'
-      preLoaderRoute: typeof DashboardLibraryNewRouteImport
+    '/_dashboard/library/create-library': {
+      id: '/_dashboard/library/create-library'
+      path: '/library/create-library'
+      fullPath: '/library/create-library'
+      preLoaderRoute: typeof DashboardLibraryCreateLibraryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/api-keys/$keyId': {
+      id: '/_dashboard/api-keys/$keyId'
+      path: '/api-keys/$keyId'
+      fullPath: '/api-keys/$keyId'
+      preLoaderRoute: typeof DashboardApiKeysKeyIdRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/library/edit-library/$libraryId': {
@@ -236,6 +314,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLibraryLibraryIdVideosRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/library/$libraryId/playlists': {
+      id: '/_dashboard/library/$libraryId/playlists'
+      path: '/library/$libraryId/playlists'
+      fullPath: '/library/$libraryId/playlists'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/create-playlist': {
+      id: '/_dashboard/library/$libraryId/create-playlist'
+      path: '/library/$libraryId/create-playlist'
+      fullPath: '/library/$libraryId/create-playlist'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdCreatePlaylistRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/playlist/$playlistId': {
+      id: '/_dashboard/library/$libraryId/playlist/$playlistId'
+      path: '/library/$libraryId/playlist/$playlistId'
+      fullPath: '/library/$libraryId/playlist/$playlistId'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/library/$libraryId/edit-video/$videoId': {
       id: '/_dashboard/library/$libraryId/edit-video/$videoId'
       path: '/library/$libraryId/edit-video/$videoId'
@@ -249,23 +348,36 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardUploadRoute: typeof DashboardUploadRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
-  DashboardLibraryNewRoute: typeof DashboardLibraryNewRoute
+  DashboardApiKeysKeyIdRoute: typeof DashboardApiKeysKeyIdRoute
+  DashboardLibraryCreateLibraryRoute: typeof DashboardLibraryCreateLibraryRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
+  DashboardApiKeysIndexRoute: typeof DashboardApiKeysIndexRoute
+  DashboardLibraryLibraryIdCreatePlaylistRoute: typeof DashboardLibraryLibraryIdCreatePlaylistRoute
+  DashboardLibraryLibraryIdPlaylistsRoute: typeof DashboardLibraryLibraryIdPlaylistsRoute
   DashboardLibraryLibraryIdVideosRoute: typeof DashboardLibraryLibraryIdVideosRoute
   DashboardLibraryEditLibraryLibraryIdRoute: typeof DashboardLibraryEditLibraryLibraryIdRoute
   DashboardLibraryLibraryIdEditVideoVideoIdRoute: typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
+  DashboardLibraryLibraryIdPlaylistPlaylistIdRoute: typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardUploadRoute: DashboardUploadRoute,
   DashboardIndexRoute: DashboardIndexRoute,
-  DashboardLibraryNewRoute: DashboardLibraryNewRoute,
+  DashboardApiKeysKeyIdRoute: DashboardApiKeysKeyIdRoute,
+  DashboardLibraryCreateLibraryRoute: DashboardLibraryCreateLibraryRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
+  DashboardApiKeysIndexRoute: DashboardApiKeysIndexRoute,
+  DashboardLibraryLibraryIdCreatePlaylistRoute:
+    DashboardLibraryLibraryIdCreatePlaylistRoute,
+  DashboardLibraryLibraryIdPlaylistsRoute:
+    DashboardLibraryLibraryIdPlaylistsRoute,
   DashboardLibraryLibraryIdVideosRoute: DashboardLibraryLibraryIdVideosRoute,
   DashboardLibraryEditLibraryLibraryIdRoute:
     DashboardLibraryEditLibraryLibraryIdRoute,
   DashboardLibraryLibraryIdEditVideoVideoIdRoute:
     DashboardLibraryLibraryIdEditVideoVideoIdRoute,
+  DashboardLibraryLibraryIdPlaylistPlaylistIdRoute:
+    DashboardLibraryLibraryIdPlaylistPlaylistIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

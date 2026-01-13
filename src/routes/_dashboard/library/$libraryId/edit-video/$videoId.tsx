@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, notFound } from '@tanstack/react-router';
+import { TRPCClientError } from '@trpc/client';
+import { useState } from 'react';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { NotFound } from '@/components/NotFound';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -8,20 +11,46 @@ import {
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import VideoEditor from '@/components/video-editor/VideoEditor';
+import CaptionEditor from '@/components/video-editor/CaptionEditor';
+import ChapterEditor from '@/components/video-editor/ChapterEditor';
+import DescriptionEditor from '@/components/video-editor/DescriptionEditor';
+import PlaybackPolicyEditor from '@/components/video-editor/PlaybackPolicyEditor';
+import PublishStatus from '@/components/video-editor/PublishStatus';
+import TagEditor from '@/components/video-editor/TagEditor';
+import TitleEditor from '@/components/video-editor/TitleEditor';
+import VideoData from '@/components/video-editor/VideoData';
+import VideoInfo from '@/components/video-editor/VideoInfo';
+import VideoPlayer from '@/components/video-editor/VideoPlayer';
+import { getVideoStatusLabel, type VideoStatus } from '@/lib/constants';
 import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute(
 	'/_dashboard/library/$libraryId/edit-video/$videoId',
 )({
 	component: VideoEditorPage,
+	notFoundComponent: NotFound,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId, videoId } = params;
-		// Prefetch video details using internal database ID
-		await queryClient.ensureQueryData(
-			trpc.mux.getVideoById.queryOptions({ videoId, libraryId }),
-		);
-		return { videoId, libraryId };
+		try {
+			// Prefetch video details using internal database ID
+			const video = await queryClient.ensureQueryData(
+				trpc.mux.getVideoById.queryOptions({ videoId, libraryId }),
+			);
+			// Throw notFound() to trigger the notFoundComponent instead of error boundary
+			if (!video) {
+				throw notFound();
+			}
+			return { videoId, libraryId };
+		} catch (error) {
+			// If the tRPC query throws NOT_FOUND, convert to router's notFound
+			if (
+				error instanceof TRPCClientError &&
+				error.data?.code === 'NOT_FOUND'
+			) {
+				throw notFound();
+			}
+			throw error;
+		}
 	},
 });
 
@@ -48,45 +77,46 @@ function VideoEditorPage() {
 		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
 	);
 
-	// Transform to VideoEditor video format
-	const video = videoData
-		? {
-				title: videoData.title || 'Untitled',
-				duration: videoData.duration || 0,
-				statusText:
-					videoData.status === 'ready'
-						? 'Ready'
-						: videoData.status === 'errored'
-							? 'Error'
-							: 'Processing',
-				views: viewCountData?.views ?? videoData.views ?? 0,
-				dateUploaded: videoData.createdAt || new Date().toISOString(),
-				isPublished: videoData.isPublished,
-				captions: videoData.captions?.map((cap) => ({
-					label: cap.name || cap.language || 'Caption',
-					srclang: cap.languageCode || 'en',
-				})),
-				resolutionTier: videoData.resolutionTier,
-				aspectRatio: videoData.aspectRatio,
-				videoQuality: videoData.videoQuality,
-				maxStoredFrameRate: videoData.maxStoredFrameRate,
-				maxWidth: videoData.maxWidth,
-				maxHeight: videoData.maxHeight,
-				id: videoData.id,
-				muxAssetId: videoData.muxAssetId,
-				muxPlaybackId: videoData.muxPlaybackId ?? undefined,
-				muxEnvironmentId: videoData.muxEnvironmentId ?? undefined,
-				createdAt: videoData.createdAt,
-				updatedAt: videoData.updatedAt,
-				viewCountSyncedAt: videoData.viewCountSyncedAt,
-				libraryName: videoData.libraryName ?? library?.name,
-				description: videoData.description ?? undefined,
-				tags: videoData.tags ?? [],
-				errorType: videoData.errorType ?? undefined,
-				errorMessages: videoData.errorMessages ?? undefined,
-				playbackPolicy: videoData.policy ?? undefined,
-			}
-		: null;
+	const [title, setTitle] = useState(videoData?.title || '');
+	const [description, setDescription] = useState(videoData?.description || '');
+
+	// Extract local variables from videoData
+	const duration = videoData?.duration || 0;
+	const dateUploaded = videoData?.createdAt || new Date().toISOString();
+	const views = viewCountData?.views ?? videoData?.views ?? 0;
+	const statusText = getVideoStatusLabel(videoData?.status as VideoStatus);
+	const captions =
+		videoData?.captions?.map((cap) => ({
+			label: cap.name || cap.language || 'Caption',
+			srclang: cap.languageCode || 'en',
+		})) || [];
+	const resolutionTier = videoData?.resolutionTier ?? undefined;
+	const aspectRatio = videoData?.aspectRatio ?? undefined;
+	const videoQuality = videoData?.videoQuality ?? undefined;
+	const maxStoredFrameRate = videoData?.maxStoredFrameRate ?? undefined;
+	const maxWidth = videoData?.maxWidth ?? undefined;
+	const maxHeight = videoData?.maxHeight ?? undefined;
+	const internalId = videoData?.id || '';
+	const muxAssetId = videoData?.muxAssetId || videoId;
+	const muxPlaybackId = videoData?.muxPlaybackId || '';
+	const muxEnvironmentId = videoData?.muxEnvironmentId || '';
+	const createdAt = videoData?.createdAt;
+	const updatedAt = videoData?.updatedAt;
+	const viewCountSyncedAt = videoData?.viewCountSyncedAt ?? undefined;
+	const errorCategory = videoData?.errorCategory ?? undefined;
+	const errorMessages = videoData?.errorMessages ?? undefined;
+	const playbackPolicy = videoData?.policy ?? undefined;
+	const tags = videoData?.tags ?? [];
+	const libraryName = videoData?.libraryName ?? library?.name;
+	const isPublished = videoData?.isPublished;
+
+	const handleTitleUpdate = (newTitle: string) => {
+		setTitle(newTitle);
+	};
+
+	const handleDescriptionUpdate = (newDescription: string) => {
+		setDescription(newDescription);
+	};
 
 	if (videoError) {
 		return (
@@ -95,6 +125,8 @@ function VideoEditorPage() {
 			</div>
 		);
 	}
+
+	const videoTitle = videoData?.title || 'Untitled';
 
 	return (
 		<>
@@ -114,7 +146,7 @@ function VideoEditorPage() {
 								</BreadcrumbLink>
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
-							<BreadcrumbItem>{video?.title}</BreadcrumbItem>
+							<BreadcrumbItem>{videoTitle}</BreadcrumbItem>
 						</BreadcrumbList>
 					</Breadcrumb>
 				</div>
@@ -123,8 +155,78 @@ function VideoEditorPage() {
 			<section className="mb-6">
 				{videoLoading ? (
 					<p className="text-muted-foreground">Loading video details...</p>
-				) : video ? (
-					<VideoEditor video={video} videoId={videoId} libraryId={libraryId} />
+				) : videoData ? (
+					<div className="grid md:grid-cols-6 gap-4">
+						<VideoInfo
+							duration={duration}
+							views={views}
+							initialTitle={title}
+							dateUploaded={dateUploaded}
+							statusText={statusText}
+							libraryName={libraryName}
+							resolutionTier={resolutionTier}
+							aspectRatio={aspectRatio}
+							videoQuality={videoQuality}
+							maxStoredFrameRate={maxStoredFrameRate}
+							maxWidth={maxWidth}
+							maxHeight={maxHeight}
+							errorCategory={errorCategory}
+							errorMessages={errorMessages}
+							playbackPolicy={playbackPolicy}
+						/>
+						<TitleEditor
+							videoId={videoId}
+							libraryId={libraryId}
+							initialTitle={title}
+							onTitleUpdate={handleTitleUpdate}
+						/>
+						<VideoPlayer
+							muxAssetId={muxAssetId}
+							libraryId={libraryId}
+							internalVideoId={internalId}
+						/>
+						<PublishStatus
+							videoId={videoId}
+							libraryId={libraryId}
+							initialPublishStatus={isPublished}
+						/>
+						<DescriptionEditor
+							videoId={videoId}
+							libraryId={libraryId}
+							initialDescription={description}
+							onDescriptionUpdate={handleDescriptionUpdate}
+						/>
+						<TagEditor
+							videoId={videoId}
+							libraryId={libraryId}
+							initialTags={tags}
+						/>
+						<CaptionEditor
+							muxAssetId={muxAssetId}
+							libraryId={libraryId}
+							initialCaptions={captions}
+						/>
+						<PlaybackPolicyEditor
+							videoId={videoId}
+							libraryId={libraryId}
+							initialPolicy={playbackPolicy}
+						/>
+						<ChapterEditor
+							videoId={internalId}
+							libraryId={libraryId}
+							videoDuration={duration}
+						/>
+						<VideoData
+							internalId={internalId}
+							libraryId={libraryId}
+							muxAssetId={muxAssetId}
+							muxPlaybackId={muxPlaybackId}
+							muxEnvironmentId={muxEnvironmentId}
+							createdAt={createdAt}
+							updatedAt={updatedAt}
+							viewCountSyncedAt={viewCountSyncedAt}
+						/>
+					</div>
 				) : (
 					<p>Video not found</p>
 				)}

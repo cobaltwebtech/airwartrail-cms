@@ -92,3 +92,29 @@ export const changePasswordSchema = z
 		message: 'New password must be different from current password',
 		path: ['newPassword'],
 	});
+
+// Playlist schema
+export const playlistSchema = z.object({
+	name: z
+		.string()
+		.min(1, 'Name is required')
+		.max(100, 'Name must be less than 100 characters'),
+	slug: z
+		.string()
+		.min(1, 'Slug is required')
+		.max(100, 'Slug must be less than 100 characters')
+		.regex(
+			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+			'Slug must be lowercase letters, numbers, and hyphens only',
+		),
+	description: z
+		.string()
+		.max(1000, 'Description must be less than 1000 characters')
+		.optional(),
+	tags: z
+		.array(z.string().max(50, 'Tag must be less than 50 characters'))
+		.max(20, 'Maximum of 20 tags allowed')
+		.optional(),
+});
+
+export type PlaylistFormValues = z.infer<typeof playlistSchema>;

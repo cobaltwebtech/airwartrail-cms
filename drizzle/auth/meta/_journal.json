@@ -8,6 +8,13 @@
       "when": 1766600549241,
       "tag": "0000_db-migration-auth",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768273937582,
+      "tag": "0001_db-migration-auth",
+      "breakpoints": true
     }
   ]
 }
