@@ -42,11 +42,11 @@
 ## Base URL
 
 ```
-Production: https://your-domain.com
-Development: http://localhost:8787
+Production: https://www.airwartrail.com
+Development: http://localhost:4321
 ```
 
-> **Note**: When using Service Bindings, you don't need the base URL - you call the API directly via `env.API.fetch()`.
+> **Note**: When using Service Bindings, you don't need the base URL - you call the API directly via `env.AWT_API.fetch()`.
 
 ---
 

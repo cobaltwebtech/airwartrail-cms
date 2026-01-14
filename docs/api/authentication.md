@@ -13,7 +13,7 @@ For browser-based applications, authentication uses HTTP-only session cookies ma
 const { env } = Astro.locals.runtime;
 
 // Forward the original request headers (includes cookies)
-const response = await env.API.fetch(new Request('https://awt-backend-worker/trpc/...', {
+const response = await env.AWT_API.fetch(new Request('https://awt-backend-worker/trpc/...', {
   headers: Astro.request.headers, // Forwards cookies automatically
 }));
 ```
@@ -35,7 +35,7 @@ For server-to-server communication or when making authenticated calls without a 
 // In Astro server-side code
 const { env } = Astro.locals.runtime;
 
-const response = await env.API.fetch(new Request('https://awt-backend-worker/trpc/...', {
+const response = await env.AWT_API.fetch(new Request('https://awt-backend-worker/trpc/...', {
   headers: {
     'x-api-key': 'awt_your_api_key_here'
   }

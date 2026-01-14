@@ -1,8 +1,8 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "airwartrail-dashboard",
+	"name": "airwartrail-cms",
 	"main": "./worker/index.ts",
-	"compatibility_date": "2025-11-17",
+	"compatibility_date": "2025-12-15",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
@@ -22,14 +22,14 @@
 	"d1_databases": [
 		{
 			"binding": "DB_AUTH",
-			"database_name": "airwartrail-dashboard-auth",
-			"database_id": "d68f0948-2a35-4274-8eb7-0c7937669688",
+			"database_name": "airwartrail-cms-auth",
+			"database_id": "e944f16d-8da3-4ce7-bdd2-22f992d8bf1f",
 			"migrations_dir": "./drizzle/auth"
 		},
 		{
 			"binding": "DB_VIDEOS",
-			"database_name": "airwartrail-dashboard-videos",
-			"database_id": "b6202639-c65c-49f0-8190-93c17545a670",
+			"database_name": "airwartrail-cms-videos",
+			"database_id": "f07cb108-35d7-466c-9c50-e5d01ff6b8dc",
 			"migrations_dir": "./drizzle/videos"
 		}
 	],

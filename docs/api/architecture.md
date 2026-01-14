@@ -30,9 +30,9 @@ The frontend Astro/React app communicates with the backend API via **Cloudflare 
 
 ```
 ┌─────────────────────┐    Service Binding    ┌─────────────────────┐
-│   Astro Frontend    │ ──────────────────────▶│  AirWarTrail API    │
-│   (Public Worker)   │   env.API.fetch()      │  (Internal Worker)  │
-└─────────────────────┘                        └─────────────────────┘
+│   Astro Frontend    │ ─────────────────────▶│  AirWarTrail API    │
+│   (Public Worker)   │  env.AWT_API.fetch()  │  (Internal Worker)  │
+└─────────────────────┘                       └─────────────────────┘
          │                                               │
          ▼                                               ▼
     Public Internet                              D1 Database, Mux
@@ -61,27 +61,17 @@ Configure the Service Binding in your Astro frontend's `wrangler.jsonc`:
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "airwartrail-frontend",
-  "compatibility_date": "2024-12-01",
-  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2025-12-15",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
   "services": [
     {
-      "binding": "API",
+      "binding": "AWT_API",
       "service": "airwartrail-dashboard"
     }
   ]
 }
-```
-
-Or in `wrangler.toml`:
-
-```toml
-name = "airwartrail-frontend"
-compatibility_date = "2024-12-01"
-pages_build_output_dir = "./dist"
-
-services = [
-  { binding = "API", service = "airwartrail-dashboard" }
-]
 ```
 
 ### TypeScript Environment Types
@@ -113,7 +103,7 @@ In Astro pages and API routes, access the Service Binding via `Astro.locals.runt
 const { env } = Astro.locals.runtime;
 
 // Call the API Worker directly via Service Binding
-const response = await env.API.fetch(new Request('https://internal/trpc/mux.listLibraries', {
+const response = await env.AWT_API.fetch(new Request('https://awt-api-worker/trpc/mux.listLibraries', {
   method: 'GET',
   headers: Astro.request.headers, // Forward auth cookies
 }));

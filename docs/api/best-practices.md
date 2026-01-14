@@ -28,10 +28,10 @@ If you don't await, the API Worker will be terminated early:
 
 ```typescript
 // ❌ BAD - Worker terminates before response
-env.API.fetch(request);
+env.AWT_API.fetch(request);
 
 // ✅ GOOD - Wait for the response
-await env.API.fetch(request);
+await env.AWT_API.fetch(request);
 ```
 
 ---
@@ -42,7 +42,7 @@ Always forward the original request headers to preserve session cookies:
 
 ```typescript
 // ✅ GOOD - Forwards auth cookies
-const response = await env.API.fetch(new Request(url, {
+const response = await env.AWT_API.fetch(new Request(url, {
   headers: Astro.request.headers,
 }));
 ```
@@ -51,12 +51,12 @@ const response = await env.API.fetch(new Request(url, {
 
 ### 4. The URL Doesn't Matter
 
-When using `env.API.fetch()`, the URL is only used for routing within the target Worker. Using `https://internal/...` is a common convention:
+When using `env.AWT_API.fetch()`, the URL is only used for routing within the target Worker. Using `https://awt-api-worker/...` is a common convention:
 
 ```typescript
 // Both work the same with Service Bindings
-await env.API.fetch('https://internal/trpc/mux.listVideos');
-await env.API.fetch('https://fake.example.com/trpc/mux.listVideos');
+await env.AWT_API.fetch('https://awt-api-worker/trpc/mux.listVideos');
+await env.AWT_API.fetch('https://different.example.com/trpc/mux.listVideos');
 ```
 
 ---

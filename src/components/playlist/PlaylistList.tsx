@@ -208,7 +208,10 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 					comparison = a.videoCount - b.videoCount;
 					break;
 				case 'sortOrder':
+					comparison = a.sortOrder - b.sortOrder;
+					break;
 				default:
+					// No default action needed; fall back to sortOrder
 					comparison = a.sortOrder - b.sortOrder;
 					break;
 			}

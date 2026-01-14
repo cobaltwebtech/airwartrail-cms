@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "722e26fd-b61f-4869-b755-d5be04da8b91",
+  "id": "6604347d-9531-4617-bbaa-f60b17998e28",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "mux_library": {
@@ -23,6 +23,13 @@
         },
         "description": {
           "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "mux_environment_id": {
+          "name": "mux_environment_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -51,6 +58,13 @@
         },
         "signing_key_private": {
           "name": "signing_key_private",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "webhook_secret": {
+          "name": "webhook_secret",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -122,6 +136,360 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "playlist": {
+      "name": "playlist",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "library_id": {
+          "name": "library_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "thumbnail_video_id": {
+          "name": "thumbnail_video_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "thumbnail_time": {
+          "name": "thumbnail_time",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'featured'"
+        },
+        "is_published": {
+          "name": "is_published",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custom_metadata": {
+          "name": "custom_metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "playlist_library_id_idx": {
+          "name": "playlist_library_id_idx",
+          "columns": [
+            "library_id"
+          ],
+          "isUnique": false
+        },
+        "playlist_slug_idx": {
+          "name": "playlist_slug_idx",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": false
+        },
+        "playlist_name_idx": {
+          "name": "playlist_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "playlist_category_idx": {
+          "name": "playlist_category_idx",
+          "columns": [
+            "category"
+          ],
+          "isUnique": false
+        },
+        "playlist_is_published_idx": {
+          "name": "playlist_is_published_idx",
+          "columns": [
+            "is_published"
+          ],
+          "isUnique": false
+        },
+        "playlist_sort_order_idx": {
+          "name": "playlist_sort_order_idx",
+          "columns": [
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "playlist_created_at_idx": {
+          "name": "playlist_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "playlist_published_category_idx": {
+          "name": "playlist_published_category_idx",
+          "columns": [
+            "is_published",
+            "category"
+          ],
+          "isUnique": false
+        },
+        "playlist_library_slug_unique_idx": {
+          "name": "playlist_library_slug_unique_idx",
+          "columns": [
+            "library_id",
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "playlist_library_id_mux_library_id_fk": {
+          "name": "playlist_library_id_mux_library_id_fk",
+          "tableFrom": "playlist",
+          "tableTo": "mux_library",
+          "columnsFrom": [
+            "library_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "playlist_thumbnail_video_id_video_id_fk": {
+          "name": "playlist_thumbnail_video_id_video_id_fk",
+          "tableFrom": "playlist",
+          "tableTo": "video",
+          "columnsFrom": [
+            "thumbnail_video_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "playlist_item": {
+      "name": "playlist_item",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "playlist_id": {
+          "name": "playlist_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "video_id": {
+          "name": "video_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "custom_title": {
+          "name": "custom_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "custom_description": {
+          "name": "custom_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "playlist_item_playlist_id_idx": {
+          "name": "playlist_item_playlist_id_idx",
+          "columns": [
+            "playlist_id"
+          ],
+          "isUnique": false
+        },
+        "playlist_item_video_id_idx": {
+          "name": "playlist_item_video_id_idx",
+          "columns": [
+            "video_id"
+          ],
+          "isUnique": false
+        },
+        "playlist_item_sort_order_idx": {
+          "name": "playlist_item_sort_order_idx",
+          "columns": [
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "playlist_item_playlist_sort_idx": {
+          "name": "playlist_item_playlist_sort_idx",
+          "columns": [
+            "playlist_id",
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "playlist_item_playlist_video_unique_idx": {
+          "name": "playlist_item_playlist_video_unique_idx",
+          "columns": [
+            "playlist_id",
+            "video_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "playlist_item_playlist_id_playlist_id_fk": {
+          "name": "playlist_item_playlist_id_playlist_id_fk",
+          "tableFrom": "playlist_item",
+          "tableTo": "playlist",
+          "columnsFrom": [
+            "playlist_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "playlist_item_video_id_video_id_fk": {
+          "name": "playlist_item_video_id_video_id_fk",
+          "tableFrom": "playlist_item",
+          "tableTo": "video",
+          "columnsFrom": [
+            "video_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -308,15 +676,30 @@
           "autoincrement": false,
           "default": 0
         },
-        "ingest_type": {
-          "name": "ingest_type",
+        "view_count_synced_at": {
+          "name": "view_count_synced_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "total_watch_time_ms": {
+          "name": "total_watch_time_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "ingest_category": {
+          "name": "ingest_category",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "error_type": {
-          "name": "error_type",
+        "error_category": {
+          "name": "error_category",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -530,319 +913,20 @@
             "sort_order"
           ],
           "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "video_chapter_video_id_video_id_fk": {
-          "name": "video_chapter_video_id_video_id_fk",
-          "tableFrom": "video_chapter",
-          "tableTo": "video",
-          "columnsFrom": [
-            "video_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "video_collection": {
-      "name": "video_collection",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
         },
-        "library_id": {
-          "name": "library_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "is_public": {
-          "name": "is_public",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "is_deleted": {
-          "name": "is_deleted",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        }
-      },
-      "indexes": {
-        "video_collection_library_id_idx": {
-          "name": "video_collection_library_id_idx",
+        "video_chapter_video_sort_idx": {
+          "name": "video_chapter_video_sort_idx",
           "columns": [
-            "library_id"
-          ],
-          "isUnique": false
-        },
-        "video_collection_name_idx": {
-          "name": "video_collection_name_idx",
-          "columns": [
-            "name"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "video_collection_library_id_mux_library_id_fk": {
-          "name": "video_collection_library_id_mux_library_id_fk",
-          "tableFrom": "video_collection",
-          "tableTo": "mux_library",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "video_collection_item": {
-      "name": "video_collection_item",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "collection_id": {
-          "name": "collection_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "video_id": {
-          "name": "video_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "sort_order": {
-          "name": "sort_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "added_at": {
-          "name": "added_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        }
-      },
-      "indexes": {
-        "video_collection_item_collection_id_idx": {
-          "name": "video_collection_item_collection_id_idx",
-          "columns": [
-            "collection_id"
-          ],
-          "isUnique": false
-        },
-        "video_collection_item_video_id_idx": {
-          "name": "video_collection_item_video_id_idx",
-          "columns": [
-            "video_id"
-          ],
-          "isUnique": false
-        },
-        "video_collection_item_sort_order_idx": {
-          "name": "video_collection_item_sort_order_idx",
-          "columns": [
+            "video_id",
             "sort_order"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "video_collection_item_collection_id_video_collection_id_fk": {
-          "name": "video_collection_item_collection_id_video_collection_id_fk",
-          "tableFrom": "video_collection_item",
-          "tableTo": "video_collection",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "video_collection_item_video_id_video_id_fk": {
-          "name": "video_collection_item_video_id_video_id_fk",
-          "tableFrom": "video_collection_item",
-          "tableTo": "video",
-          "columnsFrom": [
-            "video_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "video_moment": {
-      "name": "video_moment",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "video_id": {
-          "name": "video_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "moment_type": {
-          "name": "moment_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "sort_order": {
-          "name": "sort_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
-        }
-      },
-      "indexes": {
-        "video_moment_video_id_idx": {
-          "name": "video_moment_video_id_idx",
-          "columns": [
-            "video_id"
-          ],
-          "isUnique": false
-        },
-        "video_moment_timestamp_idx": {
-          "name": "video_moment_timestamp_idx",
-          "columns": [
-            "timestamp"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "video_moment_video_id_video_id_fk": {
-          "name": "video_moment_video_id_video_id_fk",
-          "tableFrom": "video_moment",
+        "video_chapter_video_id_video_id_fk": {
+          "name": "video_chapter_video_id_video_id_fk",
+          "tableFrom": "video_chapter",
           "tableTo": "video",
           "columnsFrom": [
             "video_id"
@@ -882,15 +966,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "type": {
-          "name": "type",
+        "track_category": {
+          "name": "track_category",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "text_type": {
-          "name": "text_type",
+        "text_category": {
+          "name": "text_category",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -979,10 +1063,10 @@
           ],
           "isUnique": false
         },
-        "video_track_type_idx": {
-          "name": "video_track_type_idx",
+        "video_track_track_category_idx": {
+          "name": "video_track_track_category_idx",
           "columns": [
-            "type"
+            "track_category"
           ],
           "isUnique": false
         }

@@ -28,6 +28,13 @@ const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 const MOBILE_BREAKPOINT = 768;
 
+function setCookie(name: string, value: string, maxAge: number) {
+	if (typeof document !== 'undefined') {
+		//biome-ignore lint/suspicious/noDocumentCookie: Ignore since this is a legit use case
+		document.cookie = `${name}=${value}; path=/; max-age=${maxAge}`;
+	}
+}
+
 function useIsMobile() {
 	const [isMobile, setIsMobile] = React.useState<boolean | undefined>(
 		undefined,
@@ -97,7 +104,7 @@ function SidebarProvider({
 			}
 
 			// This sets the cookie to keep the sidebar state.
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			setCookie(SIDEBAR_COOKIE_NAME, String(openState), SIDEBAR_COOKIE_MAX_AGE);
 		},
 		[setOpenProp, open],
 	);

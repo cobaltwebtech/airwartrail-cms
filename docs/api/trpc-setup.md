@@ -33,13 +33,13 @@ export function createServerTRPCClient(env: Env, request?: Request) {
   return createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
-        url: 'https://internal/trpc', // URL doesn't matter for service bindings
+        url: 'https://awt-api-worker/trpc', // URL doesn't matter for service bindings
         transformer: superjson,
         headers: request ? Object.fromEntries(request.headers) : {},
         fetch: async (url, options) => {
           // Use Service Binding instead of public HTTP
           const internalRequest = new Request(url, options);
-          return env.API.fetch(internalRequest);
+          return env.AWT_API.fetch(internalRequest);
         },
       }),
     ],
@@ -61,7 +61,7 @@ export function createApiKeyTRPCClient(env: Env, apiKey: string) {
         },
         fetch: async (url, options) => {
           const internalRequest = new Request(url, options);
-          return env.API.fetch(internalRequest);
+          return env.AWT_API.fetch(internalRequest);
         },
       }),
     ],
@@ -132,7 +132,7 @@ export const ALL: APIRoute = async ({ params, request, locals }) => {
   // Build the internal URL for the tRPC endpoint
   const path = params.trpc || '';
   const url = new URL(request.url);
-  const internalUrl = `https://internal/trpc/${path}${url.search}`;
+  const internalUrl = `https://awt-api-worker/trpc/${path}${url.search}`;
   
   // Forward the request to the API Worker via Service Binding
   const internalRequest = new Request(internalUrl, {
@@ -141,7 +141,7 @@ export const ALL: APIRoute = async ({ params, request, locals }) => {
     body: request.method !== 'GET' ? request.body : undefined,
   });
   
-  const response = await env.API.fetch(internalRequest);
+  const response = await env.AWT_API.fetch(internalRequest);
   
   // Return the response from the API Worker
   return new Response(response.body, {

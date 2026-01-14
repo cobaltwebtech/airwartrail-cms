@@ -1,8 +1,8 @@
 {
-  "name": "airwartrail-dashboard",
+  "name": "airwartrail-cms",
   "private": true,
   "type": "module",
-  "version": "2.0.0_beta-2",
+  "version": "2.0.0_beta-3",
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:cf": "vite build && pnpx wrangler dev",

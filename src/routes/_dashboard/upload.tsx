@@ -1,4 +1,4 @@
-import MuxUploader, { MuxUploaderPause } from '@mux/mux-uploader-react';
+import MuxUploader from '@mux/mux-uploader-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { CheckCircle, Loader2, Upload } from 'lucide-react';
