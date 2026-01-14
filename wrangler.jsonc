@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "airwartrail-cms",
+	"name": "airwartrail-dashboard",
 	"main": "./worker/index.ts",
 	"compatibility_date": "2025-12-15",
 	"compatibility_flags": [
