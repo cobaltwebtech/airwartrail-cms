@@ -92,7 +92,7 @@ export function VideoThumbnail({
 			},
 			{
 				enabled: policy === 'signed' && !!playbackId && !!libraryId,
-				staleTime: 30 * 60 * 1000, // Cache for 30 minutes (tokens expire in 1 hour by default)
+				staleTime: 60 * 60 * 1000, // Cache for 1 hour
 			},
 		),
 	);

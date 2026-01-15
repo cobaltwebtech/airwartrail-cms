@@ -106,7 +106,6 @@ export const video = sqliteTable(
 		// Custom thumbnail (optional, otherwise Mux auto-generates)
 		customThumbnailTime: real('custom_thumbnail_time'),
 		// User-defined metadata
-		tags: text('tags'), // JSON array of tags
 		passthrough: text('passthrough'), // Arbitrary passthrough data (max 255 chars)
 		externalId: text('external_id'), // Link to external system
 		creatorId: text('creator_id'), // ID of content creator
@@ -367,6 +366,68 @@ export const playlistItem = sqliteTable(
 	],
 );
 
+/**
+ * Video Tag Definition Schema
+ * Centralized registry of all available tags across all libraries
+ * Tags are global and can be used by any video regardless of library
+ */
+export const videoTag = sqliteTable(
+	'video_tag',
+	{
+		id: text('id').primaryKey(),
+		// Normalized tag name (lowercase, trimmed, URL-friendly)
+		slug: text('slug').notNull().unique(),
+		// Human-readable display name
+		name: text('name').notNull(),
+		// Optional description for admin reference
+		description: text('description'),
+		// Metadata
+		isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		index('video_tag_slug_idx').on(table.slug),
+		index('video_tag_name_idx').on(table.name),
+		index('video_tag_is_active_idx').on(table.isActive),
+	],
+);
+
+/**
+ * Video-Tag Junction Table
+ * Maps videos to their tags (many-to-many relationship)
+ */
+export const videoTagAssignment = sqliteTable(
+	'video_tag_assignment',
+	{
+		id: text('id').primaryKey(),
+		videoId: text('video_id')
+			.notNull()
+			.references(() => video.id, { onDelete: 'cascade' }),
+		tagId: text('tag_id')
+			.notNull()
+			.references(() => videoTag.id, { onDelete: 'cascade' }),
+		// When this tag was assigned to the video
+		assignedAt: integer('assigned_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index('video_tag_assignment_video_id_idx').on(table.videoId),
+		index('video_tag_assignment_tag_id_idx').on(table.tagId),
+		// Unique constraint: prevent duplicate tag assignments
+		uniqueIndex('video_tag_assignment_unique_idx').on(
+			table.videoId,
+			table.tagId,
+		),
+	],
+);
+
 // ============================================================================
 // Relations
 // ============================================================================
@@ -386,6 +447,8 @@ export const videoRelations = relations(video, ({ one, many }) => ({
 	playlistItems: many(playlistItem),
 	// Playlists that use this video as thumbnail
 	playlistThumbnails: many(playlist),
+	// Tags assigned to this video
+	tagAssignments: many(videoTagAssignment),
 }));
 
 export const videoChapterRelations = relations(videoChapter, ({ one }) => ({
@@ -425,6 +488,25 @@ export const playlistItemRelations = relations(playlistItem, ({ one }) => ({
 	}),
 }));
 
+export const videoTagRelations = relations(videoTag, ({ many }) => ({
+	// Videos that have this tag
+	videoAssignments: many(videoTagAssignment),
+}));
+
+export const videoTagAssignmentRelations = relations(
+	videoTagAssignment,
+	({ one }) => ({
+		video: one(video, {
+			fields: [videoTagAssignment.videoId],
+			references: [video.id],
+		}),
+		tag: one(videoTag, {
+			fields: [videoTagAssignment.tagId],
+			references: [videoTag.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // Type Exports
 // ============================================================================
@@ -446,3 +528,9 @@ export type NewPlaylist = typeof playlist.$inferInsert;
 
 export type PlaylistItem = typeof playlistItem.$inferSelect;
 export type NewPlaylistItem = typeof playlistItem.$inferInsert;
+
+export type VideoTag = typeof videoTag.$inferSelect;
+export type NewVideoTag = typeof videoTag.$inferInsert;
+
+export type VideoTagAssignment = typeof videoTagAssignment.$inferSelect;
+export type NewVideoTagAssignment = typeof videoTagAssignment.$inferInsert;

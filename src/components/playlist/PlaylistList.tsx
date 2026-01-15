@@ -68,6 +68,7 @@ import { formatDate } from '@/lib/video-helpers';
 import { PlaylistDelete } from './PlaylistDelete';
 
 // Type for playlist from the API
+// Note: tags comes from API as a JSON string (stored as text in DB)
 export interface Playlist {
 	id: string;
 	name: string;
@@ -79,13 +80,24 @@ export interface Playlist {
 	isPublished: boolean;
 	publishedAt: Date | null;
 	sortOrder: number;
-	tags: string[];
+	tags: string | null;
 	customMetadata: Record<string, unknown> | null;
 	createdAt: Date;
 	updatedAt: Date;
 	videoCount: number;
 	thumbnailPlaybackId: string | null | undefined;
 	thumbnailPolicy: PlaybackPolicy | null;
+}
+
+// Helper to parse tags from JSON string
+function parseTags(tags: string | null): string[] {
+	if (!tags) return [];
+	try {
+		const parsed = JSON.parse(tags);
+		return Array.isArray(parsed) ? parsed : [];
+	} catch {
+		return [];
+	}
 }
 
 interface PlaylistListProps {
@@ -189,7 +201,9 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 					playlist.name.toLowerCase().includes(term) ||
 					playlist.slug.toLowerCase().includes(term) ||
 					playlist.description?.toLowerCase().includes(term) ||
-					playlist.tags?.some((tag) => tag.toLowerCase().includes(term)),
+					parseTags(playlist.tags).some((tag) =>
+						tag.toLowerCase().includes(term),
+					),
 			);
 		}
 

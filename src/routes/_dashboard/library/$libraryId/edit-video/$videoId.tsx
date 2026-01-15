@@ -64,6 +64,14 @@ function VideoEditorPage() {
 		error: videoError,
 	} = useQuery(trpc.mux.getVideoById.queryOptions({ videoId, libraryId }));
 
+	// Fetch video tags separately (tags are now in a dedicated table)
+	const { data: videoTags } = useQuery(
+		trpc.mux.getVideoTags.queryOptions(
+			{ videoId, libraryId },
+			{ enabled: !!videoId },
+		),
+	);
+
 	// Fetch view count from Mux Data API (using muxAssetId)
 	const { data: viewCountData } = useQuery(
 		trpc.mux.getAssetViewCount.queryOptions(
@@ -106,7 +114,8 @@ function VideoEditorPage() {
 	const errorCategory = videoData?.errorCategory ?? undefined;
 	const errorMessages = videoData?.errorMessages ?? undefined;
 	const playbackPolicy = videoData?.policy ?? undefined;
-	const tags = videoData?.tags ?? [];
+	// Tags are now fetched separately from the videoTags table
+	const tagIds = videoTags?.map((t) => t.id) ?? [];
 	const libraryName = videoData?.libraryName ?? library?.name;
 	const isPublished = videoData?.isPublished;
 
@@ -199,7 +208,7 @@ function VideoEditorPage() {
 						<TagEditor
 							videoId={videoId}
 							libraryId={libraryId}
-							initialTags={tags}
+							initialTagIds={tagIds}
 						/>
 						<CaptionEditor
 							muxAssetId={muxAssetId}

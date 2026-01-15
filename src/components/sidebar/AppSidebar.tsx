@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from '@tanstack/react-router';
-import { Key, LibraryBig, Plus, Upload } from 'lucide-react';
+import { Key, LibraryBig, Plus, Tags, Upload } from 'lucide-react';
 import { Logo } from '@/components/sidebar/Logo';
 import { NavMain } from '@/components/sidebar/NavMain';
 import { NavUser } from '@/components/sidebar/NavUser';
@@ -57,6 +57,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							},
 						],
 					})) ?? []),
+		},
+		{
+			title: 'Video Tags',
+			url: '/tags',
+			icon: Tags,
 		},
 		{
 			title: 'API Keys',

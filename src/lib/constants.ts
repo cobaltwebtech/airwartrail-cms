@@ -66,14 +66,21 @@ export function getPlaylistCategoryLabel(category: PlaylistCategory): string {
 
 /**
  * Video status values - must match video-schema.ts video.status enum
+ * Note: 'waiting' is used by Mux during initial upload before processing begins
  */
-export const VIDEO_STATUSES = ['preparing', 'ready', 'errored'] as const;
+export const VIDEO_STATUSES = [
+	'waiting',
+	'preparing',
+	'ready',
+	'errored',
+] as const;
 export type VideoStatus = (typeof VIDEO_STATUSES)[number];
 
 /**
  * Human-readable labels for video statuses
  */
 export const VIDEO_STATUS_LABELS: Record<VideoStatus, string> = {
+	waiting: 'Waiting',
 	preparing: 'Processing',
 	ready: 'Ready',
 	errored: 'Error',

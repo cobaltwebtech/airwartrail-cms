@@ -93,13 +93,6 @@ Update video by internal database ID.
 
 **Input**: `{ videoId: string; libraryId: string; title?: string; description?: string; isPublished?: boolean }`
 
-### `mux.updateVideoTags`
-
-Update tags on a video.
-
-**Input**: `{ videoId: string; libraryId: string; tags: string[] }`  
-**Max**: 12 tags, each 1-32 chars, alphanumeric + : @ . _ - space
-
 ### `mux.updatePlaybackPolicy`
 
 Change the playback policy for a video.

@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Save, X } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Save, Tags } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -13,128 +11,78 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+	MultiSelect,
+	type MultiSelectOption,
+} from '@/components/ui/multi-select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { trpc } from '@/lib/trpc';
-
-const TAG_REGEX = /^[a-zA-Z0-9:@._\- ]+$/;
-
-const normalizeTags = (raw?: string[]) => {
-	const seen = new Set<string>();
-	return (raw ?? [])
-		.map((tag) => tag?.trim())
-		.filter((tag): tag is string => Boolean(tag))
-		.filter((tag) => {
-			if (seen.has(tag)) {
-				return false;
-			}
-			seen.add(tag);
-			return true;
-		});
-};
-
-const areArraysEqual = (a: string[], b: string[]) => {
-	if (a.length !== b.length) return false;
-	return a.every((value, index) => value === b[index]);
-};
 
 interface TagEditorProps {
 	videoId: string;
 	libraryId: string;
-	initialTags?: string[];
+	/** Initial tag IDs for the video */
+	initialTagIds?: string[];
 	maxTags?: number;
-	onTagsUpdate?: (tags: string[]) => void;
+	onTagsUpdate?: (tagIds: string[]) => void;
 }
+
+const areArraysEqual = (a: string[], b: string[]) => {
+	if (a.length !== b.length) return false;
+	const sortedA = [...a].sort();
+	const sortedB = [...b].sort();
+	return sortedA.every((value, index) => value === sortedB[index]);
+};
 
 const TagEditor: React.FC<TagEditorProps> = ({
 	videoId,
 	libraryId,
-	initialTags,
-	maxTags = 12,
+	initialTagIds = [],
+	maxTags = 20,
 	onTagsUpdate,
 }) => {
 	const queryClient = useQueryClient();
-	const normalizedInitial = useMemo(
-		() => normalizeTags(initialTags),
-		[initialTags],
-	);
-	const [tags, setTags] = useState(normalizedInitial);
-	const [savedTags, setSavedTags] = useState(normalizedInitial);
-	const [inputValue, setInputValue] = useState('');
+	const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialTagIds);
+	const [savedTagIds, setSavedTagIds] = useState<string[]>(initialTagIds);
 	const [error, setError] = useState<string | null>(null);
 
+	// Fetch all available tags from database
+	const {
+		data: allTags,
+		isLoading: isLoadingTags,
+		error: tagsError,
+	} = useQuery(trpc.mux.listTags.queryOptions());
+
+	// Sync with external initialTagIds changes
 	useEffect(() => {
-		const normalized = normalizeTags(initialTags);
-		setTags(normalized);
-		setSavedTags(normalized);
-	}, [initialTags]);
+		setSelectedTagIds(initialTagIds);
+		setSavedTagIds(initialTagIds);
+	}, [initialTagIds]);
 
-	const tagSchema = z
-		.string()
-		.trim()
-		.min(1, 'Tag cannot be empty')
-		.max(32, 'Tags must be 32 characters or less')
-		.regex(
-			TAG_REGEX,
-			'Tags may only include letters, numbers, spaces, and : @ . _ -',
-		);
+	// Convert tags to MultiSelect options
+	const tagOptions: MultiSelectOption[] = useMemo(() => {
+		if (!allTags) return [];
+		return allTags.map((tag) => ({
+			label: tag.name,
+			value: tag.id,
+		}));
+	}, [allTags]);
 
-	const tagsSchema = z
-		.array(tagSchema)
-		.max(maxTags, `Maximum ${maxTags} tags allowed`);
-
-	const addTag = () => {
-		const trimmed = inputValue.trim();
-		if (!trimmed) {
-			setError('Tag cannot be empty');
-			return;
-		}
-
-		if (tags.length >= maxTags) {
-			setError(`Maximum ${maxTags} tags reached`);
-			return;
-		}
-
-		if (tags.includes(trimmed)) {
-			setError('Tag already added');
-			return;
-		}
-
-		const validation = tagSchema.safeParse(trimmed);
-		if (!validation.success) {
-			setError(validation.error.issues[0].message);
-			return;
-		}
-
-		setTags((prev) => [...prev, validation.data]);
-		setInputValue('');
-		setError(null);
-	};
-
-	const removeTag = (tagToRemove: string) => {
-		setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
-	};
-
-	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === 'Enter' || event.key === ',') {
-			event.preventDefault();
-			addTag();
-		}
-	};
-
-	const updateMutation = useMutation(
-		trpc.mux.updateVideoTags.mutationOptions({
-			onSuccess: (data) => {
-				setTags(data.tags);
-				setSavedTags(data.tags);
+	const setTagsMutation = useMutation(
+		trpc.mux.setVideoTags.mutationOptions({
+			onSuccess: (updatedTags) => {
+				const tagIds = updatedTags.map((tag) => tag.id);
+				setSelectedTagIds(tagIds);
+				setSavedTagIds(tagIds);
 				toast.success('Tags updated successfully');
 				queryClient.invalidateQueries({
-					queryKey: [['mux', 'getVideoById']],
+					queryKey: [['mux', 'getVideoTags']],
 				});
 				queryClient.invalidateQueries({
 					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 				if (onTagsUpdate) {
-					onTagsUpdate(data.tags);
+					onTagsUpdate(tagIds);
 				}
 				setError(null);
 			},
@@ -146,97 +94,114 @@ const TagEditor: React.FC<TagEditorProps> = ({
 		}),
 	);
 
+	const handleSelectionChange = (values: string[]) => {
+		if (values.length > maxTags) {
+			setError(`Maximum ${maxTags} tags allowed`);
+			return;
+		}
+		setSelectedTagIds(values);
+		setError(null);
+	};
+
 	const handleSave = () => {
-		const validation = tagsSchema.safeParse(tags);
-		if (!validation.success) {
-			const message = validation.error.issues[0].message;
-			setError(message);
-			toast.error(message);
+		if (selectedTagIds.length > maxTags) {
+			setError(`Maximum ${maxTags} tags allowed`);
+			toast.error(`Maximum ${maxTags} tags allowed`);
 			return;
 		}
 
-		updateMutation.mutate({
+		setTagsMutation.mutate({
 			videoId,
 			libraryId,
-			tags: validation.data,
+			tagIds: selectedTagIds,
 		});
 	};
 
-	const hasChanged = !areArraysEqual(tags, savedTags);
-	const canAdd = inputValue.trim().length > 0 && tags.length < maxTags;
+	const hasChanged = !areArraysEqual(selectedTagIds, savedTagIds);
+
+	// Get selected tag names for display
+	const selectedTagNames = useMemo(() => {
+		if (!allTags) return [];
+		return selectedTagIds
+			.map((id) => allTags.find((tag) => tag.id === id)?.name)
+			.filter(Boolean);
+	}, [allTags, selectedTagIds]);
+
+	if (tagsError) {
+		return (
+			<Card className="col-span-3">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Tags className="size-5" />
+						Tags
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<p className="text-destructive text-sm">
+						Failed to load tags. Please try again.
+					</p>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	return (
 		<Card className="col-span-3">
 			<CardHeader>
-				<CardTitle>Tags</CardTitle>
+				<CardTitle className="flex items-center gap-2">
+					<Tags className="size-5" />
+					Tags
+				</CardTitle>
 				<CardDescription>
-					Edit tags for the video for searchability and organization in the
-					playlists.
+					Select tags to organize this video. Tags help with searchability and
+					playlist organization.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				<div className="flex flex-wrap gap-2">
-					{tags.length === 0 ? (
-						<p className="text-sm text-muted-foreground">No tags yet.</p>
-					) : (
-						tags.map((tag) => (
-							<Badge key={tag} className="flex items-center gap-1 pr-1">
-								<span className="max-w-45 truncate">{tag}</span>
-								<button
-									type="button"
-									onClick={() => removeTag(tag)}
-									className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-								>
-									<X className="size-3" />
-								</button>
-							</Badge>
-						))
-					)}
-				</div>
-
-				<div className="flex flex-col gap-2 md:flex-row md:items-center">
-					<Input
-						value={inputValue}
-						onChange={(event) => {
-							setInputValue(event.target.value);
-							setError(null);
-						}}
-						onKeyDown={handleKeyDown}
-						placeholder={
-							tags.length === 0
-								? 'Add a tag and press Enter'
-								: 'Add another tag'
-						}
-						maxLength={32}
-						aria-invalid={Boolean(error)}
-					/>
-					<Button
-						variant="outline"
-						type="button"
-						onClick={addTag}
-						disabled={!canAdd || updateMutation.isPending}
-					>
-						<Plus />
-						Add tag
-					</Button>
-				</div>
-
-				{error && <p className="text-destructive text-sm">{error}</p>}
-
-				<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-					<p className="text-sm text-muted-foreground">
-						{tags.length}/{maxTags} tags
-					</p>
-					<div className="flex items-center gap-2">
-						<Button
-							onClick={handleSave}
-							disabled={!hasChanged || updateMutation.isPending}
-						>
-							<Save />
-							{updateMutation.isPending ? 'Saving...' : 'Save Tags'}
-						</Button>
+				{isLoadingTags ? (
+					<div className="space-y-2">
+						<Skeleton className="h-10 w-full" />
+						<Skeleton className="h-4 w-24" />
 					</div>
-				</div>
+				) : (
+					<>
+						<MultiSelect
+							options={tagOptions}
+							onValueChange={handleSelectionChange}
+							defaultValue={selectedTagIds}
+							placeholder="Select tags..."
+							searchable
+							maxCount={5}
+							emptyMessage="No tags found. Create tags in the Tags management page."
+							disabled={setTagsMutation.isPending}
+						/>
+
+						{error && <p className="text-destructive text-sm">{error}</p>}
+
+						<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+							<p className="text-sm text-muted-foreground">
+								{selectedTagIds.length}/{maxTags} tags selected
+								{selectedTagNames.length > 0 && (
+									<span className="ml-2 text-xs">
+										({selectedTagNames.slice(0, 3).join(', ')}
+										{selectedTagNames.length > 3 &&
+											` +${selectedTagNames.length - 3} more`}
+										)
+									</span>
+								)}
+							</p>
+							<div className="flex items-center gap-2">
+								<Button
+									onClick={handleSave}
+									disabled={!hasChanged || setTagsMutation.isPending}
+								>
+									<Save className="size-4" />
+									{setTagsMutation.isPending ? 'Saving...' : 'Save Tags'}
+								</Button>
+							</div>
+						</div>
+					</>
+				)}
 			</CardContent>
 		</Card>
 	);

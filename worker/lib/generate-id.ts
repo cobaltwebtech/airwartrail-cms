@@ -39,3 +39,15 @@ export const generatePlaylistItemId = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   24,
 );
+
+// Tag ID
+export const generateTagId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  8,
+);
+
+// Video Tag Assignment ID
+export const generateVideoTagAssignmentId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);

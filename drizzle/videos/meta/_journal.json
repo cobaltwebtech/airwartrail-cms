@@ -8,6 +8,13 @@
       "when": 1768358833954,
       "tag": "0000_db-migration-videos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768498375569,
+      "tag": "0001_db-migration-videos",
+      "breakpoints": true
     }
   ]
 }

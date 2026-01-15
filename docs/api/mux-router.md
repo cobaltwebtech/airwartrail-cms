@@ -8,6 +8,7 @@ The `mux` router handles all video-related operations including libraries, video
 
 - **[Libraries](./mux-router-libraries.md)** - Library management
 - **[Videos](./mux-router-videos.md)** - Video asset management
+- **[Tags](./mux-router-tags.md)** - Tag management and video search by tags
 - **[Uploads](./mux-router-uploads.md)** - Direct upload procedures
 - **[Captions & Tracks](./mux-router-captions.md)** - Caption and track management
 - **[Playback](./mux-router-playback.md)** - Playback IDs and signed URLs
@@ -41,10 +42,19 @@ muxRouter = {
   updateAsset,
   updateVideoMetadata,
   updateVideoById,
-  updateVideoTags,
   updatePlaybackPolicy,
   deleteAsset,
   deleteVideoById,
+  
+  // Tags
+  listTags,
+  createTag,
+  updateTag,
+  deleteTag,
+  setVideoTags,
+  getVideoTags,
+  searchVideosByTags,
+  getTagStatistics,
   
   // Uploads
   createDirectUpload,

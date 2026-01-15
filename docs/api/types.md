@@ -89,11 +89,41 @@ interface Video {
   publishedAt: string | null;
   views: number;
   viewCountSyncedAt: string | null;
-  tags: string[];
+  // Tags are now accessed via getVideoTags query (many-to-many relationship)
   createdAt: string;
   updatedAt: string;
 }
 ```
+
+---
+
+## VideoTag
+
+```typescript
+interface VideoTag {
+  id: string;               // Unique tag identifier
+  slug: string;             // URL-friendly unique slug (auto-generated)
+  name: string;             // Human-readable display name (1-50 chars)
+  description?: string;     // Optional description (max 200 chars)
+  isActive: boolean;        // Whether tag can be assigned to new videos
+  createdAt: number;        // Timestamp in milliseconds
+}
+```
+
+---
+
+## VideoTagAssignment
+
+```typescript
+interface VideoTagAssignment {
+  id: string;               // Unique assignment identifier
+  videoId: string;          // References video.id
+  tagId: string;            // References videoTag.id
+  assignedAt: number;       // Timestamp in milliseconds (when tag was assigned)
+}
+```
+
+> **Note**: Tags use a many-to-many relationship. To get tags for a video, use `trpc.mux.getVideoTags.query()`. To assign tags, use `trpc.mux.setVideoTags.mutate()`. See [Tag Management](./mux-router-tags.md) for full documentation.
 
 ---
 
