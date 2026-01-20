@@ -37,6 +37,7 @@
 		}
 	],
 	"vars": {
-		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com"
+		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com",
+		"VITE_TURNSTILE_SITE_KEY": "0x4AAAAAABigvVfdn9-L_sZY"
 	}
 }
