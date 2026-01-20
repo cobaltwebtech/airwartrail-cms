@@ -336,7 +336,8 @@ export const playlistsRouter = t.router({
 					sortOrder: number;
 					customTitle: string | null;
 					customDescription: string | null;
-					addedAt: Date;
+					addedAt: Date; // Date when video is added to playlist
+					createdAt: Date; // Upload date of the video
 				}> = [];
 
 				if (includeVideos) {
@@ -352,6 +353,7 @@ export const playlistsRouter = t.router({
 							status: video.status,
 							isPublished: video.isPublished,
 							aspectRatio: video.aspectRatio,
+							createdAt: video.createdAt,
 							// Playlist item fields
 							sortOrder: playlistItem.sortOrder,
 							customTitle: playlistItem.customTitle,

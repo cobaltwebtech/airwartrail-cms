@@ -159,7 +159,7 @@ function PlaylistEditorPage() {
 			setSlug(playlist.slug);
 			setDescription(playlist.description ?? '');
 			setCategory(playlist.category as PlaylistCategory);
-			setTags(playlist.tags ?? []);
+			setTags(Array.isArray(playlist.tags) ? playlist.tags : []);
 			// Initialize thumbnail state - default to first video at 3 seconds if not set
 			const defaultVideoId = playlist.videos?.[0]?.id ?? null;
 			setThumbnailVideoId(playlist.thumbnailVideoId ?? defaultVideoId);
@@ -298,13 +298,28 @@ function PlaylistEditorPage() {
 			setSlug(playlist.slug);
 			setDescription(playlist.description ?? '');
 			setCategory(playlist.category as PlaylistCategory);
-			setTags(playlist.tags ?? []);
+			setTags(Array.isArray(playlist.tags) ? playlist.tags : []);
 			// Reset thumbnail state
 			const defaultVideoId = playlist.videos?.[0]?.id ?? null;
 			setThumbnailVideoId(playlist.thumbnailVideoId ?? defaultVideoId);
 			setThumbnailTime(playlist.thumbnailTime ?? 3);
 		}
 		setIsEditing(false);
+	};
+
+	const generateSlug = (text: string): string => {
+		return text
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
+	};
+
+	const handleNameChange = (newName: string) => {
+		setName(newName);
+		// Only auto-generate slug if it hasn't been manually edited
+		if (!slug || slug === generateSlug(name)) {
+			setSlug(generateSlug(newName));
+		}
 	};
 
 	const handleAddTag = () => {
@@ -579,7 +594,7 @@ function PlaylistEditorPage() {
 										<Input
 											id="name"
 											value={name}
-											onChange={(e) => setName(e.target.value)}
+											onChange={(e) => handleNameChange(e.target.value)}
 										/>
 									</div>
 									<div className="space-y-2">
@@ -740,12 +755,15 @@ function PlaylistEditorPage() {
 								</div>
 							) : (
 								<div className="flex flex-wrap gap-2">
-									{(playlist.tags ?? []).length > 0 ? (
-										(playlist.tags ?? []).map((tag: string) => (
-											<Badge key={tag} variant="secondary">
-												{tag}
-											</Badge>
-										))
+									{(Array.isArray(playlist.tags) ? playlist.tags : []).length >
+									0 ? (
+										(Array.isArray(playlist.tags) ? playlist.tags : []).map(
+											(tag: string) => (
+												<Badge key={tag} variant="secondary">
+													{tag}
+												</Badge>
+											),
+										)
 									) : (
 										<p className="text-sm text-muted-foreground">No tags</p>
 									)}

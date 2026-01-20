@@ -4,35 +4,24 @@ import {
 	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
-	getSortedRowModel,
-	type SortingState,
 	useReactTable,
 } from '@tanstack/react-table';
 import {
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
 	Eye,
 	EyeOff,
 	Film,
-	Grid3X3,
-	List,
+	GripVertical,
 	ListVideo,
 	MoreHorizontal,
 	Pencil,
+	Save,
 	Trash2,
+	Undo2,
 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -42,13 +31,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
 import {
 	Table,
 	TableBody,
@@ -105,42 +87,6 @@ interface PlaylistListProps {
 	libraryId: string;
 }
 
-type ViewMode = 'grid' | 'table';
-
-const STORAGE_KEY = 'playlistList-settings';
-
-interface PlaylistListSettings {
-	viewMode: ViewMode;
-	sortCriteria: string;
-	sortDirection: string;
-	tableSorting: SortingState;
-}
-
-function getStoredSettings(): PlaylistListSettings {
-	try {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			const parsed = JSON.parse(stored);
-			return {
-				viewMode: parsed.viewMode ?? 'grid',
-				sortCriteria: parsed.sortCriteria ?? 'sortOrder',
-				sortDirection: parsed.sortDirection ?? 'asc',
-				tableSorting: parsed.tableSorting ?? [],
-			};
-		}
-	} catch {
-		// Ignore parse errors
-	}
-	return {
-		viewMode: 'grid',
-		sortCriteria: 'sortOrder',
-		sortDirection: 'asc',
-		tableSorting: [],
-	};
-}
-
-const initialSettings = getStoredSettings();
-
 export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState('');
@@ -149,28 +95,24 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 		null,
 	);
 
-	// Initialize state from stored settings
-	const [sortCriteria, setSortCriteria] = useState(
-		initialSettings.sortCriteria,
+	// Local order state for drag-and-drop
+	const [localPlaylistOrder, setLocalPlaylistOrder] = useState<string[]>([]);
+	const [draggedPlaylistId, setDraggedPlaylistId] = useState<string | null>(
+		null,
 	);
-	const [sortDirection, setSortDirection] = useState(
-		initialSettings.sortDirection,
+	const [dragOverPlaylistId, setDragOverPlaylistId] = useState<string | null>(
+		null,
 	);
-	const [viewMode, setViewMode] = useState<ViewMode>(initialSettings.viewMode);
-	const [sorting, setSorting] = useState<SortingState>(
-		initialSettings.tableSorting,
-	);
+	const dragCounter = useRef(0);
 
-	// Save settings to localStorage
-	const saveSettings = (settings: Partial<PlaylistListSettings>) => {
-		try {
-			const current = getStoredSettings();
-			const updated = { ...current, ...settings };
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-		} catch {
-			// Ignore storage errors
+	// Initialize local order when playlists load
+	useMemo(() => {
+		if (playlists && playlists.length > 0) {
+			// Sort by sortOrder initially
+			const sorted = [...playlists].sort((a, b) => a.sortOrder - b.sortOrder);
+			setLocalPlaylistOrder(sorted.map((p) => p.id));
 		}
-	};
+	}, [playlists]);
 
 	// Toggle publish status mutation
 	const togglePublishMutation = useMutation(
@@ -189,7 +131,29 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 		}),
 	);
 
-	// Filter and sort playlists
+	// Reorder playlists mutation
+	const reorderMutation = useMutation(
+		trpc.mux.reorderPlaylists.mutationOptions({
+			onSuccess: () => {
+				toast.success('Playlist order saved');
+				queryClient.invalidateQueries({
+					queryKey: trpc.mux.listPlaylists.queryKey({ libraryId }),
+				});
+			},
+			onError: (err) => {
+				toast.error(`Failed to save playlist order: ${err.message}`);
+				// Reset local order on error
+				if (playlists) {
+					const sorted = [...playlists].sort(
+						(a, b) => a.sortOrder - b.sortOrder,
+					);
+					setLocalPlaylistOrder(sorted.map((p) => p.id));
+				}
+			},
+		}),
+	);
+
+	// Filter playlists
 	const filteredPlaylists = useMemo(() => {
 		let result = [...(playlists ?? [])];
 
@@ -207,33 +171,41 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 			);
 		}
 
-		// Apply sorting (for grid view)
-		result.sort((a, b) => {
-			let comparison = 0;
-			switch (sortCriteria) {
-				case 'name':
-					comparison = a.name.localeCompare(b.name);
-					break;
-				case 'date':
-					comparison =
-						new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-					break;
-				case 'videoCount':
-					comparison = a.videoCount - b.videoCount;
-					break;
-				case 'sortOrder':
-					comparison = a.sortOrder - b.sortOrder;
-					break;
-				default:
-					// No default action needed; fall back to sortOrder
-					comparison = a.sortOrder - b.sortOrder;
-					break;
-			}
-			return sortDirection === 'asc' ? comparison : -comparison;
-		});
-
 		return result;
-	}, [playlists, searchTerm, sortCriteria, sortDirection]);
+	}, [playlists, searchTerm]);
+
+	// Get playlists in the current local order
+	const orderedPlaylists = useMemo(() => {
+		if (!filteredPlaylists || filteredPlaylists.length === 0) return [];
+		// If search is active, don't apply custom ordering
+		if (searchTerm) {
+			return [...filteredPlaylists].sort((a, b) => a.sortOrder - b.sortOrder);
+		}
+		// If localPlaylistOrder hasn't been initialized yet, use original order
+		if (localPlaylistOrder.length === 0 && filteredPlaylists.length > 0) {
+			return [...filteredPlaylists].sort((a, b) => a.sortOrder - b.sortOrder);
+		}
+		const playlistsMap = new Map(filteredPlaylists.map((p) => [p.id, p]));
+		return localPlaylistOrder
+			.map((id) => playlistsMap.get(id))
+			.filter((p): p is NonNullable<typeof p> => p !== undefined);
+	}, [filteredPlaylists, localPlaylistOrder, searchTerm]);
+
+	// Check if order has been modified
+	const originalPlaylistOrder = useMemo(
+		() =>
+			[...(playlists ?? [])]
+				.sort((a, b) => a.sortOrder - b.sortOrder)
+				.map((p) => p.id),
+		[playlists],
+	);
+	const hasOrderChanges = useMemo(() => {
+		if (localPlaylistOrder.length !== originalPlaylistOrder.length)
+			return false;
+		return localPlaylistOrder.some(
+			(id, index) => id !== originalPlaylistOrder[index],
+		);
+	}, [localPlaylistOrder, originalPlaylistOrder]);
 
 	const handleDeleteClick = useCallback((playlist: Playlist) => {
 		setPlaylistToDelete(playlist);
@@ -251,14 +223,124 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 		[togglePublishMutation, libraryId],
 	);
 
+	// Drag and drop handlers
+	const handleDragStart = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>, playlistId: string) => {
+			setDraggedPlaylistId(playlistId);
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', playlistId);
+			setTimeout(() => {
+				const element = e.target as HTMLElement;
+				element.style.opacity = '0.5';
+			}, 0);
+		},
+		[],
+	);
+
+	const handleDragEnd = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>) => {
+			const element = e.target as HTMLElement;
+			element.style.opacity = '1';
+			setDraggedPlaylistId(null);
+			setDragOverPlaylistId(null);
+			dragCounter.current = 0;
+		},
+		[],
+	);
+
+	const handleDragEnter = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>, playlistId: string) => {
+			e.preventDefault();
+			dragCounter.current++;
+			if (draggedPlaylistId && draggedPlaylistId !== playlistId) {
+				setDragOverPlaylistId(playlistId);
+			}
+		},
+		[draggedPlaylistId],
+	);
+
+	const handleDragLeave = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>) => {
+			e.preventDefault();
+			dragCounter.current--;
+			if (dragCounter.current === 0) {
+				setDragOverPlaylistId(null);
+			}
+		},
+		[],
+	);
+
+	const handleDragOver = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>) => {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = 'move';
+		},
+		[],
+	);
+
+	const handleDrop = useCallback(
+		(e: React.DragEvent<HTMLTableRowElement>, targetPlaylistId: string) => {
+			e.preventDefault();
+			dragCounter.current = 0;
+
+			if (!draggedPlaylistId || draggedPlaylistId === targetPlaylistId) {
+				setDragOverPlaylistId(null);
+				return;
+			}
+
+			setLocalPlaylistOrder((prev) => {
+				const draggedIndex = prev.indexOf(draggedPlaylistId);
+				const targetIndex = prev.indexOf(targetPlaylistId);
+
+				if (draggedIndex === -1 || targetIndex === -1) return prev;
+
+				const newOrder = [...prev];
+				newOrder.splice(draggedIndex, 1);
+				newOrder.splice(targetIndex, 0, draggedPlaylistId);
+				return newOrder;
+			});
+
+			setDragOverPlaylistId(null);
+		},
+		[draggedPlaylistId],
+	);
+
+	const handleSaveOrder = useCallback(() => {
+		if (!searchTerm) {
+			reorderMutation.mutate({
+				libraryId,
+				playlistIds: localPlaylistOrder,
+			});
+		}
+	}, [reorderMutation, libraryId, localPlaylistOrder, searchTerm]);
+
+	const handleResetOrder = useCallback(() => {
+		setLocalPlaylistOrder(originalPlaylistOrder);
+	}, [originalPlaylistOrder]);
+
 	// Table columns
 	const columns: ColumnDef<Playlist>[] = useMemo(
 		() => [
 			{
+				id: 'drag-handle',
+				header: 'Sort Order',
+				size: 40,
+				cell: ({ row }) => (
+					<Button
+						variant="secondary"
+						className="cursor-grab active:cursor-grabbing"
+					>
+						<GripVertical className="size-5" />
+						<span className="text-center text-sm font-medium">
+							{row.index + 1}
+						</span>
+					</Button>
+				),
+			},
+			{
 				accessorKey: 'thumbnail',
 				header: '',
 				size: 80,
-				enableSorting: false,
 				cell: ({ row }) => (
 					<div className="w-20 h-12 rounded overflow-hidden">
 						<VideoThumbnail
@@ -277,21 +359,7 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 			},
 			{
 				accessorKey: 'name',
-				header: ({ column }) => (
-					<Button
-						variant="ghost"
-						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-					>
-						Name
-						{column.getIsSorted() === 'asc' ? (
-							<ArrowUp className="ml-2 h-4 w-4" />
-						) : column.getIsSorted() === 'desc' ? (
-							<ArrowDown className="ml-2 h-4 w-4" />
-						) : (
-							<ArrowUpDown className="ml-2 h-4 w-4" />
-						)}
-					</Button>
-				),
+				header: 'Name',
 				cell: ({ row }) => (
 					<div>
 						<Link
@@ -316,21 +384,7 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 			},
 			{
 				accessorKey: 'videoCount',
-				header: ({ column }) => (
-					<Button
-						variant="ghost"
-						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-					>
-						Videos
-						{column.getIsSorted() === 'asc' ? (
-							<ArrowUp className="ml-2 h-4 w-4" />
-						) : column.getIsSorted() === 'desc' ? (
-							<ArrowDown className="ml-2 h-4 w-4" />
-						) : (
-							<ArrowUpDown className="ml-2 h-4 w-4" />
-						)}
-					</Button>
-				),
+				header: 'Videos',
 				cell: ({ row }) => (
 					<div className="flex items-center gap-1">
 						<Film className="h-4 w-4 text-muted-foreground" />
@@ -349,21 +403,7 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 			},
 			{
 				accessorKey: 'createdAt',
-				header: ({ column }) => (
-					<Button
-						variant="ghost"
-						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-					>
-						Created
-						{column.getIsSorted() === 'asc' ? (
-							<ArrowUp className="ml-2 h-4 w-4" />
-						) : column.getIsSorted() === 'desc' ? (
-							<ArrowDown className="ml-2 h-4 w-4" />
-						) : (
-							<ArrowUpDown className="ml-2 h-4 w-4" />
-						)}
-					</Button>
-				),
+				header: 'Created',
 				cell: ({ row }) => formatDate(row.original.createdAt.toISOString()),
 			},
 			{
@@ -421,19 +461,9 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 	);
 
 	const table = useReactTable({
-		data: filteredPlaylists,
+		data: orderedPlaylists,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		onSortingChange: (updater) => {
-			const newSorting =
-				typeof updater === 'function' ? updater(sorting) : updater;
-			setSorting(newSorting);
-			saveSettings({ tableSorting: newSorting });
-		},
-		state: {
-			sorting,
-		},
 	});
 
 	if (!playlists || playlists.length === 0) {
@@ -463,233 +493,104 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 					onChange={(e) => setSearchTerm(e.target.value)}
 					className="max-w-sm"
 				/>
-				<div className="flex gap-2 items-center">
-					{/* View mode toggle */}
-					<div className="flex border rounded-md">
+				{hasOrderChanges && !searchTerm && (
+					<div className="flex gap-2 items-center">
 						<Button
-							variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+							variant="outline"
 							size="sm"
-							onClick={() => {
-								setViewMode('grid');
-								saveSettings({ viewMode: 'grid' });
-							}}
+							onClick={handleResetOrder}
+							disabled={reorderMutation.isPending}
 						>
-							<Grid3X3 className="h-4 w-4" />
+							<Undo2 className="h-4 w-4 mr-2" />
+							Reset Order
 						</Button>
 						<Button
-							variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+							variant="default"
 							size="sm"
-							onClick={() => {
-								setViewMode('table');
-								saveSettings({ viewMode: 'table' });
-							}}
+							onClick={handleSaveOrder}
+							disabled={reorderMutation.isPending}
 						>
-							<List className="h-4 w-4" />
+							<Save className="h-4 w-4 mr-2" />
+							{reorderMutation.isPending ? 'Saving...' : 'Save Order'}
 						</Button>
 					</div>
-
-					{/* Sort controls (grid view only) */}
-					{viewMode === 'grid' && (
-						<>
-							<Select
-								value={sortCriteria}
-								onValueChange={(value) => {
-									setSortCriteria(value);
-									saveSettings({ sortCriteria: value });
-								}}
-							>
-								<SelectTrigger className="w-35">
-									<SelectValue placeholder="Sort by" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="sortOrder">Order</SelectItem>
-									<SelectItem value="name">Name</SelectItem>
-									<SelectItem value="date">Date</SelectItem>
-									<SelectItem value="videoCount">Videos</SelectItem>
-								</SelectContent>
-							</Select>
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={() => {
-									const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-									setSortDirection(newDirection);
-									saveSettings({ sortDirection: newDirection });
-								}}
-							>
-								{sortDirection === 'asc' ? (
-									<ArrowUp className="h-4 w-4" />
-								) : (
-									<ArrowDown className="h-4 w-4" />
-								)}
-							</Button>
-						</>
-					)}
-				</div>
+				)}
 			</div>
 
 			{/* Results count */}
-			<p className="text-sm text-muted-foreground">
-				{filteredPlaylists.length} playlist
-				{filteredPlaylists.length !== 1 ? 's' : ''}
-				{searchTerm && ` matching "${searchTerm}"`}
-			</p>
-
-			{/* Grid View */}
-			{viewMode === 'grid' && (
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-					{filteredPlaylists.map((playlist) => (
-						<Card key={playlist.id} className="overflow-hidden group p-0">
-							<CardHeader className="p-0">
-								<Link
-									to="/library/$libraryId/playlist/$playlistId"
-									params={{ libraryId, playlistId: playlist.id }}
-								>
-									<div className="relative">
-										<VideoThumbnail
-											playbackId={playlist.thumbnailPlaybackId}
-											alt={playlist.name}
-											aspectVideo
-											className="w-full object-cover group-hover:scale-105 transition-transform duration-200"
-											time={playlist.thumbnailTime ?? 3}
-											policy={playlist.thumbnailPolicy ?? undefined}
-											libraryId={libraryId}
-											fallbackIcon={
-												<ListVideo className="h-8 w-8 text-muted-foreground" />
-											}
-										/>
-										<div className="absolute bottom-2 right-2 flex gap-1">
-											<Badge>
-												<Film className="h-3 w-3 mr-1" />
-												{playlist.videoCount}
-											</Badge>
-										</div>
-										{!playlist.isPublished && (
-											<div className="absolute top-2 right-2">
-												<Badge variant="outline" className="bg-background/80">
-													Draft
-												</Badge>
-											</div>
-										)}
-									</div>
-								</Link>
-							</CardHeader>
-							<CardContent className="p-3">
-								<div className="flex justify-between items-start">
-									<div className="flex-1 min-w-0">
-										<CardTitle className="text-base truncate">
-											<Link
-												to="/library/$libraryId/playlist/$playlistId"
-												params={{ libraryId, playlistId: playlist.id }}
-												className="hover:underline"
-											>
-												{playlist.name}
-											</Link>
-										</CardTitle>
-										<CardDescription className="text-xs truncate">
-											/{playlist.slug}
-										</CardDescription>
-									</div>
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" className="h-8 w-8 p-0 shrink-0">
-												<MoreHorizontal className="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuLabel>Actions</DropdownMenuLabel>
-											<DropdownMenuItem asChild>
-												<Link
-													to="/library/$libraryId/playlist/$playlistId"
-													params={{ libraryId, playlistId: playlist.id }}
-												>
-													<Pencil className="mr-2 h-4 w-4" />
-													Edit
-												</Link>
-											</DropdownMenuItem>
-											<DropdownMenuItem
-												onClick={() => handleTogglePublish(playlist)}
-											>
-												{playlist.isPublished ? (
-													<>
-														<EyeOff className="mr-2 h-4 w-4" />
-														Unpublish
-													</>
-												) : (
-													<>
-														<Eye className="mr-2 h-4 w-4" />
-														Publish
-													</>
-												)}
-											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												className="text-destructive"
-												onClick={() => handleDeleteClick(playlist)}
-											>
-												<Trash2 className="mr-2 h-4 w-4" />
-												Delete
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</div>
-								<div className="mt-2 text-xs">
-									{getPlaylistCategoryLabel(playlist.category)}
-								</div>
-							</CardContent>
-						</Card>
-					))}
-				</div>
-			)}
+			<div className="flex items-center justify-between">
+				<p className="text-sm text-muted-foreground">
+					{orderedPlaylists.length} playlist
+					{orderedPlaylists.length !== 1 ? 's' : ''}
+					{searchTerm && ` matching "${searchTerm}"`}
+				</p>
+				{!searchTerm && (
+					<p className="text-sm text-muted-foreground">
+						Drag rows to reorder playlists
+					</p>
+				)}
+			</div>
 
 			{/* Table View */}
-			{viewMode === 'table' && (
-				<div className="rounded-md border">
-					<Table>
-						<TableHeader>
-							{table.getHeaderGroups().map((headerGroup) => (
-								<TableRow key={headerGroup.id}>
-									{headerGroup.headers.map((header) => (
-										<TableHead key={header.id}>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext(),
-													)}
-										</TableHead>
+			<div className="rounded-md border">
+				<Table>
+					<TableHeader>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<TableHead key={header.id}>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
+									</TableHead>
+								))}
+							</TableRow>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows?.length ? (
+							table.getRowModel().rows.map((row) => (
+								<TableRow
+									key={row.id}
+									draggable={!searchTerm}
+									onDragStart={(e) => handleDragStart(e, row.original.id)}
+									onDragEnd={handleDragEnd}
+									onDragEnter={(e) => handleDragEnter(e, row.original.id)}
+									onDragLeave={handleDragLeave}
+									onDragOver={handleDragOver}
+									onDrop={(e) => handleDrop(e, row.original.id)}
+									className={`${!searchTerm ? 'cursor-move' : ''} ${
+										dragOverPlaylistId === row.original.id
+											? 'border-t-2 border-t-primary'
+											: ''
+									}`}
+								>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell key={cell.id}>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</TableCell>
 									))}
 								</TableRow>
-							))}
-						</TableHeader>
-						<TableBody>
-							{table.getRowModel().rows?.length ? (
-								table.getRowModel().rows.map((row) => (
-									<TableRow key={row.id}>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</TableCell>
-										))}
-									</TableRow>
-								))
-							) : (
-								<TableRow>
-									<TableCell
-										colSpan={columns.length}
-										className="h-24 text-center"
-									>
-										No playlists found.
-									</TableCell>
-								</TableRow>
-							)}
-						</TableBody>
-					</Table>
-				</div>
-			)}
+							))
+						) : (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="h-24 text-center"
+								>
+									No playlists found.
+								</TableCell>
+							</TableRow>
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
 			{/* Delete dialog */}
 			<PlaylistDelete
