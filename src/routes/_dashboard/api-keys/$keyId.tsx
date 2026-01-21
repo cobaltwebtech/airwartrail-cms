@@ -34,7 +34,7 @@ export const Route = createFileRoute('/_dashboard/api-keys/$keyId')({
 		if (!keyId) {
 			return { keyId };
 		}
-		
+
 		await queryClient.ensureQueryData(trpc.apiKeys.get.queryOptions({ keyId }));
 		await queryClient.ensureQueryData(
 			trpc.apiKeys.getPermissionOptions.queryOptions(),
@@ -53,10 +53,7 @@ function EditApiKeyPage() {
 		data: apiKey,
 		isLoading,
 		error,
-	} = useQuery({
-		...trpc.apiKeys.get.queryOptions({ keyId }),
-		enabled: !!keyId,
-	});
+	} = useQuery(trpc.apiKeys.get.queryOptions({ keyId }));
 
 	const { data: permissionOptions } = useQuery(
 		trpc.apiKeys.getPermissionOptions.queryOptions(),

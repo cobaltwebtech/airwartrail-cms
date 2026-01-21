@@ -1,5 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -34,14 +35,23 @@ function SubNavItem({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 		return (
 			<Collapsible asChild defaultOpen={item.isActive} className="group/nested">
 				<SidebarMenuSubItem>
-					<CollapsibleTrigger asChild>
-						<SidebarMenuSubButton isActive={item.isActive || isActive}>
-							<Link to={item.url} onClick={(e) => e.stopPropagation()}>
+					<div className="flex items-center w-full">
+						<SidebarMenuSubButton
+							asChild
+							isActive={item.isActive || isActive}
+							className="flex-1"
+						>
+							<Link to={item.url}>
 								<span>{item.title}</span>
 							</Link>
-							<ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/nested:rotate-90" />
 						</SidebarMenuSubButton>
-					</CollapsibleTrigger>
+						<CollapsibleTrigger asChild>
+							<Button variant="ghost" size="icon" className="size-8">
+								<ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/nested:rotate-90" />
+								<span className="sr-only">Toggle {item.title}</span>
+							</Button>
+						</CollapsibleTrigger>
+					</div>
 					<CollapsibleContent>
 						<SidebarMenuSub className="ml-2 border-l pl-2">
 							{item.items?.map((subItem) => (

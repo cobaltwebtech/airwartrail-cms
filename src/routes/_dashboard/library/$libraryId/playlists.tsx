@@ -18,12 +18,12 @@ export const Route = createFileRoute(
 	component: PlaylistsIndexPage,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
-		
+
 		// Guard against missing libraryId
 		if (!libraryId) {
 			return { libraryId };
 		}
-		
+
 		// Prefetch playlists from database
 		await queryClient.ensureQueryData(
 			trpc.mux.listPlaylists.queryOptions({ libraryId }),
@@ -43,13 +43,10 @@ function PlaylistsIndexPage() {
 		data: playlists,
 		isLoading,
 		error,
-	} = useQuery({
-		...trpc.mux.listPlaylists.queryOptions({ libraryId }),
-		enabled: !!libraryId,
-	});
+	} = useQuery(trpc.mux.listPlaylists.queryOptions({ libraryId }));
 
 	const { data: library } = useQuery(
-		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
+		trpc.mux.getLibrary.queryOptions({ libraryId }),
 	);
 
 	if (error) {

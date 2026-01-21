@@ -20,7 +20,6 @@ export default defineConfig({
 		cloudflare(),
 	],
 	server: {
-		allowedHosts: ['cgarza-mbp-m2.discus-jazz.ts.net'],
 		watch: {
 			ignored: ['**/.wrangler/state/**'],
 		},

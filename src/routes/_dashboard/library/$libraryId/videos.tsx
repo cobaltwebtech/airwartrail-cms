@@ -17,12 +17,12 @@ export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 	component: VideosPage,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
-		
+
 		// Guard against missing libraryId
 		if (!libraryId) {
 			return { libraryId };
 		}
-		
+
 		// Prefetch videos from database on the server/during navigation
 		await queryClient.ensureQueryData(
 			trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
@@ -46,7 +46,6 @@ function VideosPage() {
 		error,
 	} = useQuery({
 		...trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
-		enabled: !!libraryId,
 		// Poll every 5 seconds while any video is still processing
 		// Check for any non-terminal status (not ready or errored) to handle
 		// undefined, null, 'preparing', or any other interim status
@@ -60,7 +59,7 @@ function VideosPage() {
 	});
 
 	const { data: library } = useQuery(
-		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
+		trpc.mux.getLibrary.queryOptions({ libraryId }),
 	);
 
 	// Sync mutation for importing videos from Mux

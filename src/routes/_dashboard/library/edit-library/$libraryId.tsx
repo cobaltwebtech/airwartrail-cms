@@ -64,12 +64,12 @@ export const Route = createFileRoute(
 	notFoundComponent: NotFound,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
-		
+
 		// Guard against missing libraryId
 		if (!libraryId) {
 			return { libraryId };
 		}
-		
+
 		try {
 			const library = await queryClient.ensureQueryData(
 				trpc.mux.getLibrary.queryOptions({ libraryId }),
@@ -99,10 +99,7 @@ function LibrarySettingsPage() {
 		data: library,
 		isLoading,
 		error,
-	} = useQuery({
-		...trpc.mux.getLibrary.queryOptions({ libraryId }),
-		enabled: !!libraryId,
-	});
+	} = useQuery(trpc.mux.getLibrary.queryOptions({ libraryId }));
 
 	// Form state
 	const [name, setName] = useState('');
