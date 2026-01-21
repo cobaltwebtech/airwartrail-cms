@@ -120,16 +120,16 @@ const DashboardLibraryLibraryIdEditVideoVideoIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof DashboardIndexRoute
   '/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
-  '/': typeof DashboardIndexRoute
   '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
-  '/api-keys': typeof DashboardApiKeysIndexRoute
-  '/tags': typeof DashboardTagsIndexRoute
+  '/api-keys/': typeof DashboardApiKeysIndexRoute
+  '/tags/': typeof DashboardTagsIndexRoute
   '/library/$libraryId/create-playlist': typeof DashboardLibraryLibraryIdCreatePlaylistRoute
   '/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
@@ -178,16 +178,16 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/upload'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/reset-password'
-    | '/'
     | '/api-keys/$keyId'
     | '/library/create-library'
     | '/user/$userId'
-    | '/api-keys'
-    | '/tags'
+    | '/api-keys/'
+    | '/tags/'
     | '/library/$libraryId/create-playlist'
     | '/library/$libraryId/playlists'
     | '/library/$libraryId/videos'
@@ -245,7 +245,7 @@ declare module '@tanstack/react-router' {
     '/_dashboard': {
       id: '/_dashboard'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -287,14 +287,14 @@ declare module '@tanstack/react-router' {
     '/_dashboard/tags/': {
       id: '/_dashboard/tags/'
       path: '/tags'
-      fullPath: '/tags'
+      fullPath: '/tags/'
       preLoaderRoute: typeof DashboardTagsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/api-keys/': {
       id: '/_dashboard/api-keys/'
       path: '/api-keys'
-      fullPath: '/api-keys'
+      fullPath: '/api-keys/'
       preLoaderRoute: typeof DashboardApiKeysIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
