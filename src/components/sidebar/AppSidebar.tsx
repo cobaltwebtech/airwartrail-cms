@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from '@tanstack/react-router';
 import { Key, LibraryBig, Plus, Tags, Upload } from 'lucide-react';
 import { Logo } from '@/components/sidebar/Logo';
@@ -14,20 +13,14 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from '@/components/ui/sidebar';
-import { trpc } from '@/lib/trpc';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const { data: libraries, isLoading: librariesLoading } = useQuery(
-		trpc.mux.listLibraries.queryOptions(),
-	);
 	const location = useLocation();
 
-	// Check if we're on a library page (any route starting with /library/[id])
-	const isOnLibraryPage =
-		location.pathname.startsWith('/library/') &&
-		location.pathname.includes('/videos');
+	// Check if we're on a library page
+	const isOnLibraryPage = location.pathname.startsWith('/library/');
 
-	// Build navigation with dynamic library subitems including playlists link
+	// Build navigation with hardcoded library subitems
 	const navMain = [
 		{
 			title: 'Upload Video',
@@ -44,19 +37,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			url: '/',
 			icon: LibraryBig,
 			isActive: isOnLibraryPage || location.pathname === '/',
-			items: librariesLoading
-				? []
-				: (libraries?.map((library) => ({
-						title: library.name,
-						url: `/library/${library.id}/videos`,
-						isActive: location.pathname.startsWith(`/library/${library.id}`),
-						items: [
-							{
-								title: 'Playlists',
-								url: `/library/${library.id}/playlists`,
-							},
-						],
-					})) ?? []),
+			items: [
+				{
+					title: 'Premium Library',
+					url: '/library/WM2OkZia/videos',
+					items: [
+						{
+							title: 'Playlists',
+							url: '/library/WM2OkZia/playlists',
+						},
+					],
+				},
+				{
+					title: 'Free Library',
+					url: '/library/pnr6CRTe/videos',
+					items: [
+						{
+							title: 'Playlists',
+							url: '/library/pnr6CRTe/playlists',
+						},
+					],
+				},
+			],
 		},
 		{
 			title: 'Video Tags',
