@@ -14,7 +14,7 @@ import { VideoList } from '@/components/videos/VideoList';
 import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
-	component: VideosPage,
+	component: VideosPageWrapper,
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
 
@@ -35,8 +35,19 @@ export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 	},
 });
 
-function VideosPage() {
+// Wrapper component that uses key to force remount on libraryId change
+function VideosPageWrapper() {
 	const { libraryId } = Route.useParams();
+
+	// Guard against undefined libraryId during navigation transitions
+	if (!libraryId) {
+		return <div className="text-muted-foreground">Loading...</div>;
+	}
+
+	return <VideosPage key={libraryId} libraryId={libraryId} />;
+}
+
+function VideosPage({ libraryId }: { libraryId: string }) {
 	const queryClient = useQueryClient();
 
 	// Fetch videos from internal database (uses internal IDs)
@@ -46,6 +57,7 @@ function VideosPage() {
 		error,
 	} = useQuery({
 		...trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
+		enabled: !!libraryId,
 		// Poll every 5 seconds while any video is still processing
 		// Check for any non-terminal status (not ready or errored) to handle
 		// undefined, null, 'preparing', or any other interim status
@@ -58,9 +70,10 @@ function VideosPage() {
 		},
 	});
 
-	const { data: library } = useQuery(
-		trpc.mux.getLibrary.queryOptions({ libraryId }),
-	);
+	const { data: library } = useQuery({
+		...trpc.mux.getLibrary.queryOptions({ libraryId }),
+		enabled: !!libraryId,
+	});
 
 	// Sync mutation for importing videos from Mux
 	const syncMutation = useMutation(
@@ -115,8 +128,8 @@ function VideosPage() {
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
-								<BreadcrumbLink href="/">
-									&larr; Back to Libraries
+								<BreadcrumbLink href="/libraries">
+									&larr; Back to All Libraries
 								</BreadcrumbLink>
 							</BreadcrumbItem>
 						</BreadcrumbList>
@@ -128,7 +141,7 @@ function VideosPage() {
 								params={{ libraryId }}
 							>
 								<Settings />
-								Edit Library
+								Library Settings
 							</Link>
 						</Button>
 						<Button
@@ -139,7 +152,7 @@ function VideosPage() {
 							<RefreshCw
 								className={`${syncMutation.isPending ? 'animate-spin' : ''}`}
 							/>
-							{syncMutation.isPending ? 'Syncing...' : 'Sync from Mux'}
+							{syncMutation.isPending ? 'Syncing...' : 'Sync Remote Videos'}
 						</Button>
 					</div>
 				</div>

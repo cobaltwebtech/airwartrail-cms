@@ -7,6 +7,7 @@ import { playbackRouter } from "./playback";
 import { chaptersRouter } from "./chapters";
 import { tagsRouter } from "./tags";
 import { playlistsRouter } from "./playlists";
+import { thumbnailsRouter } from "./thumbnails";
 
 /**
  * Main Mux router combining all domain-specific routers
@@ -26,4 +27,5 @@ export const muxRouter = t.router({
 	...chaptersRouter._def.record,
 	...tagsRouter._def.record,
 	...playlistsRouter._def.record,
+	...thumbnailsRouter._def.record,
 });

@@ -19,9 +19,7 @@ export function DashboardHeader(props: {
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="font-bold text-3xl md:text-4xl">{heading}</h1>
-					{text && (
-						<p className="text-foreground text-lg font-semibold">{text}</p>
-					)}
+					{text && <p className="text-foreground text-lg">{text}</p>}
 				</div>
 				{session?.user && (
 					<Button asChild variant="secondary">

@@ -24,6 +24,7 @@ import {
 	BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
+	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
@@ -247,7 +248,13 @@ function LibrarySettingsPage() {
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>
-							<BreadcrumbLink href="/">&larr; Back to Libraries</BreadcrumbLink>
+							<BreadcrumbLink href="/libraries">All Libraries</BreadcrumbLink>
+						</BreadcrumbItem>
+						<BreadcrumbSeparator />
+						<BreadcrumbItem>
+							<BreadcrumbLink href={`/library/${libraryId}/videos`}>
+								{library.name} Videos
+							</BreadcrumbLink>
 						</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>

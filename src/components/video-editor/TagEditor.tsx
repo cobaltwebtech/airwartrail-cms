@@ -119,17 +119,9 @@ const TagEditor: React.FC<TagEditorProps> = ({
 
 	const hasChanged = !areArraysEqual(selectedTagIds, savedTagIds);
 
-	// Get selected tag names for display
-	const selectedTagNames = useMemo(() => {
-		if (!allTags) return [];
-		return selectedTagIds
-			.map((id) => allTags.find((tag) => tag.id === id)?.name)
-			.filter(Boolean);
-	}, [allTags, selectedTagIds]);
-
 	if (tagsError) {
 		return (
-			<Card className="col-span-3">
+			<Card className="col-span-2">
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<Tags className="size-5" />
@@ -146,7 +138,7 @@ const TagEditor: React.FC<TagEditorProps> = ({
 	}
 
 	return (
-		<Card className="col-span-3">
+		<Card className="col-span-2">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<Tags className="size-5" />
@@ -169,6 +161,7 @@ const TagEditor: React.FC<TagEditorProps> = ({
 							options={tagOptions}
 							onValueChange={handleSelectionChange}
 							defaultValue={selectedTagIds}
+							className="h-auto"
 							placeholder="Select tags..."
 							searchable
 							maxCount={5}
@@ -181,14 +174,6 @@ const TagEditor: React.FC<TagEditorProps> = ({
 						<div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 							<p className="text-sm text-muted-foreground">
 								{selectedTagIds.length}/{maxTags} tags selected
-								{selectedTagNames.length > 0 && (
-									<span className="ml-2 text-xs">
-										({selectedTagNames.slice(0, 3).join(', ')}
-										{selectedTagNames.length > 3 &&
-											` +${selectedTagNames.length - 3} more`}
-										)
-									</span>
-								)}
 							</p>
 							<div className="flex items-center gap-2">
 								<Button

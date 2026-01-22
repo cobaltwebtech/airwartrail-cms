@@ -15,6 +15,13 @@
       "when": 1768498375569,
       "tag": "0001_db-migration-videos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769032902416,
+      "tag": "0002_db-migration-videos",
+      "breakpoints": true
     }
   ]
 }

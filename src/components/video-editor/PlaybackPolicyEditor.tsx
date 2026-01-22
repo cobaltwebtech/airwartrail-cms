@@ -113,7 +113,7 @@ const PlaybackPolicyEditor: React.FC<PlaybackPolicyEditorProps> = ({
 					}
 					disabled={updatePolicyMutation.isPending}
 				>
-					<SelectTrigger className="w-fit">
+					<SelectTrigger className="w-1/2">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>

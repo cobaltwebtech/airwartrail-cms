@@ -104,7 +104,8 @@ export const video = sqliteTable(
 			enum: ['public', 'signed'],
 		}).default('public'),
 		// Custom thumbnail (optional, otherwise Mux auto-generates)
-		customThumbnailTime: real('custom_thumbnail_time'),
+		customThumbnailTime: real('custom_thumbnail_time'), // Time in seconds for Mux auto-generated thumbnail
+		customThumbnailUrl: text('custom_thumbnail_url'), // URL to custom uploaded image in R2 (takes precedence over customThumbnailTime)
 		// User-defined metadata
 		passthrough: text('passthrough'), // Arbitrary passthrough data (max 255 chars)
 		externalId: text('external_id'), // Link to external system

@@ -98,7 +98,7 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 	const percentUsed = (characterCount / 5000) * 100;
 
 	return (
-		<Card className="col-span-3">
+		<Card className="col-span-4">
 			<CardHeader>
 				<CardTitle>Description</CardTitle>
 				<CardDescription>

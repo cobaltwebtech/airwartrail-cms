@@ -268,7 +268,7 @@ function UploadPage() {
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>
-							<BreadcrumbLink href="/">&larr; Back to Libraries</BreadcrumbLink>
+							<BreadcrumbLink href="/">&larr; Back to Home</BreadcrumbLink>
 						</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>

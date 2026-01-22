@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useRouter } from '@tanstack/react-router';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,25 +28,35 @@ type NavItem = {
 // Component for rendering nested submenu items (libraries with playlists)
 function SubNavItem({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 	const location = useLocation();
+	const router = useRouter();
 	const hasSubItems = item.items && item.items.length > 0;
 	const isActive = location.pathname === item.url;
+
+	// Handle navigation programmatically to avoid nested <a> tags
+	const handleNavigate = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		// Navigate and invalidate to force loader re-run
+		await router.navigate({ to: item.url });
+		await router.invalidate();
+	};
 
 	if (hasSubItems) {
 		return (
 			<Collapsible asChild defaultOpen={item.isActive} className="group/nested">
 				<SidebarMenuSubItem>
 					<div className="flex items-center w-full">
+						{/* Navigation button - NOT using asChild to avoid nested <a> */}
 						<SidebarMenuSubButton
-							asChild
 							isActive={item.isActive || isActive}
-							className="flex-1"
+							className="flex-1 cursor-pointer"
+							onClick={handleNavigate}
 						>
-							<Link to={item.url}>
-								<span>{item.title}</span>
-							</Link>
+							<span>{item.title}</span>
 						</SidebarMenuSubButton>
+						{/* Separate toggle button for collapsible */}
 						<CollapsibleTrigger asChild>
-							<Button variant="ghost" size="icon" className="size-8">
+							<Button variant="ghost" size="icon" className="size-6 shrink-0">
 								<ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]/nested:rotate-90" />
 								<span className="sr-only">Toggle {item.title}</span>
 							</Button>
@@ -68,6 +78,7 @@ function SubNavItem({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 		);
 	}
 
+	// For items without sub-items, use Link with asChild
 	return (
 		<SidebarMenuSubItem>
 			<SidebarMenuSubButton asChild isActive={isActive}>

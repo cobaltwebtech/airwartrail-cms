@@ -5,7 +5,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 
@@ -89,18 +95,15 @@ const EditTitle: React.FC<EditTitleProps> = ({
 	};
 
 	return (
-		<Card className="col-span-2">
+		<Card className="col-span-2 gap-2">
 			<CardHeader>
 				<CardTitle>Title</CardTitle>
+				<CardDescription className="text-accent font-semibold">
+					{initialTitle || 'No title set'}
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form onSubmit={handleTitleChange} className="space-y-2">
-					<div className="space-y-1">
-						<p className="text-sm">Current Title</p>
-						<p className="text-accent text-lg font-semibold">
-							{initialTitle || 'No title set'}
-						</p>
-					</div>
 					<Input
 						type="text"
 						id="title"

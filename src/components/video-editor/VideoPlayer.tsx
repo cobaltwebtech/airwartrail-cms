@@ -27,13 +27,31 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 		trpc.mux.getAsset.queryOptions({ assetId: muxAssetId, libraryId }),
 	);
 
+	// Fetch thumbnail data from database (custom URL and time)
+	const { data: thumbnailData } = useQuery(
+		trpc.mux.getThumbnail.queryOptions(
+			{ videoId: internalVideoId || '', libraryId: libraryId || '' },
+			{ enabled: !!internalVideoId && !!libraryId },
+		),
+	);
+
+	// Determine thumbnail configuration
+	const customThumbnailUrl = thumbnailData?.customThumbnailUrl;
+	const customThumbnailTime = thumbnailData?.customThumbnailTime;
+
 	// Fetch tokens for signed videos using tRPC client
+	// Include thumbnail time in the token if set (for signed videos)
 	const { data: tokens, isLoading: tokensLoading } = useQuery(
 		trpc.mux.generateSignedTokens.queryOptions(
 			{
 				playbackId: video?.playbackId || '',
 				libraryId,
 				expiresIn: 3600,
+				// For signed videos, embed the thumbnail time in the JWT
+				thumbnailParams:
+					customThumbnailTime !== null && customThumbnailTime !== undefined
+						? { time: customThumbnailTime }
+						: undefined,
 			},
 			{
 				enabled: video?.policy === 'signed' && Boolean(video?.playbackId),
@@ -121,7 +139,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 	// For signed videos, wait for tokens to be generated
 	if (video.policy === 'signed' && tokensLoading) {
 		return (
-			<Card className="col-span-4 col-start-3 row-span-2 w-full">
+			<Card className="col-span-4 col-start-3 row-span-3 w-full">
 				<CardHeader>
 					<CardTitle>Video Preview</CardTitle>
 				</CardHeader>
@@ -135,7 +153,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 	}
 
 	return (
-		<Card className="col-span-4 col-start-3 row-span-2 w-full">
+		<Card className="col-span-4 col-start-3 row-span-3 w-full">
 			<CardHeader>
 				<CardTitle>Video Preview</CardTitle>
 			</CardHeader>
@@ -146,6 +164,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 						playbackId={video.playbackId}
 						title={video.title}
 						streamType="on-demand"
+						// Custom thumbnail priority:
+						// 1. Custom uploaded image URL (poster prop)
+						// 2. Custom thumbnail time (thumbnailTime prop for public, embedded in token for signed)
+						// 3. Default Mux behavior (middle of video)
+						poster={customThumbnailUrl ?? undefined}
+						// For public videos without a custom URL, use thumbnailTime if set
+						// For signed videos, the time is embedded in the thumbnail token
+						thumbnailTime={
+							!customThumbnailUrl &&
+							video.policy !== 'signed' &&
+							customThumbnailTime !== null &&
+							customThumbnailTime !== undefined
+								? customThumbnailTime
+								: undefined
+						}
 						tokens={
 							video.policy === 'signed' && tokens
 								? {

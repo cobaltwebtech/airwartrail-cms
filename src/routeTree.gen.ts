@@ -15,6 +15,8 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
+import { Route as DashboardPlaylistsRouteImport } from './routes/_dashboard/playlists'
+import { Route as DashboardLibrariesRouteImport } from './routes/_dashboard/libraries'
 import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
@@ -54,6 +56,16 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
 const DashboardUploadRoute = DashboardUploadRouteImport.update({
   id: '/upload',
   path: '/upload',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPlaylistsRoute = DashboardPlaylistsRouteImport.update({
+  id: '/playlists',
+  path: '/playlists',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLibrariesRoute = DashboardLibrariesRouteImport.update({
+  id: '/libraries',
+  path: '/libraries',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardTagsIndexRoute = DashboardTagsIndexRouteImport.update({
@@ -121,6 +133,8 @@ const DashboardLibraryLibraryIdEditVideoVideoIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof DashboardIndexRoute
+  '/libraries': typeof DashboardLibrariesRoute
+  '/playlists': typeof DashboardPlaylistsRoute
   '/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -138,6 +152,8 @@ export interface FileRoutesByFullPath {
   '/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
 }
 export interface FileRoutesByTo {
+  '/libraries': typeof DashboardLibrariesRoute
+  '/playlists': typeof DashboardPlaylistsRoute
   '/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -158,6 +174,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_dashboard': typeof DashboardRouteWithChildren
+  '/_dashboard/libraries': typeof DashboardLibrariesRoute
+  '/_dashboard/playlists': typeof DashboardPlaylistsRoute
   '/_dashboard/upload': typeof DashboardUploadRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -179,6 +197,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/libraries'
+    | '/playlists'
     | '/upload'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -196,6 +216,8 @@ export interface FileRouteTypes {
     | '/library/$libraryId/playlist/$playlistId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/libraries'
+    | '/playlists'
     | '/upload'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -215,6 +237,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_dashboard'
+    | '/_dashboard/libraries'
+    | '/_dashboard/playlists'
     | '/_dashboard/upload'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -282,6 +306,20 @@ declare module '@tanstack/react-router' {
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof DashboardUploadRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/playlists': {
+      id: '/_dashboard/playlists'
+      path: '/playlists'
+      fullPath: '/playlists'
+      preLoaderRoute: typeof DashboardPlaylistsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/libraries': {
+      id: '/_dashboard/libraries'
+      path: '/libraries'
+      fullPath: '/libraries'
+      preLoaderRoute: typeof DashboardLibrariesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/tags/': {
@@ -365,6 +403,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
+  DashboardLibrariesRoute: typeof DashboardLibrariesRoute
+  DashboardPlaylistsRoute: typeof DashboardPlaylistsRoute
   DashboardUploadRoute: typeof DashboardUploadRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardApiKeysKeyIdRoute: typeof DashboardApiKeysKeyIdRoute
@@ -381,6 +421,8 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardLibrariesRoute: DashboardLibrariesRoute,
+  DashboardPlaylistsRoute: DashboardPlaylistsRoute,
   DashboardUploadRoute: DashboardUploadRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardApiKeysKeyIdRoute: DashboardApiKeysKeyIdRoute,

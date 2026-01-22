@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import CaptionEditor from '@/components/video-editor/CaptionEditor';
 import ChapterEditor from '@/components/video-editor/ChapterEditor';
+import CustomThumbnail from '@/components/video-editor/CustomThumbnail';
 import DescriptionEditor from '@/components/video-editor/DescriptionEditor';
 import PlaybackPolicyEditor from '@/components/video-editor/PlaybackPolicyEditor';
 import PublishStatus from '@/components/video-editor/PublishStatus';
@@ -72,14 +73,6 @@ function VideoEditorPage() {
 		),
 	);
 
-	// Fetch view count from Mux Data API (using muxAssetId)
-	const { data: viewCountData } = useQuery(
-		trpc.mux.getAssetViewCount.queryOptions(
-			{ muxAssetId: videoData?.muxAssetId ?? '', libraryId },
-			{ enabled: !!videoData?.muxAssetId },
-		),
-	);
-
 	// Fetch library details to get library name
 	const { data: library } = useQuery(
 		trpc.mux.getLibrary.queryOptions({ libraryId }, { enabled: !!libraryId }),
@@ -91,7 +84,7 @@ function VideoEditorPage() {
 	// Extract local variables from videoData
 	const duration = videoData?.duration || 0;
 	const dateUploaded = videoData?.createdAt || new Date().toISOString();
-	const views = viewCountData?.views ?? videoData?.views ?? 0;
+	const views = videoData?.views ?? 0;
 	const statusText = getVideoStatusLabel(videoData?.status as VideoStatus);
 	const captions =
 		videoData?.captions?.map((cap) => ({
@@ -114,6 +107,7 @@ function VideoEditorPage() {
 	const errorCategory = videoData?.errorCategory ?? undefined;
 	const errorMessages = videoData?.errorMessages ?? undefined;
 	const playbackPolicy = videoData?.policy ?? undefined;
+	const totalWatchTime = videoData?.totalWatchTimeMs ?? 0;
 	// Tags are now fetched separately from the videoTags table
 	const tagIds = videoTags?.map((t) => t.id) ?? [];
 	const libraryName = videoData?.libraryName ?? library?.name;
@@ -144,13 +138,17 @@ function VideoEditorPage() {
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
-								<BreadcrumbLink href="/">All Libraries</BreadcrumbLink>
+								<BreadcrumbLink href="/">Home</BreadcrumbLink>
+							</BreadcrumbItem>
+							<BreadcrumbSeparator />
+							<BreadcrumbItem>
+								<BreadcrumbLink href="/libraries">All Libraries</BreadcrumbLink>
 							</BreadcrumbItem>
 							<BreadcrumbSeparator />
 							<BreadcrumbItem>
 								<BreadcrumbLink asChild>
 									<Link to="/library/$libraryId/videos" params={{ libraryId }}>
-										Videos
+										{libraryName} Videos
 									</Link>
 								</BreadcrumbLink>
 							</BreadcrumbItem>
@@ -199,17 +197,18 @@ function VideoEditorPage() {
 							libraryId={libraryId}
 							initialPublishStatus={isPublished}
 						/>
+						<TagEditor
+							videoId={videoId}
+							libraryId={libraryId}
+							initialTagIds={tagIds}
+						/>
 						<DescriptionEditor
 							videoId={videoId}
 							libraryId={libraryId}
 							initialDescription={description}
 							onDescriptionUpdate={handleDescriptionUpdate}
 						/>
-						<TagEditor
-							videoId={videoId}
-							libraryId={libraryId}
-							initialTagIds={tagIds}
-						/>
+						<CustomThumbnail videoId={videoId} libraryId={libraryId} />
 						<CaptionEditor
 							muxAssetId={muxAssetId}
 							libraryId={libraryId}
@@ -234,6 +233,7 @@ function VideoEditorPage() {
 							createdAt={createdAt}
 							updatedAt={updatedAt}
 							viewCountSyncedAt={viewCountSyncedAt}
+							totalWatchTime={totalWatchTime}
 						/>
 					</div>
 				) : (

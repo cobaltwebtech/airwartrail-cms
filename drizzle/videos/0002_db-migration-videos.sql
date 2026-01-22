@@ -1,0 +1,1 @@
+ALTER TABLE `video` ADD `custom_thumbnail_url` text;

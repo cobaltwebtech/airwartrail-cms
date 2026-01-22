@@ -994,6 +994,7 @@ function PlaylistEditorPage() {
 										<div className="h-14 w-24 shrink-0 overflow-hidden rounded-md">
 											<VideoThumbnail
 												playbackId={item.muxPlaybackId}
+												videoId={item.id}
 												alt={item.title}
 												policy={item.playbackPolicy ?? undefined}
 												libraryId={libraryId}
@@ -1115,6 +1116,7 @@ function PlaylistEditorPage() {
 										<div className="h-12 w-20 shrink-0 overflow-hidden rounded-md">
 											<VideoThumbnail
 												playbackId={video.playbackId}
+												videoId={video.id}
 												alt={video.title}
 												policy={video.policy ?? undefined}
 												libraryId={libraryId}

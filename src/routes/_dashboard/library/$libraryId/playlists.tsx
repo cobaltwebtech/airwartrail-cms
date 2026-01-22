@@ -70,8 +70,8 @@ function PlaylistsIndexPage() {
 					<Breadcrumb>
 						<BreadcrumbList>
 							<BreadcrumbItem>
-								<BreadcrumbLink href="/">
-									&larr; Back to Libraries
+								<BreadcrumbLink href="/playlists">
+									&larr; Back to Playlist Libraries
 								</BreadcrumbLink>
 							</BreadcrumbItem>
 						</BreadcrumbList>

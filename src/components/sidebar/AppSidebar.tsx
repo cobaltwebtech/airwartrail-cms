@@ -1,5 +1,12 @@
-import { Link, useLocation } from '@tanstack/react-router';
-import { Key, LibraryBig, Plus, Tags, Upload } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import {
+	CirclePlus,
+	KeyRound,
+	LibraryBig,
+	ListVideo,
+	Tags,
+	Upload,
+} from 'lucide-react';
 import { Logo } from '@/components/sidebar/Logo';
 import { NavMain } from '@/components/sidebar/NavMain';
 import { NavUser } from '@/components/sidebar/NavUser';
@@ -15,12 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-	const location = useLocation();
-
-	// Check if we're on a library page
-	const isOnLibraryPage = location.pathname.startsWith('/library/');
-
-	// Build navigation with hardcoded library subitems
+	// Build navigation with dynamic library subitems including playlists link
 	const navMain = [
 		{
 			title: 'Upload Video',
@@ -28,37 +30,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			icon: Upload,
 		},
 		{
-			title: 'Create Library',
-			url: '/library/create-library',
-			icon: Plus,
+			title: 'Video Libraries',
+			url: '/libraries',
+			icon: LibraryBig,
 		},
 		{
-			title: 'Video Libraries',
-			url: '/',
-			icon: LibraryBig,
-			isActive: isOnLibraryPage || location.pathname === '/',
-			items: [
-				{
-					title: 'Premium Library',
-					url: '/library/WM2OkZia/videos',
-					items: [
-						{
-							title: 'Playlists',
-							url: '/library/WM2OkZia/playlists',
-						},
-					],
-				},
-				{
-					title: 'Free Library',
-					url: '/library/pnr6CRTe/videos',
-					items: [
-						{
-							title: 'Playlists',
-							url: '/library/pnr6CRTe/playlists',
-						},
-					],
-				},
-			],
+			title: 'Video Playlists',
+			url: '/playlists',
+			icon: ListVideo,
 		},
 		{
 			title: 'Video Tags',
@@ -66,9 +45,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			icon: Tags,
 		},
 		{
+			title: 'Create Library',
+			url: '/library/create-library',
+			icon: CirclePlus,
+		},
+		{
 			title: 'API Keys',
 			url: '/api-keys',
-			icon: Key,
+			icon: KeyRound,
 		},
 	];
 

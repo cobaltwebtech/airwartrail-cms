@@ -12,6 +12,7 @@ interface VideoDataProps {
 	createdAt?: string;
 	updatedAt?: string;
 	viewCountSyncedAt?: string;
+	totalWatchTime?: number;
 }
 
 const VideoData: React.FC<VideoDataProps> = ({
@@ -23,11 +24,12 @@ const VideoData: React.FC<VideoDataProps> = ({
 	createdAt,
 	updatedAt,
 	viewCountSyncedAt,
+	totalWatchTime,
 }) => {
 	return (
 		<Card className="col-span-full">
 			<CardHeader>
-				<CardTitle>Database Information</CardTitle>
+				<CardTitle>Internal Video Data</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 text-muted-foreground text-sm">
@@ -43,13 +45,13 @@ const VideoData: React.FC<VideoDataProps> = ({
 						<p className="text-xs uppercase tracking-wide mb-1">
 							Internal Library ID
 						</p>
-						<Badge variant="secondary" className="font-mono text-xs">
+						<Badge variant="secondary" className="font-mono">
 							{libraryId}
 						</Badge>
 					</div>
 					<div>
 						<p className="text-xs uppercase tracking-wide mb-1">Mux Asset ID</p>
-						<Badge variant="secondary" className="font-mono text-xs">
+						<Badge variant="secondary" className="font-mono">
 							{muxAssetId}
 						</Badge>
 					</div>
@@ -57,7 +59,7 @@ const VideoData: React.FC<VideoDataProps> = ({
 						<p className="text-xs uppercase tracking-wide mb-1">
 							Mux Playback ID
 						</p>
-						<Badge variant="secondary" className="font-mono text-xs">
+						<Badge variant="secondary" className="font-mono">
 							{muxPlaybackId}
 						</Badge>
 					</div>
@@ -65,8 +67,16 @@ const VideoData: React.FC<VideoDataProps> = ({
 						<p className="text-xs uppercase tracking-wide mb-1">
 							Mux Environment ID
 						</p>
-						<Badge variant="secondary" className="font-mono text-xs">
+						<Badge variant="secondary" className="font-mono">
 							{muxEnvironmentId}
+						</Badge>
+					</div>
+					<div>
+						<p className="text-xs uppercase tracking-wide mb-1">
+							Total Watch Time
+						</p>
+						<Badge variant="secondary" className="font-mono">
+							{(totalWatchTime ?? 0) / 1000}s
 						</Badge>
 					</div>
 					<div>

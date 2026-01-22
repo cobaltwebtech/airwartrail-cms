@@ -251,6 +251,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 						>
 							<VideoThumbnail
 								playbackId={row.original.playbackId}
+								videoId={row.original.id}
 								alt={row.original.title}
 								className="h-full w-full object-cover"
 								width={160}
@@ -560,6 +561,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 							<div className="relative">
 								<VideoThumbnail
 									playbackId={video.playbackId}
+									videoId={video.id}
 									alt={video.title}
 									className="aspect-video w-full object-cover"
 									aspectVideo
@@ -592,7 +594,11 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									</Link>
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" size="icon" className="h-8 w-8">
+											<Button
+												variant="secondary"
+												size="icon"
+												className="h-8 w-8"
+											>
 												<MoreHorizontal className="size-4" />
 												<span className="sr-only">Open menu</span>
 											</Button>
@@ -628,9 +634,8 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									</DropdownMenu>
 								</div>
 								<CardDescription>
-									<div className="space-y-1">
+									<div className="space-y-2">
 										<div>
-											{' '}
 											Status:{' '}
 											<Badge
 												variant={
@@ -659,19 +664,16 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 											</Badge>
 										</div>
 										<div>
-											{' '}
 											Views:{' '}
-											<Badge variant="secondary">
+											<span className="font-semibold text-primary">
 												{(video.views ?? 0).toLocaleString()}
-											</Badge>
+											</span>
 										</div>
 										<div>
 											Visibility:{' '}
-											<Badge
-												variant={video.isPublished ? 'default' : 'secondary'}
-											>
+											<span className="font-semibold text-primary">
 												{video.isPublished ? 'Published' : 'Unpublished'}
-											</Badge>
+											</span>
 										</div>
 									</div>
 								</CardDescription>

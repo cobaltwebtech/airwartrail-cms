@@ -519,16 +519,21 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 
 			{/* Results count */}
 			<div className="flex items-center justify-between">
+				<div>
+					<span className="text-sm text-muted-foreground">
+						Click on playlist title to edit.
+					</span>{' '}
+					{!searchTerm && (
+						<span className="text-sm text-muted-foreground">
+							Drag rows to reorder playlists
+						</span>
+					)}
+				</div>
 				<p className="text-sm text-muted-foreground">
 					{orderedPlaylists.length} playlist
 					{orderedPlaylists.length !== 1 ? 's' : ''}
 					{searchTerm && ` matching "${searchTerm}"`}
 				</p>
-				{!searchTerm && (
-					<p className="text-sm text-muted-foreground">
-						Drag rows to reorder playlists
-					</p>
-				)}
 			</div>
 
 			{/* Table View */}

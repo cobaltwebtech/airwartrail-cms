@@ -14,6 +14,75 @@ import {
 // Import the MuxAssetState type alias
 type MuxAssetState = "waiting" | "preparing" | "ready" | "errored";
 
+/**
+ * Helper function to sync view count from Mux Data API
+ * This is extracted so it can be called from multiple procedures
+ */
+async function syncViewCountFromMux(
+	env: Env,
+	libraryId: string,
+	muxAssetId: string,
+): Promise<{ views: number; totalWatchTimeMs: number | null; synced: boolean }> {
+	const db = getVideosDb(env);
+
+	// Get the current stored video record
+	const [videoRecord] = await db
+		.select({
+			id: video.id,
+			viewCount: video.viewCount,
+			viewCountSyncedAt: video.viewCountSyncedAt,
+			totalWatchTimeMs: video.totalWatchTimeMs,
+		})
+		.from(video)
+		.where(and(eq(video.muxAssetId, muxAssetId), eq(video.libraryId, libraryId)))
+		.limit(1);
+
+	if (!videoRecord) {
+		return { views: 0, totalWatchTimeMs: null, synced: false };
+	}
+
+	const { mux } = await getMuxClient(env, libraryId);
+	const now = Date.now();
+	const lastSyncAt = videoRecord.viewCountSyncedAt?.getTime() ?? null;
+
+	// Determine the timeframe to query
+	let timeframeParam: string[];
+	if (lastSyncAt) {
+		const lastSyncEpoch = Math.floor(lastSyncAt / 1000);
+		const nowEpoch = Math.floor(now / 1000);
+		timeframeParam = [String(lastSyncEpoch), String(nowEpoch)];
+	} else {
+		timeframeParam = ["90:days"];
+	}
+
+	const response = await mux.data.metrics.getOverallValues("views", {
+		filters: [`asset_id:${muxAssetId}`],
+		timeframe: timeframeParam,
+	});
+
+	const newViews = response.data?.total_views ?? 0;
+	const newWatchTime = response.data?.total_watch_time ?? 0;
+
+	const storedViewCount = videoRecord.viewCount ?? 0;
+	const storedWatchTime = videoRecord.totalWatchTimeMs ?? 0;
+
+	const cumulativeViews = lastSyncAt ? storedViewCount + newViews : newViews;
+	const cumulativeWatchTime = lastSyncAt ? storedWatchTime + newWatchTime : newWatchTime;
+
+	// Update the database with new cumulative totals
+	await db
+		.update(video)
+		.set({
+			viewCount: cumulativeViews,
+			totalWatchTimeMs: cumulativeWatchTime,
+			viewCountSyncedAt: new Date(now),
+			updatedAt: new Date(now),
+		})
+		.where(eq(video.id, videoRecord.id));
+
+	return { views: cumulativeViews, totalWatchTimeMs: cumulativeWatchTime, synced: true };
+}
+
 export const videosRouter = t.router({
 	/**
 	 * List all assets from Mux (with pagination)
@@ -635,11 +704,15 @@ export const videosRouter = t.router({
 	 * This combines database metadata with Mux asset data
 	 */
 	getVideoById: protectedProcedure
-		.input(z.object({ videoId: z.string(), libraryId: z.string() }))
+		.input(z.object({ 
+			videoId: z.string(), 
+			libraryId: z.string(),
+			syncViewCount: z.boolean().default(true),
+		}))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
 			const db = getVideosDb(env);
-			const { videoId, libraryId } = input;
+			const { videoId, libraryId, syncViewCount } = input;
 
 			try {
 				// Fetch video from database by internal ID
@@ -660,6 +733,22 @@ export const videosRouter = t.router({
 						code: "NOT_FOUND",
 						message: `Video ${videoId} not found`,
 					});
+				}
+
+				// Sync view count from Mux Data API if requested
+				let currentViewCount = videoRecord.viewCount ?? 0;
+				if (syncViewCount && videoRecord.muxAssetId) {
+					try {
+						const viewCountResult = await syncViewCountFromMux(
+							env,
+							libraryId,
+							videoRecord.muxAssetId,
+						);
+						currentViewCount = viewCountResult.views;
+					} catch (viewCountError) {
+						console.warn("Could not sync view count for video:", viewCountError);
+						// Continue with stale view count
+					}
 				}
 
 				// Get Mux client and fetch asset details from Mux
@@ -707,8 +796,9 @@ export const videosRouter = t.router({
 					isPublished: videoRecord.isPublished,
 					publishedAt: videoRecord.publishedAt?.toISOString(),
 					// Analytics
-					views: videoRecord.viewCount ?? 0,
+					views: currentViewCount,
 					viewCountSyncedAt: videoRecord.viewCountSyncedAt?.toISOString(),
+					totalWatchTimeMs: videoRecord.totalWatchTimeMs ?? 0,
 					// Timestamps
 					createdAt: videoRecord.createdAt.toISOString(),
 					updatedAt: videoRecord.updatedAt.toISOString(),
@@ -1054,20 +1144,11 @@ export const videosRouter = t.router({
 			const db = getVideosDb(env);
 
 			try {
-				// Get the current stored video record
-				const [videoRecord] = await db
-					.select({
-						id: video.id,
-						viewCount: video.viewCount,
-						viewCountSyncedAt: video.viewCountSyncedAt,
-						totalWatchTimeMs: video.totalWatchTimeMs,
-					})
-					.from(video)
-					.where(and(eq(video.muxAssetId, muxAssetId), eq(video.libraryId, libraryId)))
-					.limit(1);
+				// Use the shared sync function
+				const result = await syncViewCountFromMux(env, libraryId, muxAssetId);
 
 				// If no video record exists in our DB, just fetch from Mux without storing
-				if (!videoRecord) {
+				if (!result.synced) {
 					const { mux } = await getMuxClient(env, libraryId);
 					const response = await mux.data.metrics.getOverallValues("views", {
 						filters: [`asset_id:${muxAssetId}`],
@@ -1083,66 +1164,17 @@ export const videosRouter = t.router({
 					};
 				}
 
-				const { mux } = await getMuxClient(env, libraryId);
-				const now = Date.now();
-				const lastSyncAt = videoRecord.viewCountSyncedAt?.getTime() ?? null;
-
-				// Determine the timeframe to query
-				// If we have a last sync time, get views since then
-				// Otherwise, get all available data (up to 90 days)
-				let timeframeParam: string[];
-				if (lastSyncAt) {
-					// Query from last sync to now using epoch timestamps
-					const lastSyncEpoch = Math.floor(lastSyncAt / 1000);
-					const nowEpoch = Math.floor(now / 1000);
-					timeframeParam = [String(lastSyncEpoch), String(nowEpoch)];
-				} else {
-					// First sync - get maximum available data (90 days)
-					timeframeParam = ["90:days"];
-				}
-
-				const response = await mux.data.metrics.getOverallValues("views", {
-					filters: [`asset_id:${muxAssetId}`],
-					timeframe: timeframeParam,
-				});
-
-				const newViews = response.data?.total_views ?? 0;
-				const newWatchTime = response.data?.total_watch_time ?? 0;
-
-				// Calculate cumulative totals
-				const storedViewCount = videoRecord.viewCount ?? 0;
-				const storedWatchTime = videoRecord.totalWatchTimeMs ?? 0;
-
-				// If this is an incremental sync (we have a lastSyncAt), add new views to total
-				// If this is the first sync, the newViews becomes the baseline
-				const cumulativeViews = lastSyncAt ? storedViewCount + newViews : newViews;
-				const cumulativeWatchTime = lastSyncAt ? storedWatchTime + newWatchTime : newWatchTime;
-
-				// Update the database with new cumulative totals
-				await db
-					.update(video)
-					.set({
-						viewCount: cumulativeViews,
-						totalWatchTimeMs: cumulativeWatchTime,
-						viewCountSyncedAt: new Date(now),
-						updatedAt: new Date(now),
-					})
-					.where(eq(video.id, videoRecord.id));
-
 				return {
 					muxAssetId,
-					views: cumulativeViews,
-					totalWatchTime: cumulativeWatchTime,
-					totalPlayingTime: response.data?.total_playing_time ?? null,
-					lastSyncAt: lastSyncAt ? new Date(lastSyncAt).toISOString() : null,
-					newViewsSinceLastSync: lastSyncAt ? newViews : null,
+					views: result.views,
+					totalWatchTime: result.totalWatchTimeMs,
+					totalPlayingTime: null,
 					source: "database-synced" as const,
 				};
 			} catch (error) {
 				// If Mux API fails, return stored values from database
 				console.warn("Failed to fetch view count from Mux Data API:", error);
 
-				const db = getVideosDb(env);
 				const [videoRecord] = await db
 					.select({
 						viewCount: video.viewCount,
