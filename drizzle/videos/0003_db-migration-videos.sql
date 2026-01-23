@@ -1,0 +1,1 @@
+ALTER TABLE `mux_library` ADD `default_playback_restriction_id` text;

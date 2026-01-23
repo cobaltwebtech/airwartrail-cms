@@ -163,7 +163,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 						ref={playerRef}
 						playbackId={video.playbackId}
 						title={video.title}
-						streamType="on-demand"
 						// Custom thumbnail priority:
 						// 1. Custom uploaded image URL (poster prop)
 						// 2. Custom thumbnail time (thumbnailTime prop for public, embedded in token for signed)

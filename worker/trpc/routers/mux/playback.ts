@@ -55,6 +55,11 @@ export const playbackRouter = t.router({
 					height: z.number().optional(),
 					fit_mode: z.string().optional(),
 				}).optional(),
+				// Optional playback restriction ID to enforce domain/user-agent restrictions
+				// - undefined: use library's defaultPlaybackRestrictionId (if set)
+				// - null: explicitly disable restrictions (override default)
+				// - string: use the specified restriction ID
+				playbackRestrictionId: z.string().optional().nullable(),
 			}),
 		)
 		.query(
@@ -70,11 +75,22 @@ export const playbackRouter = t.router({
 
 				try {
 					const library = await getMuxLibrary(env, input.libraryId);
+					
+					// Determine which playback restriction ID to use:
+					// - If explicitly provided (string), use it
+					// - If explicitly null, don't use any restriction
+					// - If undefined, fall back to library's default
+					const effectiveRestrictionId = 
+						input.playbackRestrictionId !== undefined
+							? input.playbackRestrictionId
+							: library.defaultPlaybackRestrictionId;
+					
 					return await generateSignedTokens(
 						input.playbackId,
 						library,
 						input.expiresIn,
 						input.thumbnailParams,
+						effectiveRestrictionId,
 					);
 				} catch (error) {
 					if (error instanceof TRPCError) throw error;
@@ -96,6 +112,11 @@ export const playbackRouter = t.router({
 				playbackId: z.string(),
 				libraryId: z.string().optional(),
 				expiresIn: z.number().default(3600),
+				// Optional playback restriction ID to enforce domain/user-agent restrictions
+				// - undefined: use library's defaultPlaybackRestrictionId (if set)
+				// - null: explicitly disable restrictions (override default)
+				// - string: use the specified restriction ID
+				playbackRestrictionId: z.string().optional().nullable(),
 			}),
 		)
 		.query(async ({ ctx, input }): Promise<{ url: string; token?: string }> => {
@@ -106,10 +127,18 @@ export const playbackRouter = t.router({
 				
 				// For signed playback, generate a signed URL with JWT token
 				if (library.signingKeyId && library.signingKeyPrivate) {
+					// Determine which playback restriction ID to use
+					const effectiveRestrictionId = 
+						input.playbackRestrictionId !== undefined
+							? input.playbackRestrictionId
+							: library.defaultPlaybackRestrictionId;
+					
 					const tokens = await generateSignedTokens(
 						input.playbackId,
 						library,
 						input.expiresIn,
+						undefined, // thumbnailParams
+						effectiveRestrictionId,
 					);
 					return {
 						url: `https://stream.mux.com/${input.playbackId}`,

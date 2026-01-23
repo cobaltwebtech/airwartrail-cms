@@ -35,6 +35,7 @@ export const muxLibrary = sqliteTable(
 		})
 			.default('public')
 			.notNull(),
+		defaultPlaybackRestrictionId: text('default_playback_restriction_id'),
 		defaultVideoQuality: text('default_video_quality', {
 			enum: ['basic', 'plus', 'premium'],
 		})

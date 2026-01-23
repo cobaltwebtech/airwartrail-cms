@@ -249,6 +249,7 @@ export async function generateSignedTokens(
 	library: MuxLibrary,
 	expiresIn: number = 3600,
 	thumbnailParams?: ThumbnailParams,
+	playbackRestrictionId?: string | null,
 ): Promise<{ playback: string; thumbnail: string; storyboard: string }> {
 	const signingKeyId = library.signingKeyId;
 	const signingKeySecret = library.signingKeyPrivate;
@@ -268,33 +269,43 @@ export async function generateSignedTokens(
 		jwtPrivateKey: signingKeySecret,
 	});
 
+	// Build base params with optional playback restriction
+	// Per Mux docs: playback_restriction_id is an optional JWT claim that enables domain/user-agent validation
+	const baseParams: Record<string, string> | undefined = playbackRestrictionId
+		? { playback_restriction_id: playbackRestrictionId }
+		: undefined;
+
 	// Generate tokens for each type using Mux's JWT helpers
 	const playbackToken = await muxClient.jwt.signPlaybackId(playbackId, {
 		expiration: `${expiresIn}s`,
 		type: "video",
+		params: baseParams,
 	});
 
 	// For thumbnail tokens, embed params in the JWT claims
 	// Per Mux docs: time, width, height, fit_mode must be in the token, not query string
 	// Convert thumbnailParams to Record<string, string> format expected by Mux SDK
-	const thumbnailParamsRecord: Record<string, string> | undefined =
-		thumbnailParams
+	const thumbnailParamsRecord: Record<string, string> = {
+		...(baseParams || {}),
+		...(thumbnailParams
 			? Object.fromEntries(
 					Object.entries(thumbnailParams)
 						.filter(([_, value]) => value !== undefined)
 						.map(([key, value]) => [key, String(value)]),
 				)
-			: undefined;
+			: {}),
+	};
 
 	const thumbnailToken = await muxClient.jwt.signPlaybackId(playbackId, {
 		expiration: `${expiresIn}s`,
 		type: "thumbnail",
-		params: thumbnailParamsRecord,
+		params: Object.keys(thumbnailParamsRecord).length > 0 ? thumbnailParamsRecord : undefined,
 	});
 
 	const storyboardToken = await muxClient.jwt.signPlaybackId(playbackId, {
 		expiration: `${expiresIn}s`,
 		type: "storyboard",
+		params: baseParams,
 	});
 
 	return {
