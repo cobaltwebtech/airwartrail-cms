@@ -45,7 +45,7 @@ export const auth = betterAuth({
 		sendResetPassword: async ({ user, url }) => {
 			try {
 				await resend.emails.send({
-					from: 'AWT Dashboard <auth@contact.cobaltweb.tech>',
+					from: 'AWT Dashboard <auth@notify.airwartrail.com>',
 					to: user.email,
 					subject: 'Password Reset',
 					react: await PasswordReset({
@@ -66,7 +66,7 @@ export const auth = betterAuth({
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url }) => {
 			void resend.emails.send({
-				from: 'AWT Dashboard <auth@contact.cobaltweb.tech>',
+				from: 'AWT Dashboard <auth@notify.airwartrail.com>',
 				to: user.email,
 				subject: 'Verify Your Email',
 				html: `<p>Click the link below to verify your email address:</p><p><a href="${url}">Verify Email</a></p>`,
@@ -111,7 +111,7 @@ export const auth = betterAuth({
 				async sendOTP({ user, otp }: { user: { email: string }; otp: string }) {
 					console.log(`Sending OTP to ${user.email}: ${otp}`);
 					await resend.emails.send({
-						from: 'AWT Dashboard <no-reply@demo.better-auth.com>',
+						from: 'AWT Dashboard <auth@notify.airwartrail.com>',
 						to: user.email,
 						subject: 'Your OTP',
 						html: `Your OTP is ${otp}`,
