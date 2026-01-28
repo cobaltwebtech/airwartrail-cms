@@ -1,9 +1,11 @@
 import { Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
+	FilePlus,
 	KeyRound,
 	LibraryBig,
 	ListVideo,
+	NotebookPen,
 	Tags,
 	Upload,
 } from 'lucide-react';
@@ -43,6 +45,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			title: 'Video Tags',
 			url: '/tags',
 			icon: Tags,
+		},
+		{
+			title: 'Blog Posts',
+			url: '/blog-posts',
+			icon: NotebookPen,
+		},
+		{
+			title: 'Create Blog Post',
+			url: '/blog-posts/create-post',
+			icon: FilePlus,
 		},
 		{
 			title: 'Create Library',

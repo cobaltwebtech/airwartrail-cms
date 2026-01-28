@@ -2,16 +2,16 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "airwartrail-cms",
 	"main": "./worker/index.ts",
-	"compatibility_date": "2025-01-12",
+	"compatibility_date": "2026-01-12",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
 	"observability": {
 		"enabled": true
 	},
-  "placement": {
-    "mode": "smart"
-  },
+	"placement": {
+		"mode": "smart"
+	},
 	"upload_source_maps": true,
 	"workers_dev": false,
 	"assets": {
@@ -34,13 +34,19 @@
 			"database_name": "airwartrail-cms-videos",
 			"database_id": "f07cb108-35d7-466c-9c50-e5d01ff6b8dc",
 			"migrations_dir": "./drizzle/videos"
+		},
+		{
+			"binding": "DB_BLOG",
+			"database_name": "airwartrail-cms-blog",
+			"database_id": "19b68360-9080-446a-b777-a1ba5b63ca17",
+			"migrations_dir": "./drizzle/blog"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "R2_ASSETS",
 			"bucket_name": "airwartrail-assets",
-			"remote" : true
+			"remote": true
 		}
 	],
 	"vars": {

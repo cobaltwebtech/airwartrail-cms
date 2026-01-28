@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, protectedProcedure } from "../trpc-init";
+import { t, protectedProcedure } from "@/worker/trpc/trpc-init";
 import { auth } from "@/lib/auth-server";
 
 // ============================================================================

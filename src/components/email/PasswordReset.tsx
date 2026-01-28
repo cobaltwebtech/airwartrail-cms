@@ -35,38 +35,12 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({ url }) => {
 										<Img
 											alt="Air War Trail Logo"
 											height="150"
-											src="https://airwartrail-assets.b-cdn.net/email-assets/Airwar-Trail-Logo.png"
+											src="https://assets.airwartrail.com/static/Airwar-Trail-Logo.png"
 										/>
 									</Link>
 									<Heading as="h1" className="text-4xl">
 										Air War Trail
 									</Heading>
-								</Column>
-							</Row>
-							<Row>
-								<Column align="center">
-									<Link
-										className="text-stone-600 [text-decoration:none]"
-										href="#"
-									>
-										Episodes
-									</Link>
-								</Column>
-								<Column align="center">
-									<Link
-										className="text-stone-600 [text-decoration:none]"
-										href="#"
-									>
-										About
-									</Link>
-								</Column>
-								<Column align="center">
-									<Link
-										className="text-stone-600 [text-decoration:none]"
-										href="#"
-									>
-										Account
-									</Link>
 								</Column>
 							</Row>
 						</Section>
@@ -98,7 +72,7 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({ url }) => {
 									<Img
 										alt="Air War Trail Logo"
 										width="80"
-										src="https://airwartrail-assets.b-cdn.net/email-assets/Airwar-Trail-Logo.png"
+										src="https://assets.airwartrail.com/static/Airwar-Trail-Logo.png"
 										className="mx-auto w-[80px]"
 									/>
 								</Column>
@@ -109,7 +83,7 @@ export const PasswordReset: React.FC<PasswordResetProps> = ({ url }) => {
 										<Img
 											alt="YouTube logo"
 											height="64"
-											src="https://airwartrail-assets.b-cdn.net/email-assets/youtube-dark-icon.png"
+											src="https://assets.airwartrail.com/static/YouTube-Logo-Dark.png"
 											width="64"
 											className="mx-auto"
 										/>
