@@ -368,7 +368,7 @@ function UploadPage() {
 							</p>
 							<MuxUploader
 								endpoint={uploadUrl}
-								chunkSize={16384} // specify in KB (16MB = 16 * 1024)
+								dynamicChunkSize={true}
 								onSuccess={() => {
 									setUploadComplete(true);
 									toast.info('Upload complete, processing video...');
