@@ -102,6 +102,49 @@ export const generatePostId = customAlphabet(
 );
 
 // ============================================================================
+// Reading Time Calculation
+// ============================================================================
+
+const WORDS_PER_MINUTE = 200;
+
+/**
+ * Extract plain text from Tiptap JSON content structure
+ */
+function extractTextFromTiptap(content: unknown): string {
+	if (!content || typeof content !== 'object') {
+		return '';
+	}
+
+	let text = '';
+
+	// Handle text nodes
+	if ('text' in content && typeof content.text === 'string') {
+		text += content.text;
+	}
+
+	// Recursively process content array
+	if ('content' in content && Array.isArray(content.content)) {
+		for (const node of content.content) {
+			text += extractTextFromTiptap(node);
+			text += ' '; // Add space between nodes
+		}
+	}
+
+	return text;
+}
+
+/**
+ * Calculate reading time in minutes from Tiptap JSON content
+ */
+function calculateReadingTime(postContent: unknown): number {
+	const text = extractTextFromTiptap(postContent);
+	const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+	const wordCount = words.length;
+	const minutes = Math.ceil(wordCount / WORDS_PER_MINUTE);
+	return Math.max(1, minutes); // Minimum 1 minute
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -219,6 +262,11 @@ export const blogRouter = t.router({
 					? now
 					: input.publishedAt ?? null;
 
+			// Auto-calculate reading time from post content
+			const readingTimeMinutes = input.postContent
+				? calculateReadingTime(input.postContent)
+				: null;
+
 			const [newPost] = await db
 				.insert(posts)
 				.values({
@@ -234,7 +282,7 @@ export const blogRouter = t.router({
 					author: ctx.user.name,
 					authorId: ctx.user.id,
 					isFeatured: input.isFeatured,
-					readingTimeMinutes: input.readingTimeMinutes ?? null,
+					readingTimeMinutes,
 				})
 				.returning();
 
@@ -310,13 +358,17 @@ export const blogRouter = t.router({
 			if (input.slug !== undefined) updateData.slug = input.slug;
 			if (input.title !== undefined) updateData.title = input.title;
 			if (input.shortDescription !== undefined) updateData.short_description = input.shortDescription;
-			if (input.postContent !== undefined) updateData.postContent = input.postContent;
+			if (input.postContent !== undefined) {
+				updateData.postContent = input.postContent;
+				// Auto-calculate reading time when content is updated
+				updateData.readingTimeMinutes = calculateReadingTime(input.postContent);
+			}
 			if (input.featuredImageUrl !== undefined) updateData.featuredImageUrl = input.featuredImageUrl;
 			if (input.featuredImageAlt !== undefined) updateData.featuredImageAlt = input.featuredImageAlt;
 			if (input.publishStatus !== undefined) updateData.publishStatus = input.publishStatus;
 			if (publishedAt !== undefined) updateData.publishedAt = publishedAt;
 			if (input.isFeatured !== undefined) updateData.isFeatured = input.isFeatured;
-			if (input.readingTimeMinutes !== undefined) updateData.readingTimeMinutes = input.readingTimeMinutes;
+			// Note: readingTimeMinutes is now auto-calculated from postContent
 
 			const [updatedPost] = await db
 				.update(posts)

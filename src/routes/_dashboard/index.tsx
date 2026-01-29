@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
+	FilePlus,
 	KeyRound,
 	Library,
 	ListVideo,
+	NotebookPen,
 	Tags,
 	Upload,
 } from 'lucide-react';
@@ -76,6 +78,32 @@ function IndexPage() {
 						<CardContent>
 							<p className="text-center text-muted-foreground text-sm">
 								View and manage video tags
+							</p>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/blog-posts">
+					<Card className="hover:bg-secondary transition-colors h-full">
+						<CardHeader className="flex flex-col items-center justify-center gap-2">
+							<NotebookPen className="size-10" />
+							<CardTitle>Blog Posts</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p className="text-center text-muted-foreground text-sm">
+								View and manage blog posts
+							</p>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/blog-posts/create-post">
+					<Card className="hover:bg-secondary transition-colors h-full">
+						<CardHeader className="flex flex-col items-center justify-center gap-2">
+							<FilePlus className="size-10" />
+							<CardTitle>Create Blog Post</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p className="text-center text-muted-foreground text-sm">
+								Create a new blog post
 							</p>
 						</CardContent>
 					</Card>
