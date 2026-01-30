@@ -2,11 +2,11 @@ import type { Editor } from '@tiptap/react';
 import {
 	Bold,
 	Code,
-	Heading1,
 	Heading2,
 	Heading3,
 	Heading4,
 	Italic,
+	Link,
 	List,
 	ListOrdered,
 	Quote,
@@ -14,7 +14,16 @@ import {
 	Strikethrough,
 	Undo,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
 	Tooltip,
@@ -66,6 +75,30 @@ function MenuButton({
 }
 
 export function EditorMenuBar({ editor }: EditorMenuBarProps) {
+	const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+	const [linkUrl, setLinkUrl] = useState('');
+
+	const handleLinkClick = () => {
+		const previousUrl = editor.getAttributes('link').href;
+		setLinkUrl(previousUrl || '');
+		setIsLinkDialogOpen(true);
+	};
+
+	const handleLinkSave = () => {
+		if (linkUrl) {
+			editor
+				.chain()
+				.focus()
+				.extendMarkRange('link')
+				.setLink({ href: linkUrl })
+				.run();
+		} else {
+			editor.chain().focus().extendMarkRange('link').unsetLink().run();
+		}
+		setIsLinkDialogOpen(false);
+		setLinkUrl('');
+	};
+
 	if (!editor) {
 		return null;
 	}
@@ -111,15 +144,16 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* Headings */}
+			{/* Link */}
 			<MenuButton
-				onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-				isActive={editor.isActive('heading', { level: 1 })}
-				tooltip="Heading 1"
+				onClick={handleLinkClick}
+				isActive={editor.isActive('link')}
+				tooltip="Add Link"
 			>
-				<Heading1 className="size-4" />
+				<Link className="size-4" />
 			</MenuButton>
 
+			<Separator orientation="vertical" className="mx-1 h-6" />
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
 				isActive={editor.isActive('heading', { level: 2 })}
@@ -189,6 +223,39 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 			>
 				<Redo className="size-4" />
 			</MenuButton>
+
+			{/* Link Dialog */}
+			<Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Add Link</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<Input
+							placeholder="https://example.com"
+							value={linkUrl}
+							onChange={(e) => setLinkUrl(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') {
+									handleLinkSave();
+								}
+							}}
+							autoFocus
+						/>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setIsLinkDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button onClick={handleLinkSave}>
+							{linkUrl ? 'Add Link' : 'Remove Link'}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

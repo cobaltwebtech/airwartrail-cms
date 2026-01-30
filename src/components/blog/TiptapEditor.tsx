@@ -1,3 +1,4 @@
+import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
@@ -22,6 +23,9 @@ export function TiptapEditor({
 				heading: {
 					levels: [1, 2, 3, 4],
 				},
+			}),
+			Link.configure({
+				openOnClick: false,
 			}),
 		],
 		content: content as string | null,
