@@ -210,14 +210,7 @@ function BlogPostsPage() {
 			<DashboardHeader
 				heading="Blog Posts"
 				text="Manage your blog posts and content."
-			>
-				<Button asChild>
-					<Link to="/blog-posts/create-post">
-						<Plus />
-						Create Post
-					</Link>
-				</Button>
-			</DashboardHeader>
+			/>
 
 			<section className="space-y-4">
 				<div className="flex justify-between gap-2">
@@ -316,7 +309,7 @@ function BlogPostsPage() {
 function StatusBadge({ status }: { status: PublishStatus }) {
 	switch (status) {
 		case 'published':
-			return <Badge variant="default">Published</Badge>;
+			return <Badge variant="accent">Published</Badge>;
 		case 'draft':
 			return <Badge variant="secondary">Draft</Badge>;
 		case 'scheduled':

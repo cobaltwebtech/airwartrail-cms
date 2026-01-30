@@ -76,7 +76,7 @@ function PlaylistsIndexPage() {
 							</BreadcrumbItem>
 						</BreadcrumbList>
 					</Breadcrumb>
-					<Button asChild variant="accent">
+					<Button asChild>
 						<Link
 							to="/library/$libraryId/create-playlist"
 							params={{ libraryId }}

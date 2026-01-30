@@ -14,7 +14,7 @@ import {
 	Strikethrough,
 	Undo,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -83,6 +83,20 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 		setLinkUrl(previousUrl || '');
 		setIsLinkDialogOpen(true);
 	};
+
+	// Listen for link clicks from the editor
+	useEffect(() => {
+		const handleOpenLinkDialog = (event: Event) => {
+			const customEvent = event as CustomEvent<{ href: string; pos: number }>;
+			setLinkUrl(customEvent.detail.href || '');
+			setIsLinkDialogOpen(true);
+			editor.chain().focus().setTextSelection(customEvent.detail.pos).run();
+		};
+
+		window.addEventListener('openLinkDialog', handleOpenLinkDialog);
+		return () =>
+			window.removeEventListener('openLinkDialog', handleOpenLinkDialog);
+	}, [editor]);
 
 	const handleLinkSave = () => {
 		if (linkUrl) {

@@ -172,6 +172,10 @@
 	margin-bottom: 0.75em;
 }
 
+.prose a {
+	text-decoration: underline;
+}
+
 .prose strong {
 	font-weight: 700;
 }
