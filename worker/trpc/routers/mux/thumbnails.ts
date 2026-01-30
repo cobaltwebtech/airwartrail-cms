@@ -99,7 +99,7 @@ export const thumbnailsRouter = t.router({
 	 * Returns the key that will be used (with collision handling)
 	 */
 	getUploadUrl: protectedProcedure
-		.use(createPermissionMiddleware('thumbnails', ['write']))
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -160,7 +160,7 @@ export const thumbnailsRouter = t.router({
 	 * Accepts base64 encoded image data
 	 */
 	uploadThumbnail: protectedProcedure
-		.use(createPermissionMiddleware('thumbnails', ['write']))
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -273,7 +273,7 @@ export const thumbnailsRouter = t.router({
 	 * Delete a custom thumbnail from R2 and clear the database reference
 	 */
 	deleteThumbnail: protectedProcedure
-		.use(createPermissionMiddleware('thumbnails', ['delete']))
+		.use(createPermissionMiddleware('mux', ['delete']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -351,7 +351,7 @@ export const thumbnailsRouter = t.router({
 	 * Returns null if no custom thumbnail is set
 	 */
 	getThumbnail: protectedProcedure
-		.use(createPermissionMiddleware('thumbnails', ['read']))
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -406,7 +406,7 @@ export const thumbnailsRouter = t.router({
 	 * This is separate from the custom uploaded thumbnail
 	 */
 	updateThumbnailTime: protectedProcedure
-		.use(createPermissionMiddleware('thumbnails', ['write']))
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
