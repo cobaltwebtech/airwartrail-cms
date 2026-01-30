@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { playlist, playlistItem, video } from "@/db/video-schema";
 import { generatePlaylistId, generatePlaylistItemId } from "@/worker/lib/generate-id";
 import { getVideosDb, getMuxLibrary } from "./shared";
@@ -11,6 +11,7 @@ export const playlistsRouter = t.router({
 	 * Create a new playlist
 	 */
 	createPlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -137,6 +138,7 @@ export const playlistsRouter = t.router({
 	 * List all playlists for a library
 	 */
 	listPlaylists: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -273,6 +275,7 @@ export const playlistsRouter = t.router({
 	 * Get a single playlist by ID or slug with its videos
 	 */
 	getPlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -396,6 +399,7 @@ export const playlistsRouter = t.router({
 	 * Update a playlist
 	 */
 	updatePlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -520,6 +524,7 @@ export const playlistsRouter = t.router({
 	 * Delete a playlist (soft delete)
 	 */
 	deletePlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['delete']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -575,6 +580,7 @@ export const playlistsRouter = t.router({
 	 * Publish or unpublish a playlist
 	 */
 	setPlaylistPublishStatus: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -631,6 +637,7 @@ export const playlistsRouter = t.router({
 	 * Add a video to a playlist
 	 */
 	addVideoToPlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -766,6 +773,7 @@ export const playlistsRouter = t.router({
 	 * Remove a video from a playlist
 	 */
 	removeVideoFromPlaylist: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -830,6 +838,7 @@ export const playlistsRouter = t.router({
 	 * Reorder videos in a playlist
 	 */
 	reorderPlaylistVideos: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -898,6 +907,7 @@ export const playlistsRouter = t.router({
 	 * Update a playlist item (custom title/description)
 	 */
 	updatePlaylistItem: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				playlistId: z.string(),
@@ -985,6 +995,7 @@ export const playlistsRouter = t.router({
 	 * Reorder playlists within a library
 	 */
 	reorderPlaylists: protectedProcedure
+		.use(createPermissionMiddleware('playlists', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string(),

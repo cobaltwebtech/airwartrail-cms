@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, asc } from "drizzle-orm";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { videoChapter, video } from "@/db/video-schema";
 import { getVideosDb } from "./shared";
 import { generateChapterId } from "@/worker/lib/generate-id";
@@ -11,6 +11,7 @@ export const chaptersRouter = t.router({
 	 * Get chapters for a video by internal video ID
 	 */
 	getChapters: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				videoId: z.string(), // Internal database video ID
@@ -67,6 +68,7 @@ export const chaptersRouter = t.router({
 	 * Save chapters for a video by internal video ID (replace all existing chapters)
 	 */
 	saveChapters: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(), // Internal database video ID
@@ -157,6 +159,7 @@ export const chaptersRouter = t.router({
 	 * Delete a single chapter
 	 */
 	deleteChapter: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['delete']))
 		.input(
 			z.object({
 				chapterId: z.string(),

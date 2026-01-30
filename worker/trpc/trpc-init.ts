@@ -67,64 +67,67 @@ export const apiKeyProcedure = t.procedure.use(async ({ ctx, next }) => {
 });
 
 /**
- * Helper to create an API key procedure with required permissions
- * @param resource - The resource name (e.g., 'mux', 'videos')
- * @param actions - Required actions (e.g., ['read'], ['read', 'write'])
+ * Permission middleware that works with both session and API key authentication
+ * - Session users: bypass permission checks (full access via CMS)
+ * - API key users: must have the required permissions
+ * 
+ * @param resource - The resource name (e.g., 'mux', 'videos', 'libraries')
+ * @param actions - Required actions (e.g., ['read'], ['read', 'write'], ['delete'])
+ * 
+ * @example
+ * ```ts
+ * // In your router:
+ * listVideos: protectedProcedure
+ *   .use(createPermissionMiddleware('mux', ['read']))
+ *   .query(async ({ ctx }) => { ... })
+ * 
+ * deleteVideo: protectedProcedure
+ *   .use(createPermissionMiddleware('mux', ['delete']))
+ *   .mutation(async ({ ctx, input }) => { ... })
+ * ```
  */
-export const createApiKeyProcedureWithPermissions = (
+export const createPermissionMiddleware = (
 	resource: string,
 	actions: string[]
 ) => {
-	return apiKeyProcedure.use(async ({ ctx, next }) => {
-		const permissions = ctx.apiKey.permissions;
-
-		if (!permissions) {
-			throw new TRPCError({
-				code: "FORBIDDEN",
-				message: `API key does not have any permissions`,
-			});
+	return t.middleware(async ({ ctx, next }) => {
+		// Session users bypass permission checks (full CMS access)
+		if (ctx.authType === 'session' || ctx.authType === null) {
+			return next();
 		}
 
-		const resourcePermissions = permissions[resource];
-		if (!resourcePermissions) {
-			throw new TRPCError({
-				code: "FORBIDDEN",
-				message: `API key does not have permissions for resource: ${resource}`,
-			});
-		}
+		// API key users must have required permissions
+		if (ctx.authType === 'api-key') {
+			const permissions = ctx.apiKey?.permissions;
 
-		const hasAllActions = actions.every((action) =>
-			resourcePermissions.includes(action)
-		);
+			if (!permissions) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: `API key does not have any permissions`,
+				});
+			}
 
-		if (!hasAllActions) {
-			throw new TRPCError({
-				code: "FORBIDDEN",
-				message: `API key missing required permissions: ${actions.join(', ')} for resource: ${resource}`,
-			});
+			const resourcePermissions = permissions[resource];
+			if (!resourcePermissions) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: `API key does not have permissions for resource: ${resource}`,
+				});
+			}
+
+			const hasAllActions = actions.every((action) =>
+				resourcePermissions.includes(action)
+			);
+
+			if (!hasAllActions) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: `API key missing required permissions: ${actions.join(', ')} for resource: ${resource}`,
+				});
+			}
 		}
 
 		return next();
 	});
 };
 
-/**
- * Admin procedure - requires authentication AND admin role
- * Throws UNAUTHORIZED if not logged in
- * Throws FORBIDDEN if not an admin
- * Use this for admin-only endpoints
- * 
- * TODO: Implement role-based access control by adding a 'role' column to the user table
- */
-// export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-// 	// At this point, we know user exists (from protectedProcedure)
-// 	// Now check if they have admin role
-// 	if (ctx.user.role !== "admin") {
-// 		throw new TRPCError({
-// 			code: "FORBIDDEN",
-// 			message: "You must be an admin to access this resource",
-// 		});
-// 	}
-
-// 	return next();
-// });

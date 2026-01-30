@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import {
 	getMuxClient,
 	getLanguageName,
@@ -12,6 +12,7 @@ export const uploadsRouter = t.router({
 	 * Create a direct upload URL for resumable uploads
 	 */
 	createDirectUpload: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string().optional(),
@@ -102,6 +103,7 @@ export const uploadsRouter = t.router({
 	 * Get direct upload status
 	 */
 	getDirectUpload: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ uploadId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }): Promise<DirectUpload> => {
 			const { env } = ctx;
@@ -131,6 +133,7 @@ export const uploadsRouter = t.router({
 	 * Create a playback ID for an asset
 	 */
 	createPlaybackId: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				assetId: z.string(),

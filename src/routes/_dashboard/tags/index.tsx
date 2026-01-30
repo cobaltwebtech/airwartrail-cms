@@ -513,10 +513,9 @@ function TagsPage() {
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Tag Name
-						<ArrowUpDown className="ml-2 h-4 w-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
@@ -536,24 +535,14 @@ function TagsPage() {
 				),
 			},
 			{
-				accessorKey: 'description',
-				header: 'Description',
-				cell: ({ row }) => (
-					<span className="text-muted-foreground text-sm max-w-xs truncate block">
-						{row.original.description || '—'}
-					</span>
-				),
-			},
-			{
 				accessorKey: 'videoCount',
 				header: ({ column }) => (
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Videos
-						<ArrowUpDown className="ml-2 h-4 w-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
@@ -568,10 +557,9 @@ function TagsPage() {
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Created
-						<ArrowUpDown className="ml-2 h-4 w-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
@@ -582,7 +570,7 @@ function TagsPage() {
 			},
 			{
 				id: 'actions',
-				header: '',
+				header: 'Actions',
 				size: 50,
 				enableSorting: false,
 				cell: ({ row }) => <TagActions tag={row.original} />,

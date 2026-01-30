@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import {
 	getMuxClient,
 	getMuxLibrary,
@@ -15,6 +15,7 @@ export const playbackRouter = t.router({
 	 * Since Mux doesn't have native collections, we filter by metadata
 	 */
 	getAssetsByCollection: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ collectionId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }): Promise<MuxAsset[]> => {
 			const { env } = ctx;
@@ -43,6 +44,7 @@ export const playbackRouter = t.router({
 	 * Generate signed tokens for secure video playback
 	 */
 	generateSignedTokens: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				playbackId: z.string(),
@@ -107,6 +109,7 @@ export const playbackRouter = t.router({
 	 * Create a signed URL for playback (for signed playback policies)
 	 */
 	createSignedUrl: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				playbackId: z.string(),

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, inArray, asc } from "drizzle-orm";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { video, videoTrack } from "@/db/video-schema";
 import { generateVideoId } from "@/worker/lib/generate-id";
 import {
@@ -88,6 +88,7 @@ export const videosRouter = t.router({
 	 * List all assets from Mux (with pagination)
 	 */
 	listAssets: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z
 				.object({
@@ -168,6 +169,7 @@ export const videosRouter = t.router({
 	 * Get a single asset by ID
 	 */
 	getAsset: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ assetId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }): Promise<MuxAsset> => {
 			const { env } = ctx;
@@ -191,6 +193,7 @@ export const videosRouter = t.router({
 	 * Update an asset (title, metadata)
 	 */
 	updateAsset: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				assetId: z.string(),
@@ -230,6 +233,7 @@ export const videosRouter = t.router({
 	 * Update video metadata in local database
 	 */
 	updateVideoMetadata: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				muxAssetId: z.string(),
@@ -307,6 +311,7 @@ export const videosRouter = t.router({
 	 * Get video metadata from local database
 	 */
 	getVideoFromDatabase: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
@@ -359,6 +364,7 @@ export const videosRouter = t.router({
 	 * Get video tracks (captions, audio, etc.) from local database
 	 */
 	getVideoTracks: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
@@ -417,6 +423,7 @@ export const videosRouter = t.router({
 	 * Check if a video is synced to the local database
 	 */
 	getVideoSyncStatus: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }): Promise<{ isSynced: boolean; videoId?: string }> => {
 			const { env } = ctx;
@@ -454,6 +461,7 @@ export const videosRouter = t.router({
 	 * Sync a single asset from Mux to the local database
 	 */
 	syncSingleAsset: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(z.object({ muxAssetId: z.string(), libraryId: z.string().optional() }))
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean; videoId: string }> => {
 			const { env } = ctx;
@@ -583,6 +591,7 @@ export const videosRouter = t.router({
 	 * Delete an asset
 	 */
 	deleteAsset: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['delete']))
 		.input(z.object({ assetId: z.string(), libraryId: z.string().optional() }))
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
 			const { env } = ctx;
@@ -618,6 +627,7 @@ export const videosRouter = t.router({
 	 * List videos from database (with pagination)
 	 */
 	listVideosFromDatabase: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -704,6 +714,7 @@ export const videosRouter = t.router({
 	 * This combines database metadata with Mux asset data
 	 */
 	getVideoById: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ 
 			videoId: z.string(), 
 			libraryId: z.string(),
@@ -819,6 +830,7 @@ export const videosRouter = t.router({
 	 * Update video metadata by internal database ID
 	 */
 	updateVideoById: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -907,6 +919,7 @@ export const videosRouter = t.router({
 	 * Delete video by internal database ID
 	 */
 	deleteVideoById: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['delete']))
 		.input(z.object({ videoId: z.string(), libraryId: z.string() }))
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
 			const { env } = ctx;
@@ -964,6 +977,7 @@ export const videosRouter = t.router({
 	 * This is useful for importing videos that were uploaded directly to Mux
 	 */
 	syncMuxAssets: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string().optional(),
@@ -1131,6 +1145,7 @@ export const videosRouter = t.router({
 	 * in our database to maintain lifetime view counts.
 	 */
 	getAssetViewCount: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -1200,6 +1215,7 @@ export const videosRouter = t.router({
 	 * Update playback policy for a video (public or signed)
 	 */
 	updatePlaybackPolicy: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),

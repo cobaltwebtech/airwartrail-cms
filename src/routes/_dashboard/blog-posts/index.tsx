@@ -85,17 +85,16 @@ function BlogPostsPage() {
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Title
-						<ArrowUpDown className="ml-2 size-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
 					<Link
 						to="/blog-posts/edit-post/$postId"
 						params={{ postId: row.original.id }}
-						className="font-medium hover:underline"
+						className="px-4 font-medium hover:underline"
 					>
 						{row.original.title}
 					</Link>
@@ -121,10 +120,9 @@ function BlogPostsPage() {
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Updated
-						<ArrowUpDown className="ml-2 size-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
@@ -143,10 +141,9 @@ function BlogPostsPage() {
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
 					>
 						Created
-						<ArrowUpDown className="ml-2 size-4" />
+						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (

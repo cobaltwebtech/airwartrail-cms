@@ -14,7 +14,6 @@ import {
 	Plus,
 	Save,
 	Settings,
-	Tag,
 	Trash2,
 	Undo2,
 	X,
@@ -135,8 +134,6 @@ function PlaylistEditorPage() {
 	const [slug, setSlug] = useState('');
 	const [description, setDescription] = useState('');
 	const [category, setCategory] = useState<PlaylistCategory>('featured');
-	const [tags, setTags] = useState<string[]>([]);
-	const [tagInput, setTagInput] = useState('');
 
 	// Thumbnail state
 	const [thumbnailVideoId, setThumbnailVideoId] = useState<string | null>(null);
@@ -159,7 +156,6 @@ function PlaylistEditorPage() {
 			setSlug(playlist.slug);
 			setDescription(playlist.description ?? '');
 			setCategory(playlist.category as PlaylistCategory);
-			setTags(Array.isArray(playlist.tags) ? playlist.tags : []);
 			// Initialize thumbnail state - default to first video at 3 seconds if not set
 			const defaultVideoId = playlist.videos?.[0]?.id ?? null;
 			setThumbnailVideoId(playlist.thumbnailVideoId ?? defaultVideoId);
@@ -270,7 +266,6 @@ function PlaylistEditorPage() {
 			name,
 			slug,
 			description: description || undefined,
-			tags: tags.length > 0 ? tags : undefined,
 		});
 
 		if (!result.success) {
@@ -286,7 +281,6 @@ function PlaylistEditorPage() {
 			slug: result.data.slug,
 			description: result.data.description,
 			category,
-			tags: result.data.tags,
 			thumbnailVideoId,
 			thumbnailTime,
 		});
@@ -298,7 +292,6 @@ function PlaylistEditorPage() {
 			setSlug(playlist.slug);
 			setDescription(playlist.description ?? '');
 			setCategory(playlist.category as PlaylistCategory);
-			setTags(Array.isArray(playlist.tags) ? playlist.tags : []);
 			// Reset thumbnail state
 			const defaultVideoId = playlist.videos?.[0]?.id ?? null;
 			setThumbnailVideoId(playlist.thumbnailVideoId ?? defaultVideoId);
@@ -319,25 +312,6 @@ function PlaylistEditorPage() {
 		// Only auto-generate slug if it hasn't been manually edited
 		if (!slug || slug === generateSlug(name)) {
 			setSlug(generateSlug(newName));
-		}
-	};
-
-	const handleAddTag = () => {
-		const trimmedTag = tagInput.trim();
-		if (trimmedTag && !tags.includes(trimmedTag)) {
-			setTags([...tags, trimmedTag]);
-			setTagInput('');
-		}
-	};
-
-	const handleRemoveTag = (tagToRemove: string) => {
-		setTags(tags.filter((tag) => tag !== tagToRemove));
-	};
-
-	const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			handleAddTag();
 		}
 	};
 
@@ -570,9 +544,9 @@ function PlaylistEditorPage() {
 
 			<section className="space-y-6">
 				{/* Playlist Info */}
-				<div className="grid gap-6 lg:grid-cols-3">
+				<div className="grid gap-6 lg:grid-cols-2">
 					{/* Details Card */}
-					<Card className="lg:col-span-2">
+					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
 								<Settings className="size-5" />
@@ -700,198 +674,129 @@ function PlaylistEditorPage() {
 						</CardContent>
 					</Card>
 
-					{/* Tags Card */}
+					{/* Thumbnail Section */}
 					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
-								<Tag className="size-5" />
-								Tags
+								<Image className="size-5" />
+								Playlist Thumbnail
 							</CardTitle>
 							<CardDescription>
-								{isEditing ? 'Manage playlist tags.' : 'Playlist tags.'}
+								The thumbnail image representing this playlist. The default
+								image is taken from the first video in the playlist. You may
+								override this by selecting a different video and time to
+								generate the image thumbnail.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							{isEditing ? (
-								<div className="space-y-4">
-									<div className="flex gap-2">
-										<Input
-											value={tagInput}
-											onChange={(e) => setTagInput(e.target.value)}
-											onKeyDown={handleTagKeyDown}
-											placeholder="Add tag..."
-											className="flex-1"
-										/>
-										<Button
-											type="button"
-											variant="secondary"
-											size="sm"
-											onClick={handleAddTag}
-											disabled={!tagInput.trim()}
-										>
-											<Plus className="size-4" />
-										</Button>
+							<div className="grid gap-6 sm:grid-cols-2">
+								{/* Thumbnail Preview */}
+								<div className="space-y-2">
+									<Label>Preview</Label>
+									<div className="max-w-40 aspect-video overflow-hidden rounded-lg border">
+										{(() => {
+											// Get the playback ID for the selected thumbnail video
+											const selectedVideo = thumbnailVideoId
+												? playlistVideos.find((v) => v.id === thumbnailVideoId)
+												: playlistVideos[0];
+											const playbackId = selectedVideo?.muxPlaybackId;
+											const policy = selectedVideo?.playbackPolicy ?? undefined;
+
+											return (
+												<VideoThumbnail
+													playbackId={playbackId}
+													alt={`${playlist.name} thumbnail`}
+													aspectVideo
+													time={thumbnailTime}
+													policy={policy}
+													libraryId={libraryId}
+													fallbackIcon={
+														<ListVideo className="size-12 text-muted-foreground" />
+													}
+												/>
+											);
+										})()}
 									</div>
-									<div className="flex flex-wrap gap-2">
-										{tags.map((tag) => (
-											<span
-												key={tag}
-												className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
+									<p className="text-xs text-muted-foreground">
+										Thumbnail at {thumbnailTime} seconds
+									</p>
+								</div>
+
+								{/* Thumbnail Settings */}
+								{isEditing ? (
+									<div className="space-y-4">
+										<div className="space-y-2">
+											<Label htmlFor="thumbnail-video">Video</Label>
+											<Select
+												value={thumbnailVideoId ?? 'auto'}
+												onValueChange={(value) =>
+													setThumbnailVideoId(value === 'auto' ? null : value)
+												}
 											>
-												{tag}
-												<button
-													type="button"
-													onClick={() => handleRemoveTag(tag)}
-													className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/10"
-												>
-													×
-												</button>
-											</span>
-										))}
-										{tags.length === 0 && (
-											<p className="text-sm text-muted-foreground">No tags</p>
-										)}
+												<SelectTrigger id="thumbnail-video">
+													<SelectValue placeholder="Select video for thumbnail" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="auto">
+														First video (auto)
+													</SelectItem>
+													{playlistVideos.map((video) => (
+														<SelectItem key={video.id} value={video.id}>
+															{video.customTitle || video.title}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<p className="text-xs text-muted-foreground">
+												Select which video to use for the playlist thumbnail
+											</p>
+										</div>
+
+										<div className="space-y-2">
+											<Label htmlFor="thumbnail-time">Time (seconds)</Label>
+											<Input
+												id="thumbnail-time"
+												type="number"
+												min={0}
+												step={0.1}
+												value={thumbnailTime}
+												onChange={(e) =>
+													setThumbnailTime(
+														Math.max(0, Number.parseFloat(e.target.value) || 0),
+													)
+												}
+											/>
+											<p className="text-xs text-muted-foreground">
+												The time in seconds to capture the thumbnail from
+											</p>
+										</div>
 									</div>
-								</div>
-							) : (
-								<div className="flex flex-wrap gap-2">
-									{(Array.isArray(playlist.tags) ? playlist.tags : []).length >
-									0 ? (
-										(Array.isArray(playlist.tags) ? playlist.tags : []).map(
-											(tag: string) => (
-												<Badge key={tag} variant="secondary">
-													{tag}
-												</Badge>
-											),
-										)
-									) : (
-										<p className="text-sm text-muted-foreground">No tags</p>
-									)}
-								</div>
-							)}
+								) : (
+									<div className="space-y-4">
+										<div>
+											<p className="text-sm font-medium text-muted-foreground">
+												Video Source
+											</p>
+											<p>
+												{thumbnailVideoId
+													? (playlistVideos.find(
+															(v) => v.id === thumbnailVideoId,
+														)?.title ?? 'Selected video')
+													: 'First video (auto)'}
+											</p>
+										</div>
+										<div>
+											<p className="text-sm font-medium text-muted-foreground">
+												Time
+											</p>
+											<p>{thumbnailTime} seconds</p>
+										</div>
+									</div>
+								)}
+							</div>
 						</CardContent>
 					</Card>
 				</div>
-
-				{/* Thumbnail Section */}
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Image className="size-5" />
-							Playlist Thumbnail
-						</CardTitle>
-						<CardDescription>
-							The thumbnail image representing this playlist. The default image
-							is taken from the first video in the playlist. You may override
-							this by selecting a different video and time to generate the image
-							thumbnail.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="grid gap-6 sm:grid-cols-2">
-							{/* Thumbnail Preview */}
-							<div className="space-y-2">
-								<Label>Preview</Label>
-								<div className="max-w-40 aspect-video overflow-hidden rounded-lg border">
-									{(() => {
-										// Get the playback ID for the selected thumbnail video
-										const selectedVideo = thumbnailVideoId
-											? playlistVideos.find((v) => v.id === thumbnailVideoId)
-											: playlistVideos[0];
-										const playbackId = selectedVideo?.muxPlaybackId;
-										const policy = selectedVideo?.playbackPolicy ?? undefined;
-
-										return (
-											<VideoThumbnail
-												playbackId={playbackId}
-												alt={`${playlist.name} thumbnail`}
-												aspectVideo
-												time={thumbnailTime}
-												policy={policy}
-												libraryId={libraryId}
-												fallbackIcon={
-													<ListVideo className="size-12 text-muted-foreground" />
-												}
-											/>
-										);
-									})()}
-								</div>
-								<p className="text-xs text-muted-foreground">
-									Thumbnail at {thumbnailTime} seconds
-								</p>
-							</div>
-
-							{/* Thumbnail Settings */}
-							{isEditing ? (
-								<div className="space-y-4">
-									<div className="space-y-2">
-										<Label htmlFor="thumbnail-video">Video</Label>
-										<Select
-											value={thumbnailVideoId ?? 'auto'}
-											onValueChange={(value) =>
-												setThumbnailVideoId(value === 'auto' ? null : value)
-											}
-										>
-											<SelectTrigger id="thumbnail-video">
-												<SelectValue placeholder="Select video for thumbnail" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="auto">First video (auto)</SelectItem>
-												{playlistVideos.map((video) => (
-													<SelectItem key={video.id} value={video.id}>
-														{video.customTitle || video.title}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										<p className="text-xs text-muted-foreground">
-											Select which video to use for the playlist thumbnail
-										</p>
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="thumbnail-time">Time (seconds)</Label>
-										<Input
-											id="thumbnail-time"
-											type="number"
-											min={0}
-											step={0.1}
-											value={thumbnailTime}
-											onChange={(e) =>
-												setThumbnailTime(
-													Math.max(0, Number.parseFloat(e.target.value) || 0),
-												)
-											}
-										/>
-										<p className="text-xs text-muted-foreground">
-											The time in seconds to capture the thumbnail from
-										</p>
-									</div>
-								</div>
-							) : (
-								<div className="space-y-4">
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">
-											Video Source
-										</p>
-										<p>
-											{thumbnailVideoId
-												? (playlistVideos.find((v) => v.id === thumbnailVideoId)
-														?.title ?? 'Selected video')
-												: 'First video (auto)'}
-										</p>
-									</div>
-									<div>
-										<p className="text-sm font-medium text-muted-foreground">
-											Time
-										</p>
-										<p>{thumbnailTime} seconds</p>
-									</div>
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
 
 				{/* Videos Section */}
 				<Card>

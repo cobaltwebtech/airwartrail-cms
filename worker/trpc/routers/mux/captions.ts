@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { eq, and } from "drizzle-orm";
 import { video, videoTrack } from "@/db/video-schema";
 import { generateTrackId } from "@/worker/lib/generate-id";
@@ -16,6 +16,7 @@ export const captionsRouter = t.router({
 	 * Add a caption or subtitle track to an asset
 	 */
 	addCaption: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				assetId: z.string(),
@@ -63,6 +64,7 @@ export const captionsRouter = t.router({
 	 * Delete a caption or subtitle track
 	 */
 	deleteCaption: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['delete']))
 		.input(z.object({ assetId: z.string(), trackId: z.string(), libraryId: z.string().optional() }))
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
 			const { env } = ctx;
@@ -93,6 +95,7 @@ export const captionsRouter = t.router({
 	 * This uses OpenAI's Whisper model to generate captions from the audio track
 	 */
 	generateCaptions: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['write']))
 		.input(
 			z.object({
 				assetId: z.string(),

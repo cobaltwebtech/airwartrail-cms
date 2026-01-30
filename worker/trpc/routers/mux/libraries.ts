@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import Mux from "@mux/mux-node";
 import { eq } from "drizzle-orm";
 import { muxLibrary } from "@/db/video-schema";
@@ -15,7 +15,9 @@ export const librariesRouter = t.router({
 	/**
 	 * List all available Mux libraries
 	 */
-	listLibraries: protectedProcedure.query(async ({ ctx }) => {
+	listLibraries: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['read']))
+		.query(async ({ ctx }) => {
 		const { env } = ctx;
 		const db = getVideosDb(env);
 
@@ -50,6 +52,7 @@ export const librariesRouter = t.router({
 	 * Get a specific Mux library by ID
 	 */
 	getLibrary: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['read']))
 		.input(z.object({ libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
@@ -88,6 +91,7 @@ export const librariesRouter = t.router({
 	 * Create a new Mux library
 	 */
 	createLibrary: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				name: z.string().min(1).max(100),
@@ -178,6 +182,7 @@ export const librariesRouter = t.router({
 	 * Update a Mux library
 	 */
 	updateLibrary: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -295,6 +300,7 @@ export const librariesRouter = t.router({
 	 * Delete a Mux library
 	 */
 	deleteLibrary: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['delete']))
 		.input(z.object({ libraryId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
@@ -335,6 +341,7 @@ export const librariesRouter = t.router({
 	 * Test Mux library credentials
 	 */
 	testLibraryCredentials: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				tokenId: z.string().min(1),
@@ -365,6 +372,7 @@ export const librariesRouter = t.router({
 	 * List playback restrictions for a library
 	 */
 	listPlaybackRestrictions: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['read']))
 		.input(z.object({ libraryId: z.string().optional() }))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
@@ -392,6 +400,7 @@ export const librariesRouter = t.router({
 	 * Get a specific playback restriction
 	 */
 	getPlaybackRestriction: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['read']))
 		.input(
 			z.object({
 				restrictionId: z.string(),
@@ -426,6 +435,7 @@ export const librariesRouter = t.router({
 	 * Create a new playback restriction
 	 */
 	createPlaybackRestriction: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				libraryId: z.string().optional(),
@@ -488,6 +498,7 @@ export const librariesRouter = t.router({
 	 * Update the referrer domain restriction for a playback restriction
 	 */
 	updatePlaybackRestrictionReferrer: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				restrictionId: z.string(),
@@ -529,6 +540,7 @@ export const librariesRouter = t.router({
 	 * Update the user agent restriction for a playback restriction
 	 */
 	updatePlaybackRestrictionUserAgent: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['write']))
 		.input(
 			z.object({
 				restrictionId: z.string(),
@@ -570,6 +582,7 @@ export const librariesRouter = t.router({
 	 * Delete a playback restriction
 	 */
 	deletePlaybackRestriction: protectedProcedure
+		.use(createPermissionMiddleware('libraries', ['delete']))
 		.input(
 			z.object({
 				restrictionId: z.string(),

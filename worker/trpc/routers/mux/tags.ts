@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { videoTag, videoTagAssignment, video } from "@/db/video-schema";
 import { getVideosDb, createTagSlug } from "./shared";
 import { generateTagId, generateVideoTagAssignmentId } from "@/worker/lib/generate-id";
@@ -10,7 +10,9 @@ export const tagsRouter = t.router({
 	/**
 	 * List all tags (active only by default)
 	 */
-	listTags: protectedProcedure.query(async ({ ctx }) => {
+	listTags: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['read']))
+		.query(async ({ ctx }) => {
 		const { env } = ctx;
 		const db = getVideosDb(env);
 
@@ -36,6 +38,7 @@ export const tagsRouter = t.router({
 	 * Create a new tag
 	 */
 	createTag: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['write']))
 		.input(
 			z.object({
 				name: z.string().min(1).max(50),
@@ -91,6 +94,7 @@ export const tagsRouter = t.router({
 	 * Update a tag
 	 */
 	updateTag: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['write']))
 		.input(
 			z.object({
 				tagId: z.string(),
@@ -148,6 +152,7 @@ export const tagsRouter = t.router({
 	 * Delete a tag (soft delete - set isActive to false)
 	 */
 	deleteTag: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['delete']))
 		.input(
 			z.object({
 				tagId: z.string(),
@@ -179,6 +184,7 @@ export const tagsRouter = t.router({
 	 * Assign tags to a video (replaces existing tags)
 	 */
 	setVideoTags: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -277,6 +283,7 @@ export const tagsRouter = t.router({
 	 * Get tags for a specific video
 	 */
 	getVideoTags: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['read']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -324,6 +331,7 @@ export const tagsRouter = t.router({
 	 * Search videos by tag(s)
 	 */
 	searchVideosByTags: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string(),
@@ -423,6 +431,7 @@ export const tagsRouter = t.router({
 	 * Get tag statistics (usage counts)
 	 */
 	getTagStatistics: protectedProcedure
+		.use(createPermissionMiddleware('tags', ['read']))
 		.input(
 			z.object({
 				libraryId: z.string().optional(),

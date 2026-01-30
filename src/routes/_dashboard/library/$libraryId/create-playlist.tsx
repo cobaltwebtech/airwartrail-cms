@@ -56,8 +56,6 @@ function CreatePlaylistPage() {
 	const [slug, setSlug] = useState('');
 	const [description, setDescription] = useState('');
 	const [category, setCategory] = useState<PlaylistCategory>('featured');
-	const [tags, setTags] = useState<string[]>([]);
-	const [tagInput, setTagInput] = useState('');
 
 	// Auto-generate slug from name
 	const handleNameChange = (newName: string) => {
@@ -93,25 +91,6 @@ function CreatePlaylistPage() {
 		},
 	});
 
-	const handleAddTag = () => {
-		const trimmedTag = tagInput.trim();
-		if (trimmedTag && !tags.includes(trimmedTag)) {
-			setTags([...tags, trimmedTag]);
-			setTagInput('');
-		}
-	};
-
-	const handleRemoveTag = (tagToRemove: string) => {
-		setTags(tags.filter((tag) => tag !== tagToRemove));
-	};
-
-	const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			handleAddTag();
-		}
-	};
-
 	const handleCreate = () => {
 		if (!name) {
 			toast.error('Please enter a playlist name');
@@ -129,7 +108,6 @@ function CreatePlaylistPage() {
 			slug,
 			description: description || undefined,
 			category,
-			tags: tags.length > 0 ? tags : undefined,
 		});
 	};
 
@@ -162,146 +140,88 @@ function CreatePlaylistPage() {
 			</DashboardHeader>
 
 			<section className="space-y-6">
-				<div className="grid gap-6 lg:grid-cols-2">
-					{/* General Settings */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Settings className="size-5" />
-								General Settings
-							</CardTitle>
-							<CardDescription>
-								Basic information about your playlist.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="name">
-									Playlist Name <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="name"
-									value={name}
-									onChange={(e) => handleNameChange(e.target.value)}
-									placeholder="My Awesome Playlist"
-									required
-								/>
-							</div>
+				{/* General Settings */}
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Settings className="size-5" />
+							General Settings
+						</CardTitle>
+						<CardDescription>
+							Basic information about your playlist.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="space-y-2">
+							<Label htmlFor="name">
+								Playlist Name <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="name"
+								value={name}
+								onChange={(e) => handleNameChange(e.target.value)}
+								placeholder="My Awesome Playlist"
+								required
+							/>
+						</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="slug">
-									Slug <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="slug"
-									value={slug}
-									onChange={(e) => setSlug(e.target.value)}
-									placeholder="my-awesome-playlist"
-									required
-								/>
-								<p className="text-muted-foreground text-xs">
-									URL-friendly identifier that is auto-generated from the name.
-									Only modify this if you need a specific URL for the playlist.
-								</p>
-							</div>
+						<div className="space-y-2">
+							<Label htmlFor="slug">
+								Slug <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="slug"
+								value={slug}
+								onChange={(e) => setSlug(e.target.value)}
+								placeholder="my-awesome-playlist"
+								required
+							/>
+							<p className="text-muted-foreground text-xs">
+								URL-friendly identifier that is auto-generated from the name.
+								Only modify this if you need a specific URL for the playlist.
+							</p>
+						</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="description">Description</Label>
-								<Textarea
-									id="description"
-									value={description}
-									onChange={(e) => setDescription(e.target.value)}
-									placeholder="Optional description for this playlist..."
-									rows={3}
-								/>
-							</div>
-						</CardContent>
-					</Card>
+						<div className="space-y-2">
+							<Label htmlFor="description">Description</Label>
+							<Textarea
+								id="description"
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
+								placeholder="Optional description for this playlist..."
+								rows={3}
+							/>
+						</div>
 
-					{/* Playlist Type & Options */}
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<ListVideo className="size-5" />
-								Playlist Options
-							</CardTitle>
-							<CardDescription>
-								Choose how this playlist will be used.
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="type">Type</Label>
-								<Select
-									value={category}
-									onValueChange={(value) =>
-										setCategory(value as PlaylistCategory)
-									}
-								>
-									<SelectTrigger id="type">
-										<SelectValue placeholder="Select type" />
-									</SelectTrigger>
-									<SelectContent>
-										{PLAYLIST_CATEGORY_OPTIONS.map((item) => (
-											<SelectItem key={item.value} value={item.value}>
-												{item.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<p className="text-muted-foreground text-xs">
-									{
-										PLAYLIST_CATEGORY_OPTIONS.find(
-											(item) => item.value === category,
-										)?.description
-									}
-								</p>
-							</div>
-							<div className="space-y-2">
-								<Label>Tags</Label>
-								<p className="text-muted-foreground text-xs">
-									Add tags to help organize and filter playlists.
-								</p>
-								<div className="flex gap-2">
-									<Input
-										value={tagInput}
-										onChange={(e) => setTagInput(e.target.value)}
-										onKeyDown={handleTagKeyDown}
-										placeholder="Enter a tag and press Enter"
-										className="flex-1"
-									/>
-									<Button
-										type="button"
-										variant="secondary"
-										onClick={handleAddTag}
-										disabled={!tagInput.trim()}
-									>
-										Add Tag
-									</Button>
-								</div>
-							</div>
-							{tags.length > 0 && (
-								<div className="flex flex-wrap gap-2">
-									{tags.map((tag) => (
-										<span
-											key={tag}
-											className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
-										>
-											{tag}
-											<button
-												type="button"
-												onClick={() => handleRemoveTag(tag)}
-												className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/10"
-											>
-												×
-											</button>
-										</span>
+						<div className="space-y-2">
+							<Label htmlFor="type">Type</Label>
+							<Select
+								value={category}
+								onValueChange={(value) =>
+									setCategory(value as PlaylistCategory)
+								}
+							>
+								<SelectTrigger id="type">
+									<SelectValue placeholder="Select type" />
+								</SelectTrigger>
+								<SelectContent>
+									{PLAYLIST_CATEGORY_OPTIONS.map((item) => (
+										<SelectItem key={item.value} value={item.value}>
+											{item.label}
+										</SelectItem>
 									))}
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</div>
+								</SelectContent>
+							</Select>
+							<p className="text-muted-foreground text-xs">
+								{
+									PLAYLIST_CATEGORY_OPTIONS.find(
+										(item) => item.value === category,
+									)?.description
+								}
+							</p>
+						</div>
+					</CardContent>
+				</Card>
 
 				{/* Actions */}
 				<div className="flex justify-end gap-4">

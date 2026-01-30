@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and } from "drizzle-orm";
-import { t, protectedProcedure } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { getVideosDb } from "./shared";
 import { video } from "@/db/video-schema";
 
@@ -99,6 +99,7 @@ export const thumbnailsRouter = t.router({
 	 * Returns the key that will be used (with collision handling)
 	 */
 	getUploadUrl: protectedProcedure
+		.use(createPermissionMiddleware('thumbnails', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -159,6 +160,7 @@ export const thumbnailsRouter = t.router({
 	 * Accepts base64 encoded image data
 	 */
 	uploadThumbnail: protectedProcedure
+		.use(createPermissionMiddleware('thumbnails', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -271,6 +273,7 @@ export const thumbnailsRouter = t.router({
 	 * Delete a custom thumbnail from R2 and clear the database reference
 	 */
 	deleteThumbnail: protectedProcedure
+		.use(createPermissionMiddleware('thumbnails', ['delete']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -348,6 +351,7 @@ export const thumbnailsRouter = t.router({
 	 * Returns null if no custom thumbnail is set
 	 */
 	getThumbnail: protectedProcedure
+		.use(createPermissionMiddleware('thumbnails', ['read']))
 		.input(
 			z.object({
 				videoId: z.string(),
@@ -402,6 +406,7 @@ export const thumbnailsRouter = t.router({
 	 * This is separate from the custom uploaded thumbnail
 	 */
 	updateThumbnailTime: protectedProcedure
+		.use(createPermissionMiddleware('thumbnails', ['write']))
 		.input(
 			z.object({
 				videoId: z.string(),
