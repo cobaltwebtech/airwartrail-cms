@@ -56,7 +56,7 @@ function LoginPage() {
 		}
 	}, []);
 
-	const handleSubmit = async (event: React.FormEvent) => {
+	const handleSubmit = async (event: React.SubmitEvent) => {
 		event.preventDefault();
 
 		if (!email || !password) {

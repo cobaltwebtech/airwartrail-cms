@@ -181,21 +181,21 @@ function VideoEditorPage() {
 							errorMessages={errorMessages}
 							playbackPolicy={playbackPolicy}
 						/>
-						<TitleEditor
+						<PublishStatus
 							videoId={videoId}
 							libraryId={libraryId}
-							initialTitle={title}
-							onTitleUpdate={handleTitleUpdate}
+							initialPublishStatus={isPublished}
 						/>
 						<VideoPlayer
 							muxAssetId={muxAssetId}
 							libraryId={libraryId}
 							internalVideoId={internalId}
 						/>
-						<PublishStatus
+						<TitleEditor
 							videoId={videoId}
 							libraryId={libraryId}
-							initialPublishStatus={isPublished}
+							initialTitle={title}
+							onTitleUpdate={handleTitleUpdate}
 						/>
 						<TagEditor
 							videoId={videoId}

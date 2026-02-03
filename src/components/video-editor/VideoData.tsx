@@ -32,68 +32,60 @@ const VideoData: React.FC<VideoDataProps> = ({
 				<CardTitle>Internal Video Data</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				<div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 text-muted-foreground text-sm">
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							Internal Video ID
-						</p>
-						<Badge variant="secondary" className="font-mono text-xs">
+				<div className="grid lg:grid-cols-2 gap-4 text-muted-foreground text-sm">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Internal Video ID</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{internalId}
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							Internal Library ID
-						</p>
-						<Badge variant="secondary" className="font-mono">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Internal Library ID</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{libraryId}
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">Mux Asset ID</p>
-						<Badge variant="secondary" className="font-mono">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Mux Asset ID</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{muxAssetId}
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							Mux Playback ID
-						</p>
-						<Badge variant="secondary" className="font-mono">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Mux Playback ID</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{muxPlaybackId}
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							Mux Environment ID
-						</p>
-						<Badge variant="secondary" className="font-mono">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Mux Environment ID</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{muxEnvironmentId}
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							Total Watch Time
-						</p>
-						<Badge variant="secondary" className="font-mono">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Total Watch Time</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{(totalWatchTime ?? 0) / 1000}s
-						</Badge>
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">Created At</p>
-						<Badge variant="secondary">{formatDateTime(createdAt)}</Badge>
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Created At</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
+							{formatDateTime(createdAt)}
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">Updated At</p>
-						<Badge variant="secondary">{formatDateTime(updatedAt)}</Badge>
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">Updated At</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
+							{formatDateTime(updatedAt)}
+						</pre>
 					</div>
-					<div>
-						<p className="text-xs uppercase tracking-wide mb-1">
-							View Count Last Synced
-						</p>
-						<Badge variant="secondary">
+					<div className="space-y-1 text-xs">
+						<p className="uppercase tracking-wide">View Count Last Synced</p>
+						<pre className="bg-secondary text-secondary-foreground px-2 py-1 rounded font-mono text-wrap w-fit">
 							{formatDateTime(viewCountSyncedAt) || 'n/a'}
-						</Badge>
+						</pre>
 					</div>
 				</div>
 			</CardContent>

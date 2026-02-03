@@ -666,13 +666,13 @@ function LibrarySettingsPage() {
 								<h4 className="mb-4 text-sm font-medium">
 									Webhook Configuration
 								</h4>
-								<p className="text-muted-foreground mb-4 text-sm">
+								<p className="text-muted-foreground text-sm">
 									The webhook secret used to verify the signature of incoming
-									webhooks. The webhook endpoint is:{' '}
-									<code className="bg-secondary text-primary px-3 py-2 rounded-sm">
-										https://dashboard.airwartrail.com/api/webhooks/mux
-									</code>
+									webhooks. The webhook endpoint is:
 								</p>
+								<pre className="mb-4 bg-secondary text-primary text-sm px-3 py-2 rounded-sm">
+									https://dashboard.airwartrail.com/api/webhooks/mux
+								</pre>
 								<div className="space-y-2">
 									<Label htmlFor="webhookSecret">Webhook Signing Secret</Label>
 									<PasswordInput

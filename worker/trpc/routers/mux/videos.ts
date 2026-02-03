@@ -1099,8 +1099,10 @@ export const videosRouter = t.router({
 						};
 					});
 
-					// Batch insert videos into database
-					await db.insert(video).values(videosToInsert);
+					// Insert videos one at a time to avoid D1 local variable limit
+					for (const videoToInsert of videosToInsert) {
+						await db.insert(video).values(videoToInsert);
+					}
 
 					// Update Mux assets with our internal video IDs (meta.external_id field)
 					// This creates a two-way link between our database and Mux
