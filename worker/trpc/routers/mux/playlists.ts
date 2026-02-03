@@ -136,6 +136,7 @@ export const playlistsRouter = t.router({
 
 	/**
 	 * List all playlists for a library
+	 * Optimized with LEFT JOINs to consolidate queries and avoid N+1 patterns
 	 */
 	listPlaylists: protectedProcedure
 		.use(createPermissionMiddleware('playlists', ['read']))
@@ -167,6 +168,8 @@ export const playlistsRouter = t.router({
 					conditions.push(eq(playlist.category, category));
 				}
 
+				// Single query with LEFT JOIN to get playlists with video counts
+				// This eliminates the separate video count query
 				const playlists = await db
 					.select({
 						id: playlist.id,
@@ -183,29 +186,18 @@ export const playlistsRouter = t.router({
 						customMetadata: playlist.customMetadata,
 						createdAt: playlist.createdAt,
 						updatedAt: playlist.updatedAt,
+						// Include video count via LEFT JOIN aggregation
+						videoCount: sql<number>`COUNT(DISTINCT ${playlistItem.id})`.as('video_count'),
 					})
 					.from(playlist)
+					.leftJoin(playlistItem, eq(playlist.id, playlistItem.playlistId))
 					.where(and(...conditions))
+					.groupBy(playlist.id)
 					.orderBy(asc(playlist.sortOrder), desc(playlist.createdAt))
 					.limit(limit)
 					.offset(offset);
 
-				// Get video count for each playlist
-				const playlistIds = playlists.map((p) => p.id);
-				const videoCounts = playlistIds.length > 0
-					? await db
-						.select({
-							playlistId: playlistItem.playlistId,
-							count: sql<number>`COUNT(*)`,
-						})
-						.from(playlistItem)
-						.where(inArray(playlistItem.playlistId, playlistIds))
-						.groupBy(playlistItem.playlistId)
-					: [];
-
-				const countMap = new Map(videoCounts.map((vc) => [vc.playlistId, vc.count]));
-
-				// Get thumbnail info for playlists with thumbnailVideoId
+				// Batch fetch thumbnail info for all playlists in one query
 				const thumbnailVideoIds = playlists
 					.map((p) => p.thumbnailVideoId)
 					.filter((id): id is string => id !== null);
@@ -223,27 +215,44 @@ export const playlistsRouter = t.router({
 
 				const thumbnailMap = new Map(thumbnailVideos.map((v) => [v.id, { playbackId: v.muxPlaybackId, policy: v.playbackPolicy }]));
 
-				// Get first video playback ID and policy for playlists without explicit thumbnail
+				// Batch fetch first video for playlists without explicit thumbnail
+				// Use a single query with ROW_NUMBER() window function pattern via subquery
 				const playlistsNeedingFirstVideo = playlists.filter((p) => !p.thumbnailVideoId);
 				const firstVideoMap = new Map<string, { playbackId: string | null; policy: string | null }>();
 
 				if (playlistsNeedingFirstVideo.length > 0) {
-					// For each playlist without a thumbnail, get the first video's playback ID and policy
-					for (const p of playlistsNeedingFirstVideo) {
-						const firstVideo = await db
-							.select({
-								muxPlaybackId: video.muxPlaybackId,
-								playbackPolicy: video.playbackPolicy,
-							})
-							.from(playlistItem)
-							.innerJoin(video, eq(playlistItem.videoId, video.id))
-							.where(eq(playlistItem.playlistId, p.id))
-							.orderBy(asc(playlistItem.sortOrder))
-							.limit(1);
+					const playlistIdsNeedingThumbnail = playlistsNeedingFirstVideo.map((p) => p.id);
+					
+					// For D1/SQLite, use a correlated subquery approach with MIN to get first video
+					// This batch-fetches first videos for all playlists in one query
+					const firstVideos = await db
+						.select({
+							playlistId: playlistItem.playlistId,
+							muxPlaybackId: video.muxPlaybackId,
+							playbackPolicy: video.playbackPolicy,
+							sortOrder: playlistItem.sortOrder,
+						})
+						.from(playlistItem)
+						.innerJoin(video, eq(playlistItem.videoId, video.id))
+						.where(
+							and(
+								inArray(playlistItem.playlistId, playlistIdsNeedingThumbnail),
+								eq(video.isDeleted, false),
+								// Use subquery to get only the first video (min sortOrder) per playlist
+								sql`${playlistItem.sortOrder} = (
+									SELECT MIN(pi2.sort_order) 
+									FROM playlist_item pi2 
+									INNER JOIN video v2 ON pi2.video_id = v2.id
+									WHERE pi2.playlist_id = ${playlistItem.playlistId}
+									AND v2.is_deleted = 0
+								)`,
+							),
+						);
 
-						firstVideoMap.set(p.id, {
-							playbackId: firstVideo[0]?.muxPlaybackId ?? null,
-							policy: firstVideo[0]?.playbackPolicy ?? null,
+					for (const fv of firstVideos) {
+						firstVideoMap.set(fv.playlistId, {
+							playbackId: fv.muxPlaybackId,
+							policy: fv.playbackPolicy,
 						});
 					}
 				}
@@ -256,7 +265,7 @@ export const playlistsRouter = t.router({
 					return {
 						...p,
 						customMetadata: p.customMetadata ? JSON.parse(p.customMetadata) : null,
-						videoCount: countMap.get(p.id) ?? 0,
+						videoCount: p.videoCount ?? 0,
 						thumbnailPlaybackId: thumbnailInfo?.playbackId ?? null,
 						thumbnailPolicy: (thumbnailInfo?.policy as "public" | "signed" | null) ?? null,
 					};

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and, inArray, asc } from "drizzle-orm";
+import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
 import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
-import { video, videoTrack } from "@/db/video-schema";
+import { video, videoTrack, videoTagAssignment, videoTag, muxLibrary } from "@/db/video-schema";
 import { generateVideoId } from "@/worker/lib/generate-id";
 import {
 	getVideosDb,
@@ -625,6 +625,7 @@ export const videosRouter = t.router({
 
 	/**
 	 * List videos from database (with pagination)
+	 * Uses LEFT JOIN to include tag count efficiently in a single query
 	 */
 	listVideosFromDatabase: protectedProcedure
 		.use(createPermissionMiddleware('mux', ['read']))
@@ -633,18 +634,20 @@ export const videosRouter = t.router({
 				libraryId: z.string(),
 				limit: z.number().min(1).max(100).default(50),
 				offset: z.number().min(0).default(0),
+				includeTags: z.boolean().default(false),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
 			const db = getVideosDb(env);
-			const { libraryId, limit, offset } = input;
+			const { libraryId, limit, offset, includeTags } = input;
 
 			try {
 				// Verify library exists and get credentials
 				const { library } = await getMuxClient(env, libraryId);
 
-				// Fetch videos from database
+				// Fetch videos from database with LEFT JOIN for tag count
+				// This avoids N+1 queries when displaying video lists with tag info
 				const videos = await db
 					.select({
 						id: video.id,
@@ -666,17 +669,53 @@ export const videosRouter = t.router({
 						viewCount: video.viewCount,
 						createdAt: video.createdAt,
 						updatedAt: video.updatedAt,
+						// Include tag count via LEFT JOIN aggregation
+						tagCount: sql<number>`COUNT(DISTINCT ${videoTagAssignment.tagId})`.as('tag_count'),
 					})
 					.from(video)
+					.leftJoin(
+						videoTagAssignment,
+						eq(video.id, videoTagAssignment.videoId),
+					)
 					.where(
 						and(
 							eq(video.libraryId, library.id),
 							eq(video.isDeleted, false),
 						),
 					)
-					.orderBy(asc(video.createdAt))
+					.groupBy(video.id)
+					.orderBy(desc(video.createdAt))
 					.limit(limit)
 					.offset(offset);
+
+				// If includeTags is true, fetch tags for all videos in one query
+				let videoTagsMap = new Map<string, Array<{ id: string; slug: string; name: string }>>();
+				if (includeTags && videos.length > 0) {
+					const videoIds = videos.map((v) => v.id);
+					const tagsResult = await db
+						.select({
+							videoId: videoTagAssignment.videoId,
+							tagId: videoTag.id,
+							tagSlug: videoTag.slug,
+							tagName: videoTag.name,
+						})
+						.from(videoTagAssignment)
+						.innerJoin(videoTag, eq(videoTagAssignment.tagId, videoTag.id))
+						.where(
+							and(
+								inArray(videoTagAssignment.videoId, videoIds),
+								eq(videoTag.isActive, true),
+							),
+						)
+						.orderBy(asc(videoTag.name));
+
+					// Group tags by video ID
+					for (const row of tagsResult) {
+						const existing = videoTagsMap.get(row.videoId) ?? [];
+						existing.push({ id: row.tagId, slug: row.tagSlug, name: row.tagName });
+						videoTagsMap.set(row.videoId, existing);
+					}
+				}
 
 				// Map to a consistent format
 				return videos.map((v) => ({
@@ -696,6 +735,8 @@ export const videosRouter = t.router({
 					isPublished: v.isPublished,
 					publishedAt: v.publishedAt?.toISOString(),
 					views: v.viewCount ?? 0,
+					tagCount: v.tagCount ?? 0,
+					tags: includeTags ? (videoTagsMap.get(v.id) ?? []) : undefined,
 					createdAt: v.createdAt.toISOString(),
 					updatedAt: v.updatedAt.toISOString(),
 				}));
@@ -712,6 +753,7 @@ export const videosRouter = t.router({
 	/**
 	 * Get a single video by internal database ID
 	 * This combines database metadata with Mux asset data
+	 * Optimized with INNER JOIN to fetch video + library info in single query
 	 */
 	getVideoById: protectedProcedure
 		.use(createPermissionMiddleware('mux', ['read']))
@@ -719,17 +761,49 @@ export const videosRouter = t.router({
 			videoId: z.string(), 
 			libraryId: z.string(),
 			syncViewCount: z.boolean().default(true),
+			includeTags: z.boolean().default(false),
 		}))
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
 			const db = getVideosDb(env);
-			const { videoId, libraryId, syncViewCount } = input;
+			const { videoId, libraryId, syncViewCount, includeTags } = input;
 
 			try {
-				// Fetch video from database by internal ID
-				const [videoRecord] = await db
-					.select()
+				// Fetch video with library info in a single query using INNER JOIN
+				// This eliminates a separate library lookup for basic info
+				const [result] = await db
+					.select({
+						// Video fields
+						id: video.id,
+						libraryId: video.libraryId,
+						muxAssetId: video.muxAssetId,
+						muxPlaybackId: video.muxPlaybackId,
+						status: video.status,
+						title: video.title,
+						description: video.description,
+						duration: video.duration,
+						aspectRatio: video.aspectRatio,
+						maxWidth: video.maxWidth,
+						maxHeight: video.maxHeight,
+						maxFrameRate: video.maxFrameRate,
+						resolutionTier: video.resolutionTier,
+						videoQuality: video.videoQuality,
+						playbackPolicy: video.playbackPolicy,
+						isPublished: video.isPublished,
+						publishedAt: video.publishedAt,
+						viewCount: video.viewCount,
+						viewCountSyncedAt: video.viewCountSyncedAt,
+						totalWatchTimeMs: video.totalWatchTimeMs,
+						errorCategory: video.errorCategory,
+						errorMessages: video.errorMessages,
+						createdAt: video.createdAt,
+						updatedAt: video.updatedAt,
+						// Library fields via JOIN
+						libraryName: muxLibrary.name,
+						muxEnvironmentId: muxLibrary.muxEnvironmentId,
+					})
 					.from(video)
+					.innerJoin(muxLibrary, eq(video.libraryId, muxLibrary.id))
 					.where(
 						and(
 							eq(video.id, videoId),
@@ -739,21 +813,41 @@ export const videosRouter = t.router({
 					)
 					.limit(1);
 
-				if (!videoRecord) {
+				if (!result) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: `Video ${videoId} not found`,
 					});
 				}
 
+				// Fetch tags if requested (single additional query)
+				let tags: Array<{ id: string; slug: string; name: string }> = [];
+				if (includeTags) {
+					tags = await db
+						.select({
+							id: videoTag.id,
+							slug: videoTag.slug,
+							name: videoTag.name,
+						})
+						.from(videoTagAssignment)
+						.innerJoin(videoTag, eq(videoTagAssignment.tagId, videoTag.id))
+						.where(
+							and(
+								eq(videoTagAssignment.videoId, videoId),
+								eq(videoTag.isActive, true),
+							),
+						)
+						.orderBy(asc(videoTag.name));
+				}
+
 				// Sync view count from Mux Data API if requested
-				let currentViewCount = videoRecord.viewCount ?? 0;
-				if (syncViewCount && videoRecord.muxAssetId) {
+				let currentViewCount = result.viewCount ?? 0;
+				if (syncViewCount && result.muxAssetId) {
 					try {
 						const viewCountResult = await syncViewCountFromMux(
 							env,
 							libraryId,
-							videoRecord.muxAssetId,
+							result.muxAssetId,
 						);
 						currentViewCount = viewCountResult.views;
 					} catch (viewCountError) {
@@ -763,11 +857,11 @@ export const videosRouter = t.router({
 				}
 
 				// Get Mux client and fetch asset details from Mux
-				const { mux, library } = await getMuxClient(env, libraryId);
+				const { mux } = await getMuxClient(env, libraryId);
 				
 				let muxAsset: MuxAsset | null = null;
 				try {
-					const asset = await mux.video.assets.retrieve(videoRecord.muxAssetId);
+					const asset = await mux.video.assets.retrieve(result.muxAssetId);
 					muxAsset = mapMuxAssetToVideo(asset);
 				} catch (muxError) {
 					console.warn("Could not fetch Mux asset details:", muxError);
@@ -777,44 +871,46 @@ export const videosRouter = t.router({
 				// Combine database and Mux data
 				return {
 					// Internal database fields
-					id: videoRecord.id,
-					libraryId: videoRecord.libraryId,
-					muxAssetId: videoRecord.muxAssetId,
-					muxPlaybackId: videoRecord.muxPlaybackId,
-					muxEnvironmentId: library.muxEnvironmentId,
+					id: result.id,
+					libraryId: result.libraryId,
+					muxAssetId: result.muxAssetId,
+					muxPlaybackId: result.muxPlaybackId,
+					muxEnvironmentId: result.muxEnvironmentId,
 					// Status from database (may be synced from Mux)
-					status: videoRecord.status,
+					status: result.status,
 					// Error information
-					errorCategory: videoRecord.errorCategory,
-					errorMessages: videoRecord.errorMessages,
+					errorCategory: result.errorCategory,
+					errorMessages: result.errorMessages,
 					// Metadata
-					title: videoRecord.title,
-					description: videoRecord.description,
+					title: result.title,
+					description: result.description,
 					// Video properties (prefer Mux data if available, fallback to database)
-					duration: muxAsset?.duration ?? videoRecord.duration ?? 0,
-					aspectRatio: muxAsset?.aspectRatio ?? videoRecord.aspectRatio,
-					maxWidth: muxAsset?.maxWidth ?? videoRecord.maxWidth,
-					maxHeight: muxAsset?.maxHeight ?? videoRecord.maxHeight,
-					maxStoredFrameRate: muxAsset?.maxStoredFrameRate ?? videoRecord.maxFrameRate,
-					resolutionTier: muxAsset?.resolutionTier ?? videoRecord.resolutionTier,
-					videoQuality: muxAsset?.videoQuality ?? videoRecord.videoQuality,
+					duration: muxAsset?.duration ?? result.duration ?? 0,
+					aspectRatio: muxAsset?.aspectRatio ?? result.aspectRatio,
+					maxWidth: muxAsset?.maxWidth ?? result.maxWidth,
+					maxHeight: muxAsset?.maxHeight ?? result.maxHeight,
+					maxStoredFrameRate: muxAsset?.maxStoredFrameRate ?? result.maxFrameRate,
+					resolutionTier: muxAsset?.resolutionTier ?? result.resolutionTier,
+					videoQuality: muxAsset?.videoQuality ?? result.videoQuality,
 					// Playback
-					playbackId: videoRecord.muxPlaybackId ?? muxAsset?.playbackId,
-					policy: videoRecord.playbackPolicy ?? muxAsset?.policy ?? "public",
+					playbackId: result.muxPlaybackId ?? muxAsset?.playbackId,
+					policy: result.playbackPolicy ?? muxAsset?.policy ?? "public",
 					// Captions from Mux
 					captions: muxAsset?.captions,
 					// Publishing status
-					isPublished: videoRecord.isPublished,
-					publishedAt: videoRecord.publishedAt?.toISOString(),
+					isPublished: result.isPublished,
+					publishedAt: result.publishedAt?.toISOString(),
 					// Analytics
 					views: currentViewCount,
-					viewCountSyncedAt: videoRecord.viewCountSyncedAt?.toISOString(),
-					totalWatchTimeMs: videoRecord.totalWatchTimeMs ?? 0,
+					viewCountSyncedAt: result.viewCountSyncedAt?.toISOString(),
+					totalWatchTimeMs: result.totalWatchTimeMs ?? 0,
+					// Tags (if requested)
+					tags: includeTags ? tags : undefined,
 					// Timestamps
-					createdAt: videoRecord.createdAt.toISOString(),
-					updatedAt: videoRecord.updatedAt.toISOString(),
+					createdAt: result.createdAt.toISOString(),
+					updatedAt: result.updatedAt.toISOString(),
 					// Library info
-					libraryName: library.name,
+					libraryName: result.libraryName,
 				};
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;

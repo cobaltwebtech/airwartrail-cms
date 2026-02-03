@@ -21,7 +21,11 @@ export const auth = betterAuth({
 	baseURL: env.BETTER_AUTH_URL,
 	database: drizzleAdapter(createDrizzle(env.DB_AUTH), {
 		provider: 'sqlite',
+		schema: authSchema,
 	}),
+	experimental: {
+		joins: true,
+	},
 	session: {
 		expiresIn: 60 * 60 * 24 * 7, // Session expires in 7 days
 		updateAge: 60 * 60 * 24, // Every 24 hours the session expiration is updated
@@ -93,8 +97,8 @@ export const auth = betterAuth({
 			// Rate limiting configuration
 			rateLimit: {
 				enabled: true,
-				timeWindow: 1000 * 60 * 60, // 1 hour
-				maxRequests: 1000, // 1000 requests per hour
+				timeWindow: 1000 * 60 * 10, // 10 minutes
+				maxRequests: 1000,
 			},
 			// Default permissions for new API keys
 			permissions: {

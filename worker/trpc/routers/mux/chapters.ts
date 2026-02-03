@@ -9,6 +9,7 @@ import { generateChapterId } from "@/worker/lib/generate-id";
 export const chaptersRouter = t.router({
 	/**
 	 * Get chapters for a video by internal video ID
+	 * Optimized with INNER JOIN to verify video exists and fetch chapters in one query
 	 */
 	getChapters: protectedProcedure
 		.use(createPermissionMiddleware('mux', ['read']))
@@ -25,36 +26,34 @@ export const chaptersRouter = t.router({
 			const db = getVideosDb(env);
 
 			try {
-				// Verify video exists with the given internal ID
-				const whereClause = libraryId
-					? and(eq(video.id, videoId), eq(video.libraryId, libraryId))
-					: eq(video.id, videoId);
-
-				const [videoRecord] = await db
-					.select({ id: video.id })
-					.from(video)
-					.where(whereClause)
-					.limit(1);
-
-				if (!videoRecord) {
-					return [];
-				}
-
-				// Get chapters for this video
+				// Single query with INNER JOIN to verify video exists and fetch chapters
+				// The JOIN implicitly verifies the video exists - if no video matches, no rows returned
 				const chapters = await db
-					.select()
+					.select({
+						id: videoChapter.id,
+						title: videoChapter.title,
+						startTime: videoChapter.startTime,
+						endTime: videoChapter.endTime,
+						sortOrder: videoChapter.sortOrder,
+						thumbnailTime: videoChapter.thumbnailTime,
+					})
 					.from(videoChapter)
-					.where(eq(videoChapter.videoId, videoRecord.id))
+					.innerJoin(video, eq(videoChapter.videoId, video.id))
+					.where(
+						libraryId
+							? and(
+									eq(video.id, videoId),
+									eq(video.libraryId, libraryId),
+									eq(video.isDeleted, false),
+								)
+							: and(
+									eq(video.id, videoId),
+									eq(video.isDeleted, false),
+								),
+					)
 					.orderBy(asc(videoChapter.sortOrder), asc(videoChapter.startTime));
 
-				return chapters.map((chapter) => ({
-					id: chapter.id,
-					title: chapter.title,
-					startTime: chapter.startTime,
-					endTime: chapter.endTime,
-					sortOrder: chapter.sortOrder,
-					thumbnailTime: chapter.thumbnailTime,
-				}));
+				return chapters;
 			} catch (error) {
 				console.error("Error getting chapters:", error);
 				throw new TRPCError({
