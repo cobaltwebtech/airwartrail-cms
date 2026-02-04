@@ -97,7 +97,7 @@ export const auth = betterAuth({
 			// Rate limiting configuration
 			rateLimit: {
 				enabled: true,
-				timeWindow: 1000 * 60 * 10, // 10 minutes
+				timeWindow: 1000 * 60, // 1 minute
 				maxRequests: 1000,
 			},
 			// Default permissions for new API keys

@@ -21,7 +21,7 @@ export function DashboardFooter() {
 				</p>
 			</div>
 			<div className="text-sm text-muted-foreground">
-				Current Version <Badge>v{appVersion}</Badge>
+				Current Release <Badge>v{appVersion}</Badge>
 			</div>
 		</footer>
 	);
