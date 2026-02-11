@@ -966,7 +966,7 @@ function AlbumEditorPage() {
 											Reset
 										</Button>
 										<Button
-											size="sm"
+											variant="accent"
 											onClick={handleSaveOrder}
 											disabled={reorderMutation.isPending}
 										>
@@ -1024,7 +1024,7 @@ function AlbumEditorPage() {
 											onDragLeave={handleDragLeave}
 											onDragOver={handleDragOver}
 											onDrop={(e) => handleDrop(e, item.imageId)}
-											className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+											className={`flex items-center gap-3 rounded-lg border p-3 transition-colors bg-muted ${
 												dragOverImageId === item.imageId
 													? 'border-primary bg-primary/5'
 													: ''
@@ -1040,15 +1040,11 @@ function AlbumEditorPage() {
 												</span>
 											</Button>
 
-											<div className="h-14 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+											<div className="w-fit p-2 shrink-0 overflow-hidden">
 												<img
-													src={getImageUrlForDisplay(
-														image.id,
-														image.deliveryUrl,
-														image.requireSignedURLs,
-													)}
+													src={`${image.deliveryUrl}/thumbnail`}
 													alt={image.altText || image.fileName || 'Album image'}
-													className="size-full object-cover"
+													className="size-full aspect-3/2 object-cover rounded-md"
 												/>
 											</div>
 
@@ -1084,14 +1080,14 @@ function AlbumEditorPage() {
 												</p>
 											</div>
 
-											<div className="flex items-center gap-1">
+											<div className="flex items-center gap-2">
 												<Button
 													variant="ghost"
 													size="icon"
 													onClick={() => handleMoveImage(item.imageId, 'up')}
 													disabled={index === 0 || reorderMutation.isPending}
 												>
-													<ArrowUp className="size-4" />
+													<ArrowUp className="size-6" />
 												</Button>
 												<Button
 													variant="ghost"
@@ -1102,12 +1098,12 @@ function AlbumEditorPage() {
 														reorderMutation.isPending
 													}
 												>
-													<ArrowDown className="size-4" />
+													<ArrowDown className="size-6" />
 												</Button>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
 														<Button variant="ghost" size="icon">
-															<MoreHorizontal className="size-4" />
+															<MoreHorizontal className="size-6" />
 														</Button>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent align="end">

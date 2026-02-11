@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { GlobeLock, LoaderCircle, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { ImageDelete } from '@/components/images/ImageDelete';
 import {
@@ -53,6 +54,15 @@ function ImageEditorPage() {
 		}),
 	});
 
+	// Fetch signed URL automatically when the image requires it
+	const { data: signedUrlData, isFetching: isFetchingSignedUrl } = useQuery({
+		...trpc.cfImages.signedUrls.signUrl.queryOptions({
+			imageId,
+			variant: 'md',
+		}),
+		enabled: !!image?.requireSignedURLs,
+	});
+
 	// Update image mutation
 	const updateImageMutation = useMutation(
 		trpc.cfImages.images.updateImage.mutationOptions({
@@ -62,6 +72,9 @@ function ImageEditorPage() {
 				});
 				queryClient.invalidateQueries({
 					queryKey: [['cfImages', 'images', 'listImages']],
+				});
+				queryClient.invalidateQueries({
+					queryKey: [['cfImages', 'signedUrls']],
 				});
 			},
 		}),
@@ -99,16 +112,28 @@ function ImageEditorPage() {
 				altText: formData.altText || null,
 				requireSignedURLs: formData.requireSignedURLs,
 			});
+			toast.success('Image updated successfully');
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to update image',
+			);
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
 	const handleDelete = async () => {
-		await deleteImageMutation.mutateAsync({
-			id: imageId,
-			deleteFromCf: true,
-		});
+		try {
+			await deleteImageMutation.mutateAsync({
+				id: imageId,
+				deleteFromCf: true,
+			});
+			toast.success('Image deleted successfully');
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : 'Failed to delete image',
+			);
+		}
 	};
 
 	if (isLoadingImage) {
@@ -244,11 +269,20 @@ function ImageEditorPage() {
 					</CardHeader>
 					<CardContent>
 						{/* Image Preview */}
-						<div className="flex justify-center">
+						<div className="flex justify-center relative">
+							{isFetchingSignedUrl && image.requireSignedURLs && (
+								<div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded">
+									<LoaderCircle className="h-6 w-6 animate-spin" />
+								</div>
+							)}
 							<img
-								src={`${image.deliveryUrl}/md`}
+								src={
+									image.requireSignedURLs && signedUrlData?.url
+										? signedUrlData.url
+										: `${image.deliveryUrl}/md`
+								}
 								alt={image.altText || 'Preview'}
-								className="w-full object-cover"
+								className="w-full object-cover rounded-lg"
 							/>
 						</div>
 					</CardContent>

@@ -2,7 +2,7 @@
   "name": "airwartrail-cms",
   "private": true,
   "type": "module",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:cf": "vite build && pnpx wrangler dev",

@@ -826,7 +826,7 @@ function PlaylistEditorPage() {
 											Reset
 										</Button>
 										<Button
-											size="sm"
+											variant="accent"
 											onClick={handleSaveOrder}
 											disabled={reorderMutation.isPending}
 										>
@@ -844,7 +844,7 @@ function PlaylistEditorPage() {
 									onClick={() => setIsAddVideoOpen(true)}
 									disabled={playlistVideos.length >= MAX_PLAYLIST_VIDEOS}
 								>
-									<Plus className="mr-2 size-4" />
+									<Plus />
 									Add Video
 								</Button>
 							</div>
@@ -896,7 +896,7 @@ function PlaylistEditorPage() {
 											</span>
 										</Button>
 
-										<div className="h-14 w-24 shrink-0 overflow-hidden rounded-md">
+										<div className="w-fit shrink-0 overflow-hidden rounded-md">
 											<VideoThumbnail
 												playbackId={item.muxPlaybackId}
 												videoId={item.id}
@@ -921,14 +921,14 @@ function PlaylistEditorPage() {
 											</p>
 										</div>
 
-										<div className="flex items-center gap-1">
+										<div className="flex items-center gap-2">
 											<Button
 												variant="ghost"
 												size="icon"
 												onClick={() => handleMoveVideo(item.id, 'up')}
 												disabled={index === 0 || reorderMutation.isPending}
 											>
-												<ArrowUp className="size-4" />
+												<ArrowUp className="size-6" />
 											</Button>
 											<Button
 												variant="ghost"
@@ -939,12 +939,12 @@ function PlaylistEditorPage() {
 													reorderMutation.isPending
 												}
 											>
-												<ArrowDown className="size-4" />
+												<ArrowDown className="size-6" />
 											</Button>
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
 													<Button variant="ghost" size="icon">
-														<MoreHorizontal className="size-4" />
+														<MoreHorizontal className="size-6" />
 													</Button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end">
