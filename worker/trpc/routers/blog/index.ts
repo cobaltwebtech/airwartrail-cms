@@ -2,8 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, asc, sql, like, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { t, protectedProcedure, publicProcedure } from "../../trpc-init";
-import { posts } from "@/db/blog-schema";
+import { t, protectedProcedure, publicProcedure, createPermissionMiddleware } from "../../trpc-init";
+import { blogPosts } from "@/db/content-schema";
 import { customAlphabet } from "nanoid";
 
 // ============================================================================
@@ -11,85 +11,7 @@ import { customAlphabet } from "nanoid";
 // ============================================================================
 
 export function getBlogDb(env: Env) {
-	return drizzle(env.DB_BLOG);
-}
-
-// ============================================================================
-// Featured Image Constants & Helpers
-// ============================================================================
-
-const BLOG_ASSETS_PREFIX = "blog";
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-
-/**
- * Parse a filename into base name and extension
- */
-function parseFileName(fileName: string): { baseName: string; ext: string } {
-	const lastDot = fileName.lastIndexOf(".");
-	if (lastDot === -1) {
-		return { baseName: fileName, ext: "" };
-	}
-	return {
-		baseName: fileName.slice(0, lastDot),
-		ext: fileName.slice(lastDot + 1),
-	};
-}
-
-/**
- * Generate a unique key for the featured image, handling collisions
- * Format: blog/{filename} or blog/{filename}-{n}.{ext}
- */
-async function generateUniqueFeaturedImageKey(
-	r2Bucket: R2Bucket,
-	fileName: string,
-): Promise<string> {
-	const { baseName, ext } = parseFileName(fileName);
-	const baseKey = `${BLOG_ASSETS_PREFIX}/${fileName}`;
-
-	// Check if the base key exists
-	const existingObject = await r2Bucket.head(baseKey);
-	if (!existingObject) {
-		return baseKey;
-	}
-
-	// Key exists, find a unique suffix
-	let suffix = 1;
-	while (suffix < 1000) {
-		const newFileName = ext
-			? `${baseName}-${suffix}.${ext}`
-			: `${baseName}-${suffix}`;
-		const newKey = `${BLOG_ASSETS_PREFIX}/${newFileName}`;
-
-		const exists = await r2Bucket.head(newKey);
-		if (!exists) {
-			return newKey;
-		}
-		suffix++;
-	}
-
-	// Fallback: use timestamp if we somehow hit 1000 versions
-	const timestamp = Date.now();
-	const fallbackFileName = ext
-		? `${baseName}-${timestamp}.${ext}`
-		: `${baseName}-${timestamp}`;
-	return `${BLOG_ASSETS_PREFIX}/${fallbackFileName}`;
-}
-
-/**
- * Extract the R2 key from a full URL
- */
-function getKeyFromUrl(url: string): string | null {
-	try {
-		const urlObj = new URL(url);
-		// Remove leading slash from pathname
-		return urlObj.pathname.slice(1);
-	} catch {
-		// If it's not a full URL, assume it's already a key
-		if (url.startsWith(BLOG_ASSETS_PREFIX)) {
-			return url;
-		}
-		return null;
-	}
+	return drizzle(env.DB_CONTENT);
 }
 
 // ============================================================================
@@ -148,7 +70,7 @@ function calculateReadingTime(postContent: unknown): number {
 // Types
 // ============================================================================
 
-export type PublishStatus = "draft" | "published" | "scheduled" | "archived";
+export type PublishStatus = "draft" | "published" | "archived";
 
 export interface Post {
 	id: string;
@@ -172,7 +94,7 @@ export interface Post {
 // Schemas
 // ============================================================================
 
-const publishStatusSchema = z.enum(["draft", "published", "scheduled", "archived"]);
+const publishStatusSchema = z.enum(["draft", "published", "archived"]);
 
 const postContentSchema = z.unknown(); // JSON content from rich text editor
 
@@ -235,15 +157,16 @@ export const blogRouter = t.router({
 	 * Create a new blog post
 	 */
 	create: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(createPostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
 
 			// Check if slug already exists
 			const existingPost = await db
-				.select({ id: posts.id })
-				.from(posts)
-				.where(eq(posts.slug, input.slug))
+				.select({ id: blogPosts.id })
+				.from(blogPosts)
+				.where(eq(blogPosts.slug, input.slug))
 				.limit(1);
 
 			if (existingPost.length > 0) {
@@ -256,11 +179,8 @@ export const blogRouter = t.router({
 			const postId = generatePostId();
 			const now = new Date();
 
-			// Set publishedAt if status is published and not provided
-			const publishedAt =
-				input.publishStatus === "published" && !input.publishedAt
-					? now
-					: input.publishedAt ?? null;
+			// Set publishedAt to current time if not provided
+			const publishedAt = input.publishedAt ?? now;
 
 			// Auto-calculate reading time from post content
 			const readingTimeMinutes = input.postContent
@@ -268,7 +188,7 @@ export const blogRouter = t.router({
 				: null;
 
 			const [newPost] = await db
-				.insert(posts)
+				.insert(blogPosts)
 				.values({
 					id: postId,
 					slug: input.slug,
@@ -309,6 +229,7 @@ export const blogRouter = t.router({
 	 * Update an existing blog post
 	 */
 	update: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(updatePostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -316,8 +237,8 @@ export const blogRouter = t.router({
 			// Check if post exists
 			const [existingPost] = await db
 				.select()
-				.from(posts)
-				.where(eq(posts.id, input.id))
+				.from(blogPosts)
+				.where(eq(blogPosts.id, input.id))
 				.limit(1);
 
 			if (!existingPost) {
@@ -330,9 +251,9 @@ export const blogRouter = t.router({
 			// Check if new slug already exists (if slug is being changed)
 			if (input.slug && input.slug !== existingPost.slug) {
 				const slugExists = await db
-					.select({ id: posts.id })
-					.from(posts)
-					.where(eq(posts.slug, input.slug))
+					.select({ id: blogPosts.id })
+					.from(blogPosts)
+					.where(eq(blogPosts.slug, input.slug))
 					.limit(1);
 
 				if (slugExists.length > 0) {
@@ -341,16 +262,6 @@ export const blogRouter = t.router({
 						message: "A post with this slug already exists",
 					});
 				}
-			}
-
-			// Handle publishedAt auto-set when publishing
-			let publishedAt = input.publishedAt;
-			if (
-				input.publishStatus === "published" &&
-				existingPost.publishStatus !== "published" &&
-				publishedAt === undefined
-			) {
-				publishedAt = new Date();
 			}
 
 			const updateData: Record<string, unknown> = {};
@@ -366,14 +277,13 @@ export const blogRouter = t.router({
 			if (input.featuredImageUrl !== undefined) updateData.featuredImageUrl = input.featuredImageUrl;
 			if (input.featuredImageAlt !== undefined) updateData.featuredImageAlt = input.featuredImageAlt;
 			if (input.publishStatus !== undefined) updateData.publishStatus = input.publishStatus;
-			if (publishedAt !== undefined) updateData.publishedAt = publishedAt;
+			if (input.publishedAt !== undefined) updateData.publishedAt = input.publishedAt;
 			if (input.isFeatured !== undefined) updateData.isFeatured = input.isFeatured;
-			// Note: readingTimeMinutes is now auto-calculated from postContent
 
 			const [updatedPost] = await db
-				.update(posts)
+				.update(blogPosts)
 				.set(updateData)
-				.where(eq(posts.id, input.id))
+				.where(eq(blogPosts.id, input.id))
 				.returning();
 
 			return {
@@ -402,10 +312,10 @@ export const blogRouter = t.router({
 		const db = getBlogDb(ctx.env);
 
 		const condition = input.id
-			? eq(posts.id, input.id)
-			: eq(posts.slug, input.slug!);
+			? eq(blogPosts.id, input.id)
+			: eq(blogPosts.slug, input.slug!);
 
-		const [post] = await db.select().from(posts).where(condition).limit(1);
+		const [post] = await db.select().from(blogPosts).where(condition).limit(1);
 
 		if (!post) {
 			throw new TRPCError({
@@ -434,9 +344,12 @@ export const blogRouter = t.router({
 	}),
 
 	/**
-	 * List blog posts with filtering and pagination
+	 * List blog posts with filtering and pagination (admin use)
 	 */
-	list: publicProcedure.input(listPostsSchema.optional()).query(async ({ ctx, input }) => {
+	list: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["read"]))
+		.input(listPostsSchema.optional())
+		.query(async ({ ctx, input }) => {
 		const db = getBlogDb(ctx.env);
 
 		const limit = input?.limit ?? 25;
@@ -447,17 +360,17 @@ export const blogRouter = t.router({
 		const conditions = [];
 
 		if (input?.status) {
-			conditions.push(eq(posts.publishStatus, input.status));
+			conditions.push(eq(blogPosts.publishStatus, input.status));
 		}
 
 		if (input?.featuredOnly) {
-			conditions.push(eq(posts.isFeatured, true));
+			conditions.push(eq(blogPosts.isFeatured, true));
 		}
 
 		if (input?.search) {
 			const searchPattern = `%${input.search}%`;
 			conditions.push(
-				or(like(posts.title, searchPattern), like(posts.slug, searchPattern)),
+				or(like(blogPosts.title, searchPattern), like(blogPosts.slug, searchPattern)),
 			);
 		}
 
@@ -465,18 +378,18 @@ export const blogRouter = t.router({
 
 		// Build order by
 		const sortColumn = {
-			createdAt: posts.createdAt,
-			updatedAt: posts.updatedAt,
-			publishedAt: posts.publishedAt,
-			title: posts.title,
+			createdAt: blogPosts.createdAt,
+			updatedAt: blogPosts.updatedAt,
+			publishedAt: blogPosts.publishedAt,
+			title: blogPosts.title,
 		}[input?.sortBy ?? "createdAt"];
 
 		const sortFn = input?.sortOrder === "asc" ? asc : desc;
 
-		// Get posts
+		// Get blogPosts
 		const results = await db
 			.select()
-			.from(posts)
+			.from(blogPosts)
 			.where(whereClause)
 			.orderBy(sortFn(sortColumn))
 			.limit(limit)
@@ -485,13 +398,13 @@ export const blogRouter = t.router({
 		// Get total count
 		const [countResult] = await db
 			.select({ count: sql<number>`count(*)` })
-			.from(posts)
+			.from(blogPosts)
 			.where(whereClause);
 
 		const total = countResult?.count ?? 0;
 
 		return {
-			posts: results.map((post) => ({
+			blogPosts: results.map((post) => ({
 				id: post.id,
 				slug: post.slug,
 				title: post.title,
@@ -521,18 +434,109 @@ export const blogRouter = t.router({
 	}),
 
 	/**
+	 * List published blog posts (public-facing) - filters for posts where publishedAt is now or older
+	 */
+	listFiltered: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["read"]))
+		.input(listPostsSchema.optional())
+		.query(async ({ ctx, input }) => {
+			const db = getBlogDb(ctx.env);
+
+		const limit = input?.limit ?? 25;
+		const page = input?.page ?? 1;
+		const offset = (page - 1) * limit;
+		const now = new Date().toISOString();
+		
+		// Build where conditions
+		const conditions = [
+			eq(blogPosts.publishStatus, "published"),
+			// Only include posts where publishedAt is now or in the past
+			sql`${blogPosts.publishedAt} <= ${now}`,
+		];
+
+		if (input?.featuredOnly) {
+			conditions.push(eq(blogPosts.isFeatured, true));
+		}
+
+		if (input?.search) {
+			const searchPattern = `%${input.search}%`;
+			conditions.push(
+				sql`(${like(blogPosts.title, searchPattern)} OR ${like(blogPosts.slug, searchPattern)})`,
+			);
+		}
+
+		const whereClause = and(...conditions);
+
+		// Build order by
+		const sortColumn = {
+			createdAt: blogPosts.createdAt,
+			updatedAt: blogPosts.updatedAt,
+			publishedAt: blogPosts.publishedAt,
+			title: blogPosts.title,
+		}[input?.sortBy ?? "publishedAt"];
+
+		const sortFn = input?.sortOrder === "asc" ? asc : desc;
+
+		// Get posts
+		const results = await db
+			.select()
+			.from(blogPosts)
+			.where(whereClause)
+			.orderBy(sortFn(sortColumn))
+			.limit(limit)
+			.offset(offset);
+
+		// Get total count
+		const [countResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(blogPosts)
+			.where(whereClause);
+
+		const total = countResult?.count ?? 0;
+
+		return {
+			blogPosts: results.map((post) => ({
+				id: post.id,
+				slug: post.slug,
+				title: post.title,
+				shortDescription: post.short_description,
+				postContent: post.postContent,
+				featuredImageUrl: post.featuredImageUrl,
+				featuredImageAlt: post.featuredImageAlt,
+				publishStatus: post.publishStatus as PublishStatus,
+				publishedAt: post.publishedAt,
+				author: post.author,
+				authorId: post.authorId,
+				isFeatured: post.isFeatured,
+				readingTimeMinutes: post.readingTimeMinutes,
+				createdAt: post.createdAt,
+				updatedAt: post.updatedAt,
+			})),
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+				hasNext: page * limit < total,
+				hasPrev: page > 1,
+			},
+		};
+	}),
+
+	/**
 	 * Delete a blog post
 	 */
 	delete: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["delete"]))
 		.input(deletePostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
 
 			// Check if post exists
 			const [existingPost] = await db
-				.select({ id: posts.id })
-				.from(posts)
-				.where(eq(posts.id, input.id))
+				.select({ id: blogPosts.id })
+				.from(blogPosts)
+				.where(eq(blogPosts.id, input.id))
 				.limit(1);
 
 			if (!existingPost) {
@@ -543,7 +547,7 @@ export const blogRouter = t.router({
 			}
 
 			// Delete post
-			await db.delete(posts).where(eq(posts.id, input.id));
+			await db.delete(blogPosts).where(eq(blogPosts.id, input.id));
 
 			return {
 				success: true,
@@ -558,14 +562,15 @@ export const blogRouter = t.router({
 	 * Publish a blog post
 	 */
 	publish: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
 
 			const [existingPost] = await db
 				.select()
-				.from(posts)
-				.where(eq(posts.id, input.id))
+				.from(blogPosts)
+				.where(eq(blogPosts.id, input.id))
 				.limit(1);
 
 			if (!existingPost) {
@@ -579,12 +584,12 @@ export const blogRouter = t.router({
 			const publishedAt = existingPost.publishedAt ?? now;
 
 			const [updatedPost] = await db
-				.update(posts)
+				.update(blogPosts)
 				.set({
 					publishStatus: "published",
 					publishedAt,
 				})
-				.where(eq(posts.id, input.id))
+				.where(eq(blogPosts.id, input.id))
 				.returning();
 
 			return {
@@ -600,14 +605,15 @@ export const blogRouter = t.router({
 	 * Unpublish a blog post (move to draft)
 	 */
 	unpublish: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
 
 			const [existingPost] = await db
 				.select()
-				.from(posts)
-				.where(eq(posts.id, input.id))
+				.from(blogPosts)
+				.where(eq(blogPosts.id, input.id))
 				.limit(1);
 
 			if (!existingPost) {
@@ -618,11 +624,11 @@ export const blogRouter = t.router({
 			}
 
 			const [updatedPost] = await db
-				.update(posts)
+				.update(blogPosts)
 				.set({
 					publishStatus: "draft",
 				})
-				.where(eq(posts.id, input.id))
+				.where(eq(blogPosts.id, input.id))
 				.returning();
 
 			return {
@@ -638,14 +644,15 @@ export const blogRouter = t.router({
 	 * Toggle featured status
 	 */
 	toggleFeatured: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
 
 			const [existingPost] = await db
-				.select({ id: posts.id, isFeatured: posts.isFeatured })
-				.from(posts)
-				.where(eq(posts.id, input.id))
+				.select({ id: blogPosts.id, isFeatured: blogPosts.isFeatured })
+				.from(blogPosts)
+				.where(eq(blogPosts.id, input.id))
 				.limit(1);
 
 			if (!existingPost) {
@@ -656,11 +663,11 @@ export const blogRouter = t.router({
 			}
 
 			const [updatedPost] = await db
-				.update(posts)
+				.update(blogPosts)
 				.set({
 					isFeatured: !existingPost.isFeatured,
 				})
-				.where(eq(posts.id, input.id))
+				.where(eq(blogPosts.id, input.id))
 				.returning();
 
 			return {
@@ -670,32 +677,27 @@ export const blogRouter = t.router({
 		}),
 
 	/**
-	 * Upload a featured image to R2 and store the URL in the database
-	 * Accepts base64 encoded image data
+	 * Set the featured image URL for a blog post
 	 */
-	uploadFeaturedImage: protectedProcedure
+	setFeaturedImage: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["write"]))
 		.input(
 			z.object({
 				postId: z.string(),
-				fileName: z.string().min(1).max(255),
-				imageData: z.string(), // Base64 encoded image data
-				mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]),
+				featuredImageUrl: z.string().url(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const { env } = ctx;
 			const db = getBlogDb(env);
-			const { postId, fileName, imageData, mimeType } = input;
+			const { postId, featuredImageUrl } = input;
 
 			try {
-				// Verify the post exists and get current featured image URL for cleanup
+				// Verify the post exists
 				const [existingPost] = await db
-					.select({
-						id: posts.id,
-						featuredImageUrl: posts.featuredImageUrl,
-					})
-					.from(posts)
-					.where(eq(posts.id, postId))
+					.select({ id: blogPosts.id })
+					.from(blogPosts)
+					.where(eq(blogPosts.id, postId))
 					.limit(1);
 
 				if (!existingPost) {
@@ -705,79 +707,33 @@ export const blogRouter = t.router({
 					});
 				}
 
-				// Decode base64 image data
-				const binaryData = Uint8Array.from(atob(imageData), (c) =>
-					c.charCodeAt(0),
-				);
-
-				// Validate file size
-				if (binaryData.length > MAX_IMAGE_SIZE) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: `File size exceeds maximum of ${MAX_IMAGE_SIZE / 1024 / 1024}MB`,
-					});
-				}
-
-				// Generate unique key for the new featured image (handles filename collisions)
-				const key = await generateUniqueFeaturedImageKey(env.R2_ASSETS, fileName);
-
-				// Upload to R2
-				await env.R2_ASSETS.put(key, binaryData, {
-					httpMetadata: {
-						contentType: mimeType,
-						cacheControl: "public, max-age=31536000", // 1 year cache
-					},
-					customMetadata: {
-						postId,
-						uploadedAt: new Date().toISOString(),
-					},
-				});
-
-				// Build the public URL for the featured image
-				const featuredImageUrl = `https://assets.airwartrail.com/${key}`;
-
-				// Delete the old featured image if it exists
-				if (existingPost.featuredImageUrl) {
-					const oldKey = getKeyFromUrl(existingPost.featuredImageUrl);
-					if (oldKey) {
-						try {
-							await env.R2_ASSETS.delete(oldKey);
-						} catch (deleteError) {
-							// Log but don't fail - the new image is already uploaded
-							console.warn("Failed to delete old featured image:", deleteError);
-						}
-					}
-				}
-
 				// Update the post record with the new featured image URL
 				const [updatedPost] = await db
-					.update(posts)
-					.set({
-						featuredImageUrl,
-					})
-					.where(eq(posts.id, postId))
+					.update(blogPosts)
+					.set({ featuredImageUrl })
+					.where(eq(blogPosts.id, postId))
 					.returning();
 
 				return {
 					success: true,
 					featuredImageUrl,
-					key,
 					postId: updatedPost.id,
 				};
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;
-				console.error("Error uploading featured image:", error);
+				console.error("Error setting featured image:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to upload featured image",
+					message: "Failed to set featured image",
 				});
 			}
 		}),
 
 	/**
-	 * Delete a featured image from R2 and clear the database reference
+	 * Clear the featured image URL from a blog post
 	 */
-	deleteFeaturedImage: protectedProcedure
+	removeFeaturedImage: protectedProcedure
+		.use(createPermissionMiddleware("blog", ["delete"]))
 		.input(
 			z.object({
 				postId: z.string(),
@@ -789,14 +745,11 @@ export const blogRouter = t.router({
 			const { postId } = input;
 
 			try {
-				// Get the current featured image URL
+				// Verify the post exists
 				const [existingPost] = await db
-					.select({
-						id: posts.id,
-						featuredImageUrl: posts.featuredImageUrl,
-					})
-					.from(posts)
-					.where(eq(posts.id, postId))
+					.select({ id: blogPosts.id })
+					.from(blogPosts)
+					.where(eq(blogPosts.id, postId))
 					.limit(1);
 
 				if (!existingPost) {
@@ -806,39 +759,19 @@ export const blogRouter = t.router({
 					});
 				}
 
-				if (!existingPost.featuredImageUrl) {
-					// No featured image to delete
-					return { success: true, deleted: false };
-				}
-
-				// Extract the R2 key from the URL
-				const key = getKeyFromUrl(existingPost.featuredImageUrl);
-
-				if (key) {
-					// Delete from R2
-					try {
-						await env.R2_ASSETS.delete(key);
-					} catch (deleteError) {
-						console.warn("Failed to delete featured image from R2:", deleteError);
-						// Continue to clear the database reference even if R2 delete fails
-					}
-				}
-
 				// Clear the featured image URL in the database
 				await db
-					.update(posts)
-					.set({
-						featuredImageUrl: null,
-					})
-					.where(eq(posts.id, postId));
+					.update(blogPosts)
+					.set({ featuredImageUrl: null })
+					.where(eq(blogPosts.id, postId));
 
-				return { success: true, deleted: true };
+				return { success: true };
 			} catch (error) {
 				if (error instanceof TRPCError) throw error;
-				console.error("Error deleting featured image:", error);
+				console.error("Error clearing featured image:", error);
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to delete featured image",
+					message: "Failed to clear featured image",
 				});
 			}
 		}),

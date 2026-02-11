@@ -36,10 +36,10 @@
 			"migrations_dir": "./drizzle/videos"
 		},
 		{
-			"binding": "DB_BLOG",
-			"database_name": "airwartrail-cms-blog",
-			"database_id": "19b68360-9080-446a-b777-a1ba5b63ca17",
-			"migrations_dir": "./drizzle/blog"
+			"binding": "DB_CONTENT",
+			"database_name": "airwartrail-cms-content",
+			"database_id": "f5c8983a-7eb7-454e-a533-74299e920183",
+			"migrations_dir": "./drizzle/content"
 		}
 	],
 	"r2_buckets": [
@@ -51,6 +51,7 @@
 	],
 	"vars": {
 		"BETTER_AUTH_URL": "https://dashboard.airwartrail.com",
-		"VITE_TURNSTILE_SITE_KEY": "0x4AAAAAABigvVfdn9-L_sZY"
+		"VITE_TURNSTILE_SITE_KEY": "0x4AAAAAABigvVfdn9-L_sZY",
+		"CLOUDFLARE_IMAGES_DOMAIN": "www.airwartrail.com"
 	}
 }

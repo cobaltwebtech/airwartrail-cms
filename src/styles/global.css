@@ -241,3 +241,27 @@
 	border-top: 1px solid var(--border);
 	margin: 2em 0;
 }
+
+/* Custom scrollbar styling */
+.dialog-scrollbar {
+	scrollbar-color: var(--muted-foreground) var(--card);
+	scrollbar-width: thin;
+}
+
+.dialog-scrollbar::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.dialog-scrollbar::-webkit-scrollbar-track {
+	background: var(--card);
+}
+
+.dialog-scrollbar::-webkit-scrollbar-thumb {
+	background: var(--muted-foreground);
+	border-radius: 4px;
+}
+
+.dialog-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: var(--muted-foreground);
+}

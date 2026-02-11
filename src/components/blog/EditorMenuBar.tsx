@@ -5,6 +5,7 @@ import {
 	Heading2,
 	Heading3,
 	Heading4,
+	ImagePlus,
 	Italic,
 	Link,
 	List,
@@ -31,6 +32,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+	getImageUrl,
+	ImagePickerDialog,
+	type SelectedImage,
+} from './ImagePickerDialog';
 
 interface EditorMenuBarProps {
 	editor: Editor;
@@ -77,6 +83,14 @@ function MenuButton({
 export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
 	const [linkUrl, setLinkUrl] = useState('');
+	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+
+	const handleImageSelected = (image: SelectedImage) => {
+		const src = getImageUrl(image.deliveryUrl, 'blog');
+		const alt = image.altText || 'Blog image';
+		editor.chain().focus().setImage({ src, alt }).run();
+		setIsImagePickerOpen(false);
+	};
 
 	const handleLinkClick = () => {
 		const previousUrl = editor.getAttributes('link').href;
@@ -167,6 +181,14 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 				<Link className="size-4" />
 			</MenuButton>
 
+			{/* Image */}
+			<MenuButton
+				onClick={() => setIsImagePickerOpen(true)}
+				tooltip="Insert Image"
+			>
+				<ImagePlus className="size-4" />
+			</MenuButton>
+
 			<Separator orientation="vertical" className="mx-1 h-6" />
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -237,6 +259,15 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 			>
 				<Redo className="size-4" />
 			</MenuButton>
+
+			{/* Image Picker Dialog */}
+			<ImagePickerDialog
+				open={isImagePickerOpen}
+				onOpenChange={setIsImagePickerOpen}
+				onSelect={handleImageSelected}
+				title="Insert Image"
+				description="Choose an image from your library to insert into the editor."
+			/>
 
 			{/* Link Dialog */}
 			<Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>

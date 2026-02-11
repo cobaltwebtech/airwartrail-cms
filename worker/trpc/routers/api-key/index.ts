@@ -245,7 +245,7 @@ export const apiKeysRouter = t.router({
 		return {
 			resources: {
 				mux: {
-					label: "Mux Videos",
+					label: "Videos",
 					description: "Access to video management API",
 					actions: [
 						{ id: "read", label: "Read", description: "View videos and metadata" },
@@ -254,7 +254,7 @@ export const apiKeysRouter = t.router({
 					],
 				},
 				playlists: {
-					label: "Playlists",
+					label: "Video Playlists",
 					description: "Access to playlist management API",
 					actions: [
 						{ id: "read", label: "Read", description: "View playlists" },
@@ -263,11 +263,29 @@ export const apiKeysRouter = t.router({
 					],
 				},
 				libraries: {
-					label: "Libraries",
-					description: "Access to Mux library configuration",
+					label: "Video Libraries",
+					description: "Access to video library API",
 					actions: [
 						{ id: "read", label: "Read", description: "View library settings" },
 						{ id: "write", label: "Write", description: "Update library settings" },
+					],
+				},
+				blog: {
+					label: "Blog",
+					description: "Access to blog management API",
+					actions: [
+						{ id: "read", label: "Read", description: "View blog posts" },
+						{ id: "write", label: "Write", description: "Create and update blog posts" },
+						{ id: "delete", label: "Delete", description: "Delete blog posts" },
+					],
+				},
+				images: {
+					label: "Images & Albums",
+					description: "Access to image management API",
+					actions: [
+						{ id: "read", label: "Read", description: "Read images and albums" },
+						{ id: "write", label: "Write", description: "Create and update images and albums" },
+						{ id: "delete", label: "Delete", description: "Delete images and albums" },
 					],
 				},
 			},

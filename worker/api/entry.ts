@@ -5,6 +5,7 @@ import { appRouter } from "@/worker/trpc/router";
 import { createContext } from "@/worker/trpc/context";
 import { auth } from "@/lib/auth-server";
 import { muxWebhookRouter } from "@/worker/api/webhooks/mux";
+import { imageDownloadRouter } from "@/worker/api/cf-images/download";
 
 export const App = new Hono<{ Bindings: Env }>();
 
@@ -28,6 +29,9 @@ App.on(["POST", "GET"], "/api/auth/*", (c) => {
 
 // Mux webhook handler (no auth required - uses signature verification)
 App.route("/api/webhooks/mux", muxWebhookRouter);
+
+// Image download handler (auth handled inside router)
+App.route("/api/cf-images/download", imageDownloadRouter);
 
 App.use("/trpc/*", async (c, next) => {
   // Check for API key in header first

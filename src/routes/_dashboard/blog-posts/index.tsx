@@ -44,7 +44,7 @@ export const Route = createFileRoute('/_dashboard/blog-posts/')({
 	component: BlogPostsPage,
 });
 
-type PublishStatus = 'draft' | 'published' | 'scheduled' | 'archived';
+type PublishStatus = 'draft' | 'published' | 'archived';
 
 interface BlogPost {
 	id: string;
@@ -181,7 +181,7 @@ function BlogPostsPage() {
 		[],
 	);
 
-	const posts = postsData?.posts ?? [];
+	const posts = postsData?.blogPosts ?? [];
 
 	const table = useReactTable({
 		data: posts,
@@ -312,8 +312,6 @@ function StatusBadge({ status }: { status: PublishStatus }) {
 			return <Badge variant="accent">Published</Badge>;
 		case 'draft':
 			return <Badge variant="secondary">Draft</Badge>;
-		case 'scheduled':
-			return <Badge variant="outline">Scheduled</Badge>;
 		case 'archived':
 			return <Badge variant="destructive">Archived</Badge>;
 		default:

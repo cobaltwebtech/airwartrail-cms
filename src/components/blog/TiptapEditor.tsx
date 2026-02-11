@@ -1,3 +1,4 @@
+import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -26,6 +27,13 @@ export function TiptapEditor({
 			}),
 			Link.configure({
 				openOnClick: false,
+			}),
+			Image.configure({
+				inline: false,
+				allowBase64: false,
+				HTMLAttributes: {
+					class: 'rounded-lg',
+				},
 			}),
 		],
 		content: content as string | null,

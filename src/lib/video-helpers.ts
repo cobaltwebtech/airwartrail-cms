@@ -154,16 +154,3 @@ export function formatDateTime(dateString: string | undefined) {
 	const date = new Date(dateString);
 	return format(date, 'MMM dd, yyyy HH:mm:ss');
 }
-
-export function copyVideoUrl(videoId: string) {
-	const libraryId = import.meta.env.VITE_BUNNY_LIBRARY_ID;
-	const url = `https://player.mediadelivery.net/embed/${libraryId}/${videoId}`;
-	const handleCopy = () => {
-		navigator.clipboard.writeText(url);
-	};
-	return handleCopy;
-}
-
-export const convertToGb = (sizeInBytes: number): string => {
-	return (sizeInBytes / 1024 ** 3).toFixed(2);
-};

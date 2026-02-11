@@ -38,7 +38,10 @@ export const VideoDialog: React.FC<VideoDialogProps> = ({
 		isLoading,
 		isError,
 	} = useQuery(
-		trpc.mux.getAsset.queryOptions({ assetId: video.id, libraryId }),
+		trpc.mux.getAsset.queryOptions({
+			assetId: video.muxAssetId || video.id,
+			libraryId,
+		}),
 	);
 
 	// Fetch signed tokens only when the video has a "signed" playback policy

@@ -2,6 +2,8 @@ import { Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
 	FilePlus,
+	GalleryHorizontalEnd,
+	Images,
 	KeyRound,
 	LibraryBig,
 	ListVideo,
@@ -45,6 +47,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			title: 'Video Tags',
 			url: '/tags',
 			icon: Tags,
+		},
+		{
+			title: 'Images',
+			url: '/images',
+			icon: Images,
+		},
+		{
+			title: 'Image Albums',
+			url: '/images/albums',
+			icon: GalleryHorizontalEnd,
 		},
 		{
 			title: 'Blog Posts',

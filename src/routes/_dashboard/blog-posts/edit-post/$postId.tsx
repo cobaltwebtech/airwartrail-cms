@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { FileText, Loader2, Save, Star, Trash2 } from 'lucide-react';
+import {
+	CalendarDays,
+	FileText,
+	Loader2,
+	Save,
+	Star,
+	Trash2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import FeaturedImage from '@/components/blog/FeaturedImage';
@@ -15,6 +22,7 @@ import {
 	BreadcrumbList,
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
 	Card,
 	CardContent,
@@ -32,6 +40,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
 import {
 	Select,
 	SelectContent,
@@ -58,7 +71,7 @@ export const Route = createFileRoute(
 	component: EditPostPage,
 });
 
-type PublishStatus = 'draft' | 'published' | 'scheduled' | 'archived';
+type PublishStatus = 'draft' | 'published' | 'archived';
 
 function EditPostPage() {
 	const { postId } = Route.useParams();
@@ -80,6 +93,7 @@ function EditPostPage() {
 	const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(null);
 	const [featuredImageAlt, setFeaturedImageAlt] = useState<string | null>(null);
 	const [publishStatus, setPublishStatus] = useState<PublishStatus>('draft');
+	const [publishedAt, setPublishedAt] = useState<Date | null>(null);
 	const [isFeatured, setIsFeatured] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -93,6 +107,7 @@ function EditPostPage() {
 			setFeaturedImageUrl(post.featuredImageUrl);
 			setFeaturedImageAlt(post.featuredImageAlt);
 			setPublishStatus(post.publishStatus);
+			setPublishedAt(post.publishedAt ? new Date(post.publishedAt) : null);
 			setIsFeatured(post.isFeatured);
 		}
 	}, [post]);
@@ -230,6 +245,7 @@ function EditPostPage() {
 			postContent,
 			featuredImageAlt: featuredImageAlt?.trim() || null,
 			publishStatus,
+			publishedAt,
 			isFeatured,
 		});
 	};
@@ -264,8 +280,6 @@ function EditPostPage() {
 				return <Badge variant="default">Published</Badge>;
 			case 'draft':
 				return <Badge variant="secondary">Draft</Badge>;
-			case 'scheduled':
-				return <Badge variant="outline">Scheduled</Badge>;
 			case 'archived':
 				return <Badge variant="destructive">Archived</Badge>;
 			default:
@@ -415,10 +429,41 @@ function EditPostPage() {
 										<SelectContent>
 											<SelectItem value="draft">Draft</SelectItem>
 											<SelectItem value="published">Published</SelectItem>
-											<SelectItem value="scheduled">Scheduled</SelectItem>
 											<SelectItem value="archived">Archived</SelectItem>
 										</SelectContent>
 									</Select>
+								</div>
+
+								<div>
+									<Label className="mb-2">Publish Date</Label>
+									<Popover>
+										<PopoverTrigger asChild>
+											<Button
+												variant="secondary"
+												className="justify-start font-normal"
+												disabled={isAnyMutationPending}
+											>
+												<CalendarDays />
+												{publishedAt ? (
+													format(publishedAt, 'PPP')
+												) : (
+													<span>Pick a date</span>
+												)}
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent align="center" className="w-auto p-0">
+											<Calendar
+												mode="single"
+												selected={publishedAt || undefined}
+												onSelect={(date) => setPublishedAt(date || null)}
+												required={false}
+												defaultMonth={publishedAt || undefined}
+											/>
+										</PopoverContent>
+									</Popover>
+									<p className="m-0 text-muted-foreground text-sm">
+										Click the date to edit
+									</p>
 								</div>
 
 								<div className="flex items-center justify-between">

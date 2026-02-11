@@ -51,3 +51,21 @@ export const generateVideoTagAssignmentId = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   24,
 );
+
+// Image ID (project-level)
+export const generateImageId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);
+
+// Album ID
+export const generateAlbumId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  16,
+);
+
+// Album Image (junction) ID
+export const generateAlbumImageId = customAlphabet(
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+  24,
+);
