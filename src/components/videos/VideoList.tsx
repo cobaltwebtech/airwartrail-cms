@@ -63,7 +63,7 @@ import {
 import { VideoThumbnail } from '@/components/VideoThumbnail';
 import { trpc } from '@/lib/trpc';
 import type { Video } from '@/lib/types';
-import { copyVideoUrl, formatDate, formatDuration } from '@/lib/video-helpers';
+import { formatDate, formatDuration } from '@/lib/video-helpers';
 import { VideoDelete } from './VideoDelete';
 import { VideoDialog } from './VideoDialog';
 
@@ -199,11 +199,6 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const toggleSortDirection = () => {
 		setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
 	};
-
-	const handleCopy = useCallback((video: Video) => {
-		copyVideoUrl(video.guid || video.id)();
-		toast.success('URL copied to clipboard');
-	}, []);
 
 	const handleDeleteRequest = useCallback((video: Video) => {
 		setVideoToDelete(video);
@@ -399,10 +394,6 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									<Eye className="mr-2 size-4" />
 									<span>Preview</span>
 								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleCopy(video)}>
-									<Copy className="mr-2 size-4" />
-									<span>Copy URL</span>
-								</DropdownMenuItem>
 								<DropdownMenuItem asChild>
 									<Link
 										to="/library/$libraryId/edit-video/$videoId"
@@ -424,7 +415,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				},
 			},
 		],
-		[handleCopy, handleDeleteRequest, handleSelectVideo, libraryId],
+		[handleDeleteRequest, handleSelectVideo, libraryId],
 	);
 
 	const table = useReactTable({
@@ -608,10 +599,6 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 											<DropdownMenuItem onClick={() => setSelectedVideo(video)}>
 												<Eye className="mr-2 size-4" />
 												<span>Preview</span>
-											</DropdownMenuItem>
-											<DropdownMenuItem onClick={() => handleCopy(video)}>
-												<Copy className="mr-2 size-4" />
-												<span>Copy URL</span>
 											</DropdownMenuItem>
 											<DropdownMenuItem asChild>
 												<Link
