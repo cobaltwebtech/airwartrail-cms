@@ -35,7 +35,7 @@ export const Route = createFileRoute('/_dashboard/blog-posts/')({
 	loader: async ({ context: { queryClient } }) => {
 		await queryClient.ensureQueryData(
 			trpc.blog.list.queryOptions({
-				sortBy: 'updatedAt',
+				sortBy: 'publishedAt',
 				sortOrder: 'desc',
 				limit: 100,
 			}),
@@ -61,7 +61,7 @@ interface BlogPost {
 
 function BlogPostsPage() {
 	const [sorting, setSorting] = useState<SortingState>([
-		{ id: 'updatedAt', desc: true },
+		{ id: 'publishedAt', desc: true },
 	]);
 	const [searchTerm, setSearchTerm] = useState('');
 
@@ -71,7 +71,7 @@ function BlogPostsPage() {
 		error,
 	} = useQuery(
 		trpc.blog.list.queryOptions({
-			sortBy: 'updatedAt',
+			sortBy: 'publishedAt',
 			sortOrder: 'desc',
 			limit: 100,
 		}),
@@ -115,23 +115,25 @@ function BlogPostsPage() {
 				cell: ({ row }) => <StatusBadge status={row.original.publishStatus} />,
 			},
 			{
-				accessorKey: 'updatedAt',
+				accessorKey: 'publishedAt',
 				header: ({ column }) => (
 					<Button
 						variant="ghost"
 						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
 					>
-						Updated
+						Published
 						<ArrowUpDown className="size-4" />
 					</Button>
 				),
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-sm">
-						{new Date(row.original.updatedAt).toLocaleDateString('en-US', {
-							year: 'numeric',
-							month: 'short',
-							day: 'numeric',
-						})}
+						{row.original.publishedAt
+							? new Date(row.original.publishedAt).toLocaleDateString('en-US', {
+									year: 'numeric',
+									month: 'short',
+									day: 'numeric',
+								})
+							: 'Not published'}
 					</span>
 				),
 			},
