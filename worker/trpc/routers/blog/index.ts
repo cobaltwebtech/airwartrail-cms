@@ -344,7 +344,7 @@ export const blogRouter = t.router({
 	}),
 
 	/**
-	 * List blog posts with filtering and pagination (admin use)
+	 * List blog posts with filtering and pagination (CMS use)
 	 */
 	list: protectedProcedure
 		.use(createPermissionMiddleware("blog", ["read"]))
@@ -479,7 +479,17 @@ export const blogRouter = t.router({
 
 		// Get posts
 		const results = await db
-			.select()
+			.select({
+				id: blogPosts.id,
+				slug: blogPosts.slug,
+				title: blogPosts.title,
+				shortDescription: blogPosts.short_description,
+				featuredImageUrl: blogPosts.featuredImageUrl,
+				featuredImageAlt: blogPosts.featuredImageAlt,
+				publishedAt: blogPosts.publishedAt,
+				isFeatured: blogPosts.isFeatured,
+				readingTimeMinutes: blogPosts.readingTimeMinutes,
+			})
 			.from(blogPosts)
 			.where(whereClause)
 			.orderBy(sortFn(sortColumn))
@@ -495,23 +505,7 @@ export const blogRouter = t.router({
 		const total = countResult?.count ?? 0;
 
 		return {
-			blogPosts: results.map((post) => ({
-				id: post.id,
-				slug: post.slug,
-				title: post.title,
-				shortDescription: post.short_description,
-				postContent: post.postContent,
-				featuredImageUrl: post.featuredImageUrl,
-				featuredImageAlt: post.featuredImageAlt,
-				publishStatus: post.publishStatus as PublishStatus,
-				publishedAt: post.publishedAt,
-				author: post.author,
-				authorId: post.authorId,
-				isFeatured: post.isFeatured,
-				readingTimeMinutes: post.readingTimeMinutes,
-				createdAt: post.createdAt,
-				updatedAt: post.updatedAt,
-			})),
+			blogPosts: results,
 			pagination: {
 				page,
 				limit,
@@ -555,8 +549,6 @@ export const blogRouter = t.router({
 				id: input.id,
 			};
 		}),
-
-
 
 	/**
 	 * Publish a blog post
