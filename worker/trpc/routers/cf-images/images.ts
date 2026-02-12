@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, desc, asc, count } from "drizzle-orm";
+import { eq, desc, asc, count, inArray } from "drizzle-orm";
 import {
 	t,
 	protectedProcedure,
@@ -126,6 +126,23 @@ export const imagesDbRouter = t.router({
 			}
 
 			return image[0];
+		}),
+
+	// -----------------------------------------------------------------------
+	// GET BY CF IMAGE IDS – batch query multiple images by CF image IDs
+	// -----------------------------------------------------------------------
+	getImagesByCfIds: protectedProcedure
+		.use(createPermissionMiddleware("images", ["read"]))
+		.input(z.object({ cfImageIds: z.array(z.string().min(1)).min(1) }))
+		.query(async ({ ctx, input }) => {
+			const db = getContentDb(ctx.env);
+
+			const results = await db
+				.select()
+				.from(images)
+				.where(inArray(images.cfImageId, input.cfImageIds));
+
+			return results;
 		}),
 
 	// -----------------------------------------------------------------------

@@ -22,7 +22,7 @@ import {
 import { trpc } from '@/lib/trpc';
 
 // Build image URL with variant
-export function getImageUrl(deliveryUrl: string, variant = 'blog'): string {
+export function getImageUrl(deliveryUrl: string, variant = 'md'): string {
 	return `${deliveryUrl}/${variant}`;
 }
 

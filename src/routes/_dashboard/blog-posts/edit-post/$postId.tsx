@@ -8,6 +8,7 @@ import {
 	Save,
 	Star,
 	Trash2,
+	TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -39,6 +40,14 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+	Item,
+	ItemActions,
+	ItemContent,
+	ItemDescription,
+	ItemMedia,
+	ItemTitle,
+} from '@/components/ui/item';
 import { Label } from '@/components/ui/label';
 import {
 	Popover,
@@ -520,27 +529,28 @@ function EditPostPage() {
 							</CardContent>
 						</Card>
 
-						{/* Danger Zone */}
-						<Card className="border-destructive/50">
-							<CardHeader>
-								<CardTitle className="text-destructive">Danger Zone</CardTitle>
-							</CardHeader>
-							<CardContent>
+						{/* Delete Blog Post */}
+						<Item variant="outline">
+							<ItemMedia variant="icon">
+								<TriangleAlert />
+							</ItemMedia>
+							<ItemContent>
+								<ItemTitle>Delete Blog Post</ItemTitle>
+								<ItemDescription className="line-clamp-0">
+									This action will permanently delete the blog post.
+								</ItemDescription>
+							</ItemContent>
+							<ItemActions>
 								<Button
 									variant="destructive"
 									onClick={() => setIsDeleteDialogOpen(true)}
 									disabled={isAnyMutationPending}
-									className="w-full"
 								>
-									{isDeleting ? (
-										<Loader2 className="animate-spin" />
-									) : (
-										<Trash2 />
-									)}
+									<Trash2 />
 									Delete Post
 								</Button>
-							</CardContent>
-						</Card>
+							</ItemActions>
+						</Item>
 					</div>
 				</div>
 			</div>

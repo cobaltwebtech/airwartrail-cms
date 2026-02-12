@@ -93,8 +93,8 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
 
 	const handleImageSelected = useCallback(
 		(image: SelectedImage) => {
-			// Build the public URL using the "blog" variant (public override, no signature needed)
-			const featuredImageUrl = getImageUrl(image.deliveryUrl, 'blog');
+			// Build the public URL using the "md" variant (public override, no signature needed)
+			const featuredImageUrl = getImageUrl(image.deliveryUrl, 'md');
 			setImageMutation.mutate({ postId, featuredImageUrl });
 		},
 		[postId, setImageMutation],
@@ -113,9 +113,9 @@ const FeaturedImage: React.FC<FeaturedImageProps> = ({
 		[onAltTextChange],
 	);
 
-	// Swap 'blog' variant to 'thumbnail' for a smaller preview image
+	// Swap 'md' variant to 'thumbnail' for a smaller preview image
 	const previewImageUrl =
-		currentImageUrl?.replace(/\/blog$/, '/thumbnail') ?? null;
+		currentImageUrl?.replace(/\/md$/, '/thumbnail') ?? null;
 	const hasExistingImage = !!currentImageUrl;
 	const isAnyMutationPending =
 		setImageMutation.isPending || deleteMutation.isPending;

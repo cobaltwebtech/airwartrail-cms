@@ -88,7 +88,7 @@ import { trpc } from '@/lib/trpc';
 const MAX_ALBUM_IMAGES = 100;
 
 // Build image URL with variant
-function getImageUrl(deliveryUrl: string, variant = 'thumbnail'): string {
+function getImageUrl(deliveryUrl: string, variant = 'thumbsm'): string {
 	return `${deliveryUrl}/${variant}`;
 }
 
@@ -221,7 +221,7 @@ function AlbumEditorPage() {
 	const { data: albumSignedUrls } = useQuery({
 		...trpc.cfImages.signedUrls.signBatch.queryOptions({
 			imageIds: albumImageIdsNeedingSigning,
-			variant: 'thumbnail',
+			variant: 'thumbsm',
 			expirationSeconds: 3600,
 		}),
 		enabled: albumImageIdsNeedingSigning.length > 0,
@@ -231,20 +231,20 @@ function AlbumEditorPage() {
 	const { data: availableSignedUrls } = useQuery({
 		...trpc.cfImages.signedUrls.signBatch.queryOptions({
 			imageIds: availableImageIdsNeedingSigning,
-			variant: 'thumbnail',
+			variant: 'thumbsm',
 			expirationSeconds: 3600,
 		}),
 		enabled: availableImageIdsNeedingSigning.length > 0,
 	});
 
-	// Fetch a signed URL for the cover image with 'md' variant for larger preview
+	// Fetch a signed URL for the cover image with 'sm' variant for larger preview
 	const coverImageId = album?.coverImage?.requireSignedURLs
 		? album.coverImage.id
 		: undefined;
 	const { data: coverSignedUrl } = useQuery({
 		...trpc.cfImages.signedUrls.signBatch.queryOptions({
 			imageIds: coverImageId ? [coverImageId] : [],
-			variant: 'md',
+			variant: 'sm',
 			expirationSeconds: 3600,
 		}),
 		enabled: !!coverImageId,
@@ -262,8 +262,8 @@ function AlbumEditorPage() {
 		return map;
 	}, [albumSignedUrls, availableSignedUrls]);
 
-	// Separate map for 'md' variant signed URLs (cover image)
-	const signedUrlMdMap = useMemo(() => {
+	// Separate map for 'thumbsm' variant signed URLs (cover image)
+	const signedUrlCoverMap = useMemo(() => {
 		const map = new Map<string, string>();
 		for (const img of coverSignedUrl?.images ?? []) {
 			map.set(img.imageId, img.url);
@@ -277,16 +277,16 @@ function AlbumEditorPage() {
 			imageId: string,
 			deliveryUrl: string,
 			requireSigned: boolean,
-			variant = 'thumbnail',
+			variant = 'thumbsm',
 		): string => {
 			if (requireSigned) {
-				const urlMap = variant === 'md' ? signedUrlMdMap : signedUrlMap;
+				const urlMap = variant === 'sm' ? signedUrlCoverMap : signedUrlMap;
 				const signedUrl = urlMap.get(imageId);
 				if (signedUrl) return signedUrl;
 			}
 			return getImageUrl(deliveryUrl, variant);
 		},
-		[signedUrlMap, signedUrlMdMap],
+		[signedUrlMap, signedUrlCoverMap],
 	);
 
 	// ---------- Mutations ----------
@@ -891,7 +891,7 @@ function AlbumEditorPage() {
 											album.coverImage.id,
 											album.coverImage.deliveryUrl,
 											album.coverImage.requireSignedURLs,
-											'md',
+											'sm',
 										)}
 										alt={album.title}
 										className="size-full object-cover"
@@ -1042,7 +1042,7 @@ function AlbumEditorPage() {
 
 											<div className="w-fit p-2 shrink-0 overflow-hidden">
 												<img
-													src={`${image.deliveryUrl}/thumbnail`}
+													src={`${image.deliveryUrl}/thumbsm`}
 													alt={image.altText || image.fileName || 'Album image'}
 													className="size-full aspect-3/2 object-cover rounded-md"
 												/>

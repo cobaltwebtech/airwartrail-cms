@@ -8,13 +8,13 @@ import {
 	type SortingState,
 	useReactTable,
 } from '@tanstack/react-table';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
 	AlertCircle,
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
 	CheckCircle,
-	Copy,
 	Eye,
 	Film,
 	Grid3X3,
@@ -117,6 +117,41 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [videoToDelete, setVideoToDelete] = useState<Video | null>(null);
 
+	// Refs for virtualization
+	const gridParentRef = useRef<HTMLDivElement>(null);
+	const tableParentRef = useRef<HTMLDivElement>(null);
+	const gridParentOffsetRef = useRef(0);
+	const tableParentOffsetRef = useRef(0);
+
+	// Track column count for grid virtualization (matches CSS breakpoints)
+	const [columnCount, setColumnCount] = useState(() => {
+		if (typeof window === 'undefined') return 4;
+		const width = window.innerWidth;
+		if (width >= 1024) return 4; // lg
+		if (width >= 768) return 3; // md
+		if (width >= 640) return 2; // sm
+		return 1; // mobile
+	});
+
+	// Update column count based on viewport width
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const updateColumnCount = () => {
+			const width = window.innerWidth;
+			if (width >= 1024)
+				setColumnCount(4); // lg
+			else if (width >= 768)
+				setColumnCount(3); // md
+			else if (width >= 640)
+				setColumnCount(2); // sm
+			else setColumnCount(1); // mobile
+		};
+
+		window.addEventListener('resize', updateColumnCount);
+		return () => window.removeEventListener('resize', updateColumnCount);
+	}, []);
+
 	// Initialize state from stored settings (read once)
 	const [sortCriteria, setSortCriteria] = useState(
 		initialSettings.sortCriteria,
@@ -131,6 +166,16 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 
 	// Use ref to track if we need to save (debounced)
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// Track the offset of the grid/table container from the top of the page
+	useEffect(() => {
+		if (gridParentRef.current && viewMode === 'grid') {
+			gridParentOffsetRef.current = gridParentRef.current.offsetTop ?? 0;
+		}
+		if (tableParentRef.current && viewMode === 'table') {
+			tableParentOffsetRef.current = tableParentRef.current.offsetTop ?? 0;
+		}
+	}, [viewMode]);
 
 	// Persist settings to localStorage with debouncing
 	useEffect(() => {
@@ -429,6 +474,25 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 		getSortedRowModel: getSortedRowModel(),
 	});
 
+	// Grid virtualization - virtualize by rows, not individual items
+	// columnCount is dynamically tracked based on viewport width
+	const gridRowCount = Math.ceil(filteredVideos.length / columnCount);
+	const gridVirtualizer = useWindowVirtualizer({
+		count: gridRowCount,
+		estimateSize: () => 380, // Approximate row height
+		overscan: 3,
+		scrollMargin: gridParentOffsetRef.current,
+	});
+
+	// Virtualizer for table rows - uses window scroll
+	const { rows } = table.getRowModel();
+	const tableVirtualizer = useWindowVirtualizer({
+		count: rows.length,
+		estimateSize: () => 73, // Approximate row height
+		overscan: 10,
+		scrollMargin: tableParentOffsetRef.current,
+	});
+
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between gap-2">
@@ -498,7 +562,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			/>
 
 			{viewMode === 'table' && (
-				<div className="rounded-md border">
+				<div ref={tableParentRef} className="rounded-md border">
 					<Table>
 						<TableHeader>
 							{table.getHeaderGroups().map((headerGroup) => (
@@ -517,19 +581,49 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 							))}
 						</TableHeader>
 						<TableBody>
-							{table.getRowModel().rows?.length ? (
-								table.getRowModel().rows.map((row) => (
-									<TableRow key={row.id}>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</TableCell>
-										))}
-									</TableRow>
-								))
+							{rows.length ? (
+								<>
+									{/* Virtual padding row at top */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${(tableVirtualizer.getVirtualItems()[0]?.start ?? 0) - tableVirtualizer.options.scrollMargin}px`,
+											}}
+										/>
+									)}
+									{tableVirtualizer.getVirtualItems().map((virtualRow) => {
+										const row = rows[virtualRow.index];
+										return (
+											<TableRow
+												key={row.id}
+												data-index={virtualRow.index}
+												ref={tableVirtualizer.measureElement}
+											>
+												{row.getVisibleCells().map((cell) => (
+													<TableCell key={cell.id}>
+														{flexRender(
+															cell.column.columnDef.cell,
+															cell.getContext(),
+														)}
+													</TableCell>
+												))}
+											</TableRow>
+										);
+									})}
+									{/* Virtual padding row at bottom */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${
+													tableVirtualizer.getTotalSize() -
+													(tableVirtualizer.getVirtualItems()[
+														tableVirtualizer.getVirtualItems().length - 1
+													]?.end ?? 0)
+												}px`,
+											}}
+										/>
+									)}
+								</>
 							) : (
 								<TableRow>
 									<TableCell
@@ -546,130 +640,174 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			)}
 
 			{viewMode === 'grid' && (
-				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-					{filteredVideos.map((video) => (
-						<Card key={video.id} className="gap-2 overflow-hidden pt-0 pb-2">
-							<div className="relative">
-								<VideoThumbnail
-									playbackId={video.playbackId}
-									videoId={video.id}
-									alt={video.title}
-									className="aspect-video w-full object-cover"
-									aspectVideo
-									policy={video.policy ?? undefined}
-									libraryId={libraryId}
-								/>
-								<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
-									<Button
-										variant="secondary"
-										size="icon"
-										onClick={() => setSelectedVideo(video)}
+				<div ref={gridParentRef}>
+					<div
+						style={{
+							height: `${gridVirtualizer.getTotalSize()}px`,
+							width: '100%',
+							position: 'relative',
+						}}
+					>
+						<div
+							style={{
+								position: 'absolute',
+								top: 0,
+								left: 0,
+								width: '100%',
+								transform: `translateY(${(gridVirtualizer.getVirtualItems()[0]?.start ?? 0) - gridParentOffsetRef.current}px)`,
+							}}
+						>
+							{gridVirtualizer.getVirtualItems().map((virtualRow) => {
+								// Get all videos for this row
+								const startIdx = virtualRow.index * columnCount;
+								const rowVideos = filteredVideos.slice(
+									startIdx,
+									startIdx + columnCount,
+								);
+								return (
+									<div
+										key={virtualRow.index}
+										data-index={virtualRow.index}
+										ref={gridVirtualizer.measureElement}
+										className="grid gap-4 pb-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
 									>
-										<Play className="h-6 w-6" />
-									</Button>
-								</div>
-								<div className="absolute right-2 bottom-2 rounded bg-black/70 px-1 text-xs text-white">
-									{formatDuration(video.duration)}
-								</div>
-							</div>
-							<CardHeader className="p-4">
-								<div className="flex items-start justify-between">
-									<Link
-										to="/library/$libraryId/edit-video/$videoId"
-										params={{ videoId: video.id, libraryId }}
-										className="cursor-pointer"
-									>
-										<CardTitle className="text-base text-wrap">
-											{video.title}
-										</CardTitle>
-									</Link>
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button
-												variant="secondary"
-												size="icon"
-												className="h-8 w-8"
+										{rowVideos.map((video) => (
+											<Card
+												key={video.id}
+												className="gap-2 overflow-hidden pt-0 pb-2"
 											>
-												<MoreHorizontal className="size-4" />
-												<span className="sr-only">Open menu</span>
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuLabel>Actions</DropdownMenuLabel>
-											<DropdownMenuItem onClick={() => setSelectedVideo(video)}>
-												<Eye className="mr-2 size-4" />
-												<span>Preview</span>
-											</DropdownMenuItem>
-											<DropdownMenuItem asChild>
-												<Link
-													to="/library/$libraryId/edit-video/$videoId"
-													params={{ videoId: video.id, libraryId }}
-													className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
-												>
-													<Pencil className="mr-2 size-4" />
-													<span>Edit</span>
-												</Link>
-											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												onClick={() => handleDeleteRequest(video)}
-											>
-												<Trash2 className="text-destructive-foreground mr-2 size-4" />
-												<span className="text-destructive">Delete</span>
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</div>
-								<CardDescription>
-									<div className="space-y-2">
-										<div>
-											Status:{' '}
-											<Badge
-												variant={
-													video.status === 'ready'
-														? 'default'
-														: video.status === 'errored'
-															? 'destructive'
-															: 'secondary'
-												}
-												className="gap-1"
-											>
-												{video.status === 'ready' && (
-													<CheckCircle className="size-3" />
-												)}
-												{video.status === 'errored' && (
-													<AlertCircle className="size-3" />
-												)}
-												{video.status === 'preparing' && (
-													<Loader2 className="size-3 animate-spin" />
-												)}
-												{video.status === 'ready'
-													? 'Ready'
-													: video.status === 'errored'
-														? 'Error'
-														: 'Processing'}
-											</Badge>
-										</div>
-										<div>
-											Views:{' '}
-											<span className="font-semibold text-primary">
-												{(video.views ?? 0).toLocaleString()}
-											</span>
-										</div>
-										<div>
-											Visibility:{' '}
-											<span className="font-semibold text-primary">
-												{video.isPublished ? 'Published' : 'Unpublished'}
-											</span>
-										</div>
+												<div className="relative">
+													<VideoThumbnail
+														playbackId={video.playbackId}
+														videoId={video.id}
+														alt={video.title}
+														className="aspect-video w-full object-cover"
+														aspectVideo
+														policy={video.policy ?? undefined}
+														libraryId={libraryId}
+													/>
+													<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
+														<Button
+															variant="secondary"
+															size="icon"
+															onClick={() => setSelectedVideo(video)}
+														>
+															<Play className="h-6 w-6" />
+														</Button>
+													</div>
+													<div className="absolute right-2 bottom-2 rounded bg-black/70 px-1 text-xs text-white">
+														{formatDuration(video.duration)}
+													</div>
+												</div>
+												<CardHeader className="p-4">
+													<div className="flex items-start justify-between">
+														<Link
+															to="/library/$libraryId/edit-video/$videoId"
+															params={{ videoId: video.id, libraryId }}
+															className="cursor-pointer"
+														>
+															<CardTitle className="text-base text-wrap">
+																{video.title}
+															</CardTitle>
+														</Link>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="secondary"
+																	size="icon"
+																	className="h-8 w-8"
+																>
+																	<MoreHorizontal className="size-4" />
+																	<span className="sr-only">Open menu</span>
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuLabel>Actions</DropdownMenuLabel>
+																<DropdownMenuItem
+																	onClick={() => setSelectedVideo(video)}
+																>
+																	<Eye className="mr-2 size-4" />
+																	<span>Preview</span>
+																</DropdownMenuItem>
+																<DropdownMenuItem asChild>
+																	<Link
+																		to="/library/$libraryId/edit-video/$videoId"
+																		params={{ videoId: video.id, libraryId }}
+																		className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
+																	>
+																		<Pencil className="mr-2 size-4" />
+																		<span>Edit</span>
+																	</Link>
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	onClick={() => handleDeleteRequest(video)}
+																>
+																	<Trash2 className="text-destructive-foreground mr-2 size-4" />
+																	<span className="text-destructive">
+																		Delete
+																	</span>
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</div>
+													<CardDescription>
+														<div className="space-y-2">
+															<div>
+																Status:{' '}
+																<Badge
+																	variant={
+																		video.status === 'ready'
+																			? 'default'
+																			: video.status === 'errored'
+																				? 'destructive'
+																				: 'secondary'
+																	}
+																	className="gap-1"
+																>
+																	{video.status === 'ready' && (
+																		<CheckCircle className="size-3" />
+																	)}
+																	{video.status === 'errored' && (
+																		<AlertCircle className="size-3" />
+																	)}
+																	{video.status === 'preparing' && (
+																		<Loader2 className="size-3 animate-spin" />
+																	)}
+																	{video.status === 'ready'
+																		? 'Ready'
+																		: video.status === 'errored'
+																			? 'Error'
+																			: 'Processing'}
+																</Badge>
+															</div>
+															<div>
+																Views:{' '}
+																<span className="font-semibold text-primary">
+																	{(video.views ?? 0).toLocaleString()}
+																</span>
+															</div>
+															<div>
+																Visibility:{' '}
+																<span className="font-semibold text-primary">
+																	{video.isPublished
+																		? 'Published'
+																		: 'Unpublished'}
+																</span>
+															</div>
+														</div>
+													</CardDescription>
+												</CardHeader>
+												<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
+													Uploaded on {formatDate(video.createdAt)}
+												</CardFooter>
+											</Card>
+										))}
 									</div>
-								</CardDescription>
-							</CardHeader>
-							<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-								Uploaded on {formatDate(video.createdAt)}
-							</CardFooter>
-						</Card>
-					))}
+								);
+							})}
+						</div>
+					</div>
 				</div>
 			)}
 

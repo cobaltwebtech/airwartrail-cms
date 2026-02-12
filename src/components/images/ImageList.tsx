@@ -8,6 +8,7 @@ import {
 	type SortingState,
 	useReactTable,
 } from '@tanstack/react-table';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
 	ArrowDown,
 	ArrowUp,
@@ -117,7 +118,7 @@ function getStoredSettings(): ImageListSettings {
 }
 
 // Build image URL with variant
-function getImageUrl(deliveryUrl: string, variant = 'thumbnail'): string {
+function getImageUrl(deliveryUrl: string, variant = 'thumbsm'): string {
 	// deliveryUrl format: https://imagedelivery.net/<hash>/<image-id>
 	// or with custom domain: https://www.airwartrail.com/cdn-cgi/imagedelivery/<hash>/<image-id>
 	return `${deliveryUrl}/${variant}`;
@@ -148,6 +149,44 @@ export function ImageList({
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [imageToDelete, setImageToDelete] = useState<Image | null>(null);
 
+	// Refs for virtualization
+	const gridParentRef = useRef<HTMLDivElement>(null);
+	const tableParentRef = useRef<HTMLDivElement>(null);
+	const gridParentOffsetRef = useRef(0);
+	const tableParentOffsetRef = useRef(0);
+
+	// Track column count for grid virtualization (matches CSS breakpoints)
+	const [columnCount, setColumnCount] = useState(() => {
+		if (typeof window === 'undefined') return 5;
+		const width = window.innerWidth;
+		if (width >= 1280) return 5; // xl
+		if (width >= 1024) return 4; // lg
+		if (width >= 768) return 3; // md
+		if (width >= 640) return 2; // sm
+		return 1; // mobile
+	});
+
+	// Update column count based on viewport width
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const updateColumnCount = () => {
+			const width = window.innerWidth;
+			if (width >= 1280)
+				setColumnCount(5); // xl
+			else if (width >= 1024)
+				setColumnCount(4); // lg
+			else if (width >= 768)
+				setColumnCount(3); // md
+			else if (width >= 640)
+				setColumnCount(2); // sm
+			else setColumnCount(1); // mobile
+		};
+
+		window.addEventListener('resize', updateColumnCount);
+		return () => window.removeEventListener('resize', updateColumnCount);
+	}, []);
+
 	// Initialize state from stored settings
 	const [sortCriteria, setSortCriteria] = useState(
 		initialSettings.sortCriteria,
@@ -159,6 +198,16 @@ export function ImageList({
 	const [tableSorting, setTableSorting] = useState<SortingState>(
 		initialSettings.tableSorting,
 	);
+
+	// Track the offset of the grid/table container from the top of the page
+	useEffect(() => {
+		if (gridParentRef.current && viewMode === 'grid') {
+			gridParentOffsetRef.current = gridParentRef.current.offsetTop ?? 0;
+		}
+		if (tableParentRef.current && viewMode === 'table') {
+			tableParentOffsetRef.current = tableParentRef.current.offsetTop ?? 0;
+		}
+	}, [viewMode]);
 
 	// Ensure images is an array before filtering
 	const imageArray = Array.isArray(images) ? images : [];
@@ -199,7 +248,7 @@ export function ImageList({
 	const { data: thumbnailSignedUrls } = useQuery({
 		...trpc.cfImages.signedUrls.signBatch.queryOptions({
 			imageIds: imageIdsNeedingSigning,
-			variant: 'thumbnail',
+			variant: 'thumbsm',
 			expirationSeconds: 3600,
 		}),
 		enabled: imageIdsNeedingSigning.length > 0,
@@ -262,8 +311,8 @@ export function ImageList({
 
 	// Helper to get the correct image URL (signed or plain)
 	const getImageUrlForDisplay = useCallback(
-		(image: Image, variant = 'thumbnail'): string => {
-			if (image.requireSignedURLs && variant === 'thumbnail') {
+		(image: Image, variant = 'thumbsm'): string => {
+			if (image.requireSignedURLs && variant === 'thumbsm') {
 				// Use the signed URL from our batch query if available
 				const signedUrl = signedUrlMap.get(image.id);
 				if (signedUrl) return signedUrl;
@@ -343,7 +392,7 @@ export function ImageList({
 							className="block h-full w-full"
 						>
 							<img
-								src={getImageUrlForDisplay(row.original, 'thumbnail')}
+								src={getImageUrlForDisplay(row.original, 'thumbsm')}
 								alt={row.original.altText || row.original.fileName || 'Image'}
 								className="h-full w-full object-cover"
 							/>
@@ -489,6 +538,25 @@ export function ImageList({
 		getSortedRowModel: getSortedRowModel(),
 	});
 
+	// Grid virtualization - virtualize by rows, not individual items
+	// columnCount is dynamically tracked based on viewport width
+	const gridRowCount = Math.ceil(filteredImages.length / columnCount);
+	const gridVirtualizer = useWindowVirtualizer({
+		count: gridRowCount,
+		estimateSize: () => 300, // Approximate row height
+		overscan: 3,
+		scrollMargin: gridParentOffsetRef.current,
+	});
+
+	// Virtualizer for table rows - uses window scroll
+	const { rows } = table.getRowModel();
+	const tableVirtualizer = useWindowVirtualizer({
+		count: rows.length,
+		estimateSize: () => 73, // Approximate row height
+		overscan: 10,
+		scrollMargin: tableParentOffsetRef.current,
+	});
+
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between gap-2">
@@ -546,7 +614,7 @@ export function ImageList({
 			/>
 
 			{viewMode === 'table' && (
-				<div className="rounded-md border">
+				<div ref={tableParentRef} className="rounded-md border">
 					<Table>
 						<TableHeader>
 							{table.getHeaderGroups().map((headerGroup) => (
@@ -565,19 +633,49 @@ export function ImageList({
 							))}
 						</TableHeader>
 						<TableBody>
-							{table.getRowModel().rows?.length ? (
-								table.getRowModel().rows.map((row) => (
-									<TableRow key={row.id}>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</TableCell>
-										))}
-									</TableRow>
-								))
+							{rows.length ? (
+								<>
+									{/* Virtual padding row at top */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${(tableVirtualizer.getVirtualItems()[0]?.start ?? 0) - tableVirtualizer.options.scrollMargin}px`,
+											}}
+										/>
+									)}
+									{tableVirtualizer.getVirtualItems().map((virtualRow) => {
+										const row = rows[virtualRow.index];
+										return (
+											<TableRow
+												key={row.id}
+												data-index={virtualRow.index}
+												ref={tableVirtualizer.measureElement}
+											>
+												{row.getVisibleCells().map((cell) => (
+													<TableCell key={cell.id}>
+														{flexRender(
+															cell.column.columnDef.cell,
+															cell.getContext(),
+														)}
+													</TableCell>
+												))}
+											</TableRow>
+										);
+									})}
+									{/* Virtual padding row at bottom */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${
+													tableVirtualizer.getTotalSize() -
+													(tableVirtualizer.getVirtualItems()[
+														tableVirtualizer.getVirtualItems().length - 1
+													]?.end ?? 0)
+												}px`,
+											}}
+										/>
+									)}
+								</>
 							) : (
 								<TableRow>
 									<TableCell
@@ -594,87 +692,133 @@ export function ImageList({
 			)}
 
 			{viewMode === 'grid' && (
-				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-					{filteredImages.map((image) => (
-						<Card key={image.id} className="gap-2 overflow-hidden pt-0 pb-2">
-							<div className="relative aspect-3/2 overflow-hidden bg-muted">
-								<Link
-									to="/images/edit-image/$imageId"
-									params={{ imageId: image.id }}
-									className="block size-full"
-								>
-									<img
-										src={getImageUrlForDisplay(image, 'thumbnail')}
-										alt={image.altText || image.fileName || 'Image'}
-										className="size-full object-cover transition-transform hover:scale-105"
-									/>
-								</Link>
-								{image.requireSignedURLs && (
-									<div className="absolute top-2 right-2">
-										<Badge className="gap-1 text-xs">
-											<Lock className="size-3" />
-										</Badge>
-									</div>
-								)}
-							</div>
-							<CardHeader className="p-4 pt-2">
-								<div className="flex items-start justify-between">
-									<Link
-										to="/images/edit-image/$imageId"
-										params={{ imageId: image.id }}
-										className="cursor-pointer"
+				<div ref={gridParentRef}>
+					<div
+						style={{
+							height: `${gridVirtualizer.getTotalSize()}px`,
+							width: '100%',
+							position: 'relative',
+						}}
+					>
+						<div
+							style={{
+								position: 'absolute',
+								top: 0,
+								left: 0,
+								width: '100%',
+								transform: `translateY(${(gridVirtualizer.getVirtualItems()[0]?.start ?? 0) - gridParentOffsetRef.current}px)`,
+							}}
+						>
+							{gridVirtualizer.getVirtualItems().map((virtualRow) => {
+								// Get all images for this row
+								const startIdx = virtualRow.index * columnCount;
+								const rowImages = filteredImages.slice(
+									startIdx,
+									startIdx + columnCount,
+								);
+								return (
+									<div
+										key={virtualRow.index}
+										data-index={virtualRow.index}
+										ref={gridVirtualizer.measureElement}
+										className="grid gap-4 pb-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
 									>
-										<CardTitle className="line-clamp-1 text-sm">
-											{image.fileName || 'Untitled'}
-										</CardTitle>
-									</Link>
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" size="icon" className="h-8 w-8">
-												<MoreHorizontal className="size-4" />
-												<span className="sr-only">Open menu</span>
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuLabel>Actions</DropdownMenuLabel>
-											<DropdownMenuItem onClick={() => handleCopy(image)}>
-												<Copy className="mr-2 size-4" />
-												<span>Copy URL</span>
-											</DropdownMenuItem>
-											<DropdownMenuItem asChild>
-												<Link
-													to="/images/edit-image/$imageId"
-													params={{ imageId: image.id }}
-													className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
-												>
-													<Pencil className="mr-2 size-4" />
-													<span>Edit</span>
-												</Link>
-											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												onClick={() => handleDeleteRequest(image)}
+										{rowImages.map((image) => (
+											<Card
+												key={image.id}
+												className="gap-2 overflow-hidden pt-0 pb-2"
 											>
-												<Trash2 className="text-destructive-foreground mr-2 size-4" />
-												<span className="text-destructive">Delete</span>
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</div>
-								<CardDescription className="line-clamp-2 text-xs">
-									{image.altText || 'No description'}
-								</CardDescription>
-							</CardHeader>
-							<CardFooter className="text-muted-foreground flex items-center justify-between p-4 pt-0 text-xs">
-								<span>
-									{image.width && image.height
-										? `${image.width} × ${image.height}`
-										: 'Unknown size'}
-								</span>
-								<span>{formatDate(image.createdAt)}</span>
-							</CardFooter>
-						</Card>
-					))}
+												<div className="relative aspect-3/2 overflow-hidden bg-muted">
+													<Link
+														to="/images/edit-image/$imageId"
+														params={{ imageId: image.id }}
+														className="block size-full"
+													>
+														<img
+															src={getImageUrlForDisplay(image, 'thumbsm')}
+															alt={image.altText || image.fileName || 'Image'}
+															className="size-full object-cover transition-transform hover:scale-105"
+														/>
+													</Link>
+													{image.requireSignedURLs && (
+														<div className="absolute top-2 right-2">
+															<Badge className="gap-1 text-xs">
+																<Lock className="size-3" />
+															</Badge>
+														</div>
+													)}
+												</div>
+												<CardHeader className="p-4 pt-2">
+													<div className="flex items-start justify-between">
+														<Link
+															to="/images/edit-image/$imageId"
+															params={{ imageId: image.id }}
+															className="cursor-pointer"
+														>
+															<CardTitle className="line-clamp-1 text-sm">
+																{image.fileName || 'Untitled'}
+															</CardTitle>
+														</Link>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	className="h-8 w-8"
+																>
+																	<MoreHorizontal className="size-4" />
+																	<span className="sr-only">Open menu</span>
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuLabel>Actions</DropdownMenuLabel>
+																<DropdownMenuItem
+																	onClick={() => handleCopy(image)}
+																>
+																	<Copy className="mr-2 size-4" />
+																	<span>Copy URL</span>
+																</DropdownMenuItem>
+																<DropdownMenuItem asChild>
+																	<Link
+																		to="/images/edit-image/$imageId"
+																		params={{ imageId: image.id }}
+																		className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
+																	>
+																		<Pencil className="mr-2 size-4" />
+																		<span>Edit</span>
+																	</Link>
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	onClick={() => handleDeleteRequest(image)}
+																>
+																	<Trash2 className="text-destructive-foreground mr-2 size-4" />
+																	<span className="text-destructive">
+																		Delete
+																	</span>
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</div>
+													<CardDescription className="line-clamp-2 text-xs">
+														{image.altText || 'No description'}
+													</CardDescription>
+												</CardHeader>
+												<CardFooter className="text-muted-foreground flex items-center justify-between p-4 pt-0 text-xs">
+													<span>
+														{image.width && image.height
+															? `${image.width} × ${image.height}`
+															: 'Unknown size'}
+													</span>
+													<span>{formatDate(image.createdAt)}</span>
+												</CardFooter>
+											</Card>
+										))}
+									</div>
+								);
+							})}
+						</div>
+					</div>
 				</div>
 			)}
 

@@ -2,7 +2,7 @@
   "name": "airwartrail-cms",
   "private": true,
   "type": "module",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:cf": "vite build && pnpx wrangler dev",
@@ -42,6 +42,7 @@
     "@tanstack/react-router": "^1.159.5",
     "@tanstack/react-router-devtools": "^1.159.5",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.18",
     "@tanstack/router-plugin": "^1.159.5",
     "@tiptap/extension-image": "^3.19.0",
     "@tiptap/extension-link": "^3.19.0",

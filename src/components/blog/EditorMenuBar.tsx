@@ -86,7 +86,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
 	const handleImageSelected = (image: SelectedImage) => {
-		const src = getImageUrl(image.deliveryUrl, 'blog');
+		const src = getImageUrl(image.deliveryUrl, 'md');
 		const alt = image.altText || 'Blog image';
 		editor.chain().focus().setImage({ src, alt }).run();
 		setIsImagePickerOpen(false);

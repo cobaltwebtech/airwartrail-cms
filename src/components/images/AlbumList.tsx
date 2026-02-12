@@ -8,6 +8,7 @@ import {
 	type SortingState,
 	useReactTable,
 } from '@tanstack/react-table';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
 	Archive,
 	ArrowDown,
@@ -132,7 +133,7 @@ function getStoredSettings(): AlbumListSettings {
 }
 
 // Build image URL with variant
-function getImageUrl(deliveryUrl: string, variant = 'thumbnail'): string {
+function getImageUrl(deliveryUrl: string, variant = 'thumbsm'): string {
 	return `${deliveryUrl}/${variant}`;
 }
 
@@ -172,6 +173,41 @@ export function AlbumList({
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
 
+	// Refs for virtualization
+	const gridParentRef = useRef<HTMLDivElement>(null);
+	const tableParentRef = useRef<HTMLDivElement>(null);
+	const gridParentOffsetRef = useRef(0);
+	const tableParentOffsetRef = useRef(0);
+
+	// Track column count for grid virtualization (matches CSS breakpoints)
+	const [columnCount, setColumnCount] = useState(() => {
+		if (typeof window === 'undefined') return 4;
+		const width = window.innerWidth;
+		if (width >= 1024) return 4; // lg
+		if (width >= 768) return 3; // md
+		if (width >= 640) return 2; // sm
+		return 1; // mobile
+	});
+
+	// Update column count based on viewport width
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const updateColumnCount = () => {
+			const width = window.innerWidth;
+			if (width >= 1024)
+				setColumnCount(4); // lg
+			else if (width >= 768)
+				setColumnCount(3); // md
+			else if (width >= 640)
+				setColumnCount(2); // sm
+			else setColumnCount(1); // mobile
+		};
+
+		window.addEventListener('resize', updateColumnCount);
+		return () => window.removeEventListener('resize', updateColumnCount);
+	}, []);
+
 	// Initialize state from stored settings
 	const [sortCriteria, setSortCriteria] = useState(
 		initialSettings.sortCriteria,
@@ -183,6 +219,16 @@ export function AlbumList({
 	const [tableSorting, setTableSorting] = useState<SortingState>(
 		initialSettings.tableSorting,
 	);
+
+	// Track the offset of the grid/table container from the top of the page
+	useEffect(() => {
+		if (gridParentRef.current && viewMode === 'grid') {
+			gridParentOffsetRef.current = gridParentRef.current.offsetTop ?? 0;
+		}
+		if (tableParentRef.current && viewMode === 'table') {
+			tableParentOffsetRef.current = tableParentRef.current.offsetTop ?? 0;
+		}
+	}, [viewMode]);
 
 	// Ensure albums is an array before filtering
 	const albumArray = Array.isArray(albums) ? albums : [];
@@ -232,7 +278,7 @@ export function AlbumList({
 	const { data: coverSignedUrls } = useQuery({
 		...trpc.cfImages.signedUrls.signBatch.queryOptions({
 			imageIds: coverImageIdsNeedingSigning,
-			variant: 'thumbnail',
+			variant: 'thumbsm',
 			expirationSeconds: 3600,
 		}),
 		enabled: coverImageIdsNeedingSigning.length > 0,
@@ -344,7 +390,7 @@ export function AlbumList({
 				const signedUrl = signedUrlMap.get(album.coverImage.id);
 				if (signedUrl) return signedUrl;
 			}
-			return getImageUrl(album.coverImage.deliveryUrl, 'thumbnail');
+			return getImageUrl(album.coverImage.deliveryUrl, 'thumbsm');
 		},
 		[signedUrlMap],
 	);
@@ -561,6 +607,25 @@ export function AlbumList({
 		getSortedRowModel: getSortedRowModel(),
 	});
 
+	// Grid virtualization - virtualize by rows, not individual items
+	// columnCount is dynamically tracked based on viewport width
+	const gridRowCount = Math.ceil(filteredAlbums.length / columnCount);
+	const gridVirtualizer = useWindowVirtualizer({
+		count: gridRowCount,
+		estimateSize: () => 300, // Approximate row height
+		overscan: 3,
+		scrollMargin: gridParentOffsetRef.current,
+	});
+
+	// Virtualizer for table rows - uses window scroll
+	const { rows } = table.getRowModel();
+	const tableVirtualizer = useWindowVirtualizer({
+		count: rows.length,
+		estimateSize: () => 73, // Approximate row height
+		overscan: 10,
+		scrollMargin: tableParentOffsetRef.current,
+	});
+
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between gap-2">
@@ -640,7 +705,7 @@ export function AlbumList({
 
 			{/* Table View */}
 			{viewMode === 'table' && (
-				<div className="rounded-md border">
+				<div ref={tableParentRef} className="rounded-md border">
 					<Table>
 						<TableHeader>
 							{table.getHeaderGroups().map((headerGroup) => (
@@ -659,19 +724,49 @@ export function AlbumList({
 							))}
 						</TableHeader>
 						<TableBody>
-							{table.getRowModel().rows?.length ? (
-								table.getRowModel().rows.map((row) => (
-									<TableRow key={row.id}>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</TableCell>
-										))}
-									</TableRow>
-								))
+							{rows.length ? (
+								<>
+									{/* Virtual padding row at top */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${(tableVirtualizer.getVirtualItems()[0]?.start ?? 0) - tableVirtualizer.options.scrollMargin}px`,
+											}}
+										/>
+									)}
+									{tableVirtualizer.getVirtualItems().map((virtualRow) => {
+										const row = rows[virtualRow.index];
+										return (
+											<TableRow
+												key={row.id}
+												data-index={virtualRow.index}
+												ref={tableVirtualizer.measureElement}
+											>
+												{row.getVisibleCells().map((cell) => (
+													<TableCell key={cell.id}>
+														{flexRender(
+															cell.column.columnDef.cell,
+															cell.getContext(),
+														)}
+													</TableCell>
+												))}
+											</TableRow>
+										);
+									})}
+									{/* Virtual padding row at bottom */}
+									{tableVirtualizer.getVirtualItems().length > 0 && (
+										<tr
+											style={{
+												height: `${
+													tableVirtualizer.getTotalSize() -
+													(tableVirtualizer.getVirtualItems()[
+														tableVirtualizer.getVirtualItems().length - 1
+													]?.end ?? 0)
+												}px`,
+											}}
+										/>
+									)}
+								</>
 							) : (
 								<TableRow>
 									<TableCell
@@ -689,61 +784,99 @@ export function AlbumList({
 
 			{/* Grid View */}
 			{viewMode === 'grid' && (
-				<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-					{filteredAlbums.map((album) => {
-						const coverUrl = getCoverImageUrl(album);
-						return (
-							<Card key={album.id} className="gap-2 overflow-hidden pt-0 pb-2">
-								<div className="relative aspect-3/2 overflow-hidden bg-muted">
-									<Link
-										to="/images/albums/$albumId"
-										params={{ albumId: album.id }}
-										className="block size-full"
+				<div ref={gridParentRef}>
+					<div
+						style={{
+							height: `${gridVirtualizer.getTotalSize()}px`,
+							width: '100%',
+							position: 'relative',
+						}}
+					>
+						<div
+							style={{
+								position: 'absolute',
+								top: 0,
+								left: 0,
+								width: '100%',
+								transform: `translateY(${(gridVirtualizer.getVirtualItems()[0]?.start ?? 0) - gridParentOffsetRef.current}px)`,
+							}}
+						>
+							{gridVirtualizer.getVirtualItems().map((virtualRow) => {
+								// Get all albums for this row
+								const startIdx = virtualRow.index * columnCount;
+								const rowAlbums = filteredAlbums.slice(
+									startIdx,
+									startIdx + columnCount,
+								);
+								return (
+									<div
+										key={virtualRow.index}
+										data-index={virtualRow.index}
+										ref={gridVirtualizer.measureElement}
+										className="grid gap-4 pb-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
 									>
-										{coverUrl ? (
-											<img
-												src={coverUrl}
-												alt={album.title}
-												className="size-full object-cover transition-transform hover:scale-105"
-											/>
-										) : (
-											<div className="flex size-full items-center justify-center">
-												<FolderOpen className="text-muted-foreground size-10" />
-											</div>
-										)}
-									</Link>
-									<div className="absolute top-2 right-2">
-										{getStatusBadge(album.publishStatus)}
+										{rowAlbums.map((album) => {
+											const coverUrl = getCoverImageUrl(album);
+											return (
+												<Card
+													key={album.id}
+													className="gap-2 overflow-hidden pt-0 pb-2"
+												>
+													<div className="relative aspect-3/2 overflow-hidden bg-muted">
+														<Link
+															to="/images/albums/$albumId"
+															params={{ albumId: album.id }}
+															className="block size-full"
+														>
+															{coverUrl ? (
+																<img
+																	src={coverUrl}
+																	alt={album.title}
+																	className="size-full object-cover transition-transform hover:scale-105"
+																/>
+															) : (
+																<div className="flex size-full items-center justify-center">
+																	<FolderOpen className="text-muted-foreground size-10" />
+																</div>
+															)}
+														</Link>
+														<div className="absolute top-2 right-2">
+															{getStatusBadge(album.publishStatus)}
+														</div>
+													</div>
+													<CardHeader className="p-4 pt-2">
+														<div className="flex items-start justify-between">
+															<Link
+																to="/images/albums/$albumId"
+																params={{ albumId: album.id }}
+																className="cursor-pointer"
+															>
+																<CardTitle className="line-clamp-1 text-sm">
+																	{album.title}
+																</CardTitle>
+															</Link>
+															<AlbumActions album={album} />
+														</div>
+														<CardDescription className="line-clamp-2 text-xs">
+															{album.description || 'No description'}
+														</CardDescription>
+													</CardHeader>
+													<CardFooter className="text-muted-foreground flex items-center justify-between p-4 pt-0 text-xs">
+														<span className="flex items-center gap-1">
+															<ImageIcon className="size-3" />
+															{album.imageCount}{' '}
+															{album.imageCount === 1 ? 'image' : 'images'}
+														</span>
+														<span>{formatDate(album.createdAt)}</span>
+													</CardFooter>
+												</Card>
+											);
+										})}
 									</div>
-								</div>
-								<CardHeader className="p-4 pt-2">
-									<div className="flex items-start justify-between">
-										<Link
-											to="/images/albums/$albumId"
-											params={{ albumId: album.id }}
-											className="cursor-pointer"
-										>
-											<CardTitle className="line-clamp-1 text-sm">
-												{album.title}
-											</CardTitle>
-										</Link>
-										<AlbumActions album={album} />
-									</div>
-									<CardDescription className="line-clamp-2 text-xs">
-										{album.description || 'No description'}
-									</CardDescription>
-								</CardHeader>
-								<CardFooter className="text-muted-foreground flex items-center justify-between p-4 pt-0 text-xs">
-									<span className="flex items-center gap-1">
-										<ImageIcon className="size-3" />
-										{album.imageCount}{' '}
-										{album.imageCount === 1 ? 'image' : 'images'}
-									</span>
-									<span>{formatDate(album.createdAt)}</span>
-								</CardFooter>
-							</Card>
-						);
-					})}
+								);
+							})}
+						</div>
+					</div>
 				</div>
 			)}
 
