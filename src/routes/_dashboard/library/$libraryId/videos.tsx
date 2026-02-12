@@ -18,7 +18,7 @@ export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId } = params;
 
-		// Guard against missing libraryId
+		// Guard against missing libraryId in the URL
 		if (!libraryId) {
 			return { libraryId };
 		}
