@@ -2,6 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
 	FilePlus,
+	GalleryHorizontalEnd,
+	Images,
 	KeyRound,
 	Library,
 	ListVideo,
@@ -29,7 +31,7 @@ function IndexPage() {
 				heading="Air War Trail Dashboard"
 				text="Manage content for the airwartrail.com website."
 			></DashboardHeader>
-			<section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+			<section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 				<Link to="/upload">
 					<Card className="hover:bg-secondary transition-colors h-full">
 						<CardHeader className="flex flex-col items-center justify-center gap-2">
@@ -78,6 +80,32 @@ function IndexPage() {
 						<CardContent>
 							<p className="text-center text-muted-foreground text-sm">
 								View and manage video tags
+							</p>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/images">
+					<Card className="hover:bg-secondary transition-colors h-full">
+						<CardHeader className="flex flex-col items-center justify-center gap-2">
+							<Images className="size-10" />
+							<CardTitle>Images</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p className="text-center text-muted-foreground text-sm">
+								View and manage images
+							</p>
+						</CardContent>
+					</Card>
+				</Link>
+				<Link to="/images/albums">
+					<Card className="hover:bg-secondary transition-colors h-full">
+						<CardHeader className="flex flex-col items-center justify-center gap-2">
+							<GalleryHorizontalEnd className="size-10" />
+							<CardTitle>Image Albums</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p className="text-center text-muted-foreground text-sm">
+								View and manage image albums
 							</p>
 						</CardContent>
 					</Card>

@@ -263,17 +263,18 @@ function ImageEditorPage() {
 						</Button>
 					</CardFooter>
 				</Card>
+				{/* Image Preview */}
 				<Card>
 					<CardHeader>
 						<CardTitle>Image Preview</CardTitle>
 					</CardHeader>
-					<CardContent>
-						{/* Image Preview */}
-						<div className="flex justify-center relative">
+					<CardContent className="h-full">
+						<div className="h-full flex flex-col justify-center items-center gap-2">
 							{isFetchingSignedUrl && image.requireSignedURLs && (
-								<div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded">
-									<LoaderCircle className="h-6 w-6 animate-spin" />
-								</div>
+								<>
+									<p className="text-muted-foreground">Loading Image</p>
+									<LoaderCircle className="size-6 animate-spin" />
+								</>
 							)}
 							<img
 								src={
@@ -282,7 +283,7 @@ function ImageEditorPage() {
 										: `${image.deliveryUrl}/md`
 								}
 								alt={image.altText || 'Preview'}
-								className="w-full object-cover rounded-lg"
+								className="w-full max-h-100 object-contain"
 							/>
 						</div>
 					</CardContent>
