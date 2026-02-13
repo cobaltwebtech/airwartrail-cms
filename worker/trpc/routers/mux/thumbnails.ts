@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { getVideosDb } from "./shared";
 import { video } from "@/db/video-schema";
@@ -342,6 +342,69 @@ export const thumbnailsRouter = t.router({
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to delete thumbnail",
+				});
+			}
+		}),
+
+	/**
+	 * Batch get custom thumbnails for multiple videos
+	 * Reduces API calls when loading video grids/lists
+	 */
+	getThumbnailBatch: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
+		.input(
+			z.object({
+				videoIds: z.array(z.string()).max(50), // Limit batch size
+				libraryId: z.string(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const { env } = ctx;
+			const db = getVideosDb(env);
+			const { videoIds, libraryId } = input;
+
+			if (videoIds.length === 0) {
+				return [];
+			}
+
+			try {
+				// Single query to fetch all thumbnails
+				const records = await db
+					.select({
+						id: video.id,
+						customThumbnailUrl: video.customThumbnailUrl,
+						customThumbnailTime: video.customThumbnailTime,
+					})
+					.from(video)
+					.where(
+						and(
+							inArray(video.id, videoIds),
+							eq(video.libraryId, libraryId),
+							eq(video.isDeleted, false),
+						),
+					);
+
+				// Create a map for O(1) lookup
+				const recordMap = new Map(
+					records.map((r) => [r.id, r]),
+				);
+
+				// Return results in the same order as input, with null for missing videos
+				return videoIds.map((videoId) => {
+					const record = recordMap.get(videoId);
+					return {
+						videoId,
+						customThumbnailUrl: record?.customThumbnailUrl ?? null,
+						customThumbnailTime: record?.customThumbnailTime ?? null,
+						hasCustomThumbnail: !!record?.customThumbnailUrl,
+					};
+				});
+			} catch (error) {
+				if (error instanceof TRPCError) throw error;
+				console.error("Error getting thumbnails batch:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to get thumbnails",
 				});
 			}
 		}),

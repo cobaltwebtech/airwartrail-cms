@@ -41,6 +41,78 @@ export const playbackRouter = t.router({
 		}),
 
 	/**
+	 * Batch generate signed tokens for multiple playback IDs
+	 * Reduces API calls when loading video grids/lists
+	 */
+	generateSignedTokensBatch: protectedProcedure
+		.use(createPermissionMiddleware('mux', ['read']))
+		.input(
+			z.object({
+				items: z.array(
+					z.object({
+						playbackId: z.string(),
+						expiresIn: z.number().default(3600),
+						thumbnailParams: z.object({
+							time: z.number().optional(),
+							width: z.number().optional(),
+							height: z.number().optional(),
+							fit_mode: z.string().optional(),
+						}).optional(),
+						playbackRestrictionId: z.string().optional().nullable(),
+					}),
+				).max(50), // Limit batch size for performance
+				libraryId: z.string().optional(),
+			}),
+		)
+		.query(
+			async ({ ctx, input }): Promise<Array<{
+				playbackId: string;
+				playback: string;
+				thumbnail: string;
+				storyboard: string;
+			}>> => {
+				const { env } = ctx;
+
+				try {
+					// Get library once for all items
+					const library = await getMuxLibrary(env, input.libraryId);
+
+					// Generate tokens for all items in parallel
+					const results = await Promise.all(
+						input.items.map(async (item) => {
+							const effectiveRestrictionId =
+								item.playbackRestrictionId !== undefined
+									? item.playbackRestrictionId
+									: library.defaultPlaybackRestrictionId;
+
+							const tokens = await generateSignedTokens(
+								item.playbackId,
+								library,
+								item.expiresIn,
+								item.thumbnailParams,
+								effectiveRestrictionId,
+							);
+
+							return {
+								playbackId: item.playbackId,
+								...tokens,
+							};
+						}),
+					);
+
+					return results;
+				} catch (error) {
+					if (error instanceof TRPCError) throw error;
+					console.error("Error generating signed tokens batch:", error);
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Failed to generate signed tokens",
+					});
+				}
+			},
+		),
+
+	/**
 	 * Generate signed tokens for secure video playback
 	 */
 	generateSignedTokens: protectedProcedure

@@ -10,9 +10,12 @@ import {
 import { Toaster } from '@/components/ui/sonner';
 import { requireAuth } from '@/lib/auth-check';
 
+// This is the root layout for all dashboard routes. It includes the sidebar and other common UI elements.
+
 export const Route = createFileRoute('/_dashboard')({
 	beforeLoad: async ({ location }) => {
 		// Require authentication for all dashboard routes
+		// This simplifies the auth check since we don't have to repeat it in every route
 		const session = await requireAuth(location);
 		return { session };
 	},
@@ -33,7 +36,7 @@ function DashboardLayout() {
 				</main>
 				<DashboardFooter />
 			</SidebarInset>
-			<Toaster richColors position="top-right" />
+			<Toaster richColors position="bottom-right" />
 		</SidebarProvider>
 	);
 }

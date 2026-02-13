@@ -5,17 +5,16 @@
   "version": "2.6.1",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "dev:cf": "vite build && pnpx wrangler dev",
+    "dev:cf": "vite build && pnpm wrangler dev",
     "lint": "biome lint",
     "format": "biome format --write",
     "build": "vite build",
-    "deploy:cf": "pnpm run build && wrangler deploy",
+    "deploy:cf": "pnpm build && pnpm wrangler deploy",
     "serve": "vite preview",
     "clean": "rm -rf dist .tanstack src/routeTree.gen.ts",
-    "up:biome": "pnpm up @biomejs/biome@latest && pnpm biome migrate --write",
-    "cf-typegen": "wrangler types --env-interface Env"
+    "up:biome": "pnpm up @biomejs/biome@latest && pnpm biome migrate --write"
   },
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@10.29.3",
   "dependencies": {
     "@better-auth/passkey": "^1.4.18",
     "@marsidev/react-turnstile": "^1.4.2",
