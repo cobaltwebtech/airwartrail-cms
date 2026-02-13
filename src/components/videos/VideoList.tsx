@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
@@ -241,6 +241,53 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			});
 	}, [videoArray, searchTerm, sortCriteria, sortDirection]);
 
+	// Extract video IDs for batch thumbnail query
+	const videoIds = useMemo(
+		() => filteredVideos.map((v) => v.id),
+		[filteredVideos],
+	);
+
+	// Extract playback items for batch signed token query
+	const playbackItems = useMemo(
+		() =>
+			filteredVideos
+				.filter((v) => v.playbackId) // Only videos with playback IDs
+				.map((v) => ({
+					playbackId: v.playbackId as string,
+					expiresIn: 3600,
+				})),
+		[filteredVideos],
+	);
+
+	// Batch fetch custom thumbnails for all videos
+	const { data: thumbnailBatch } = useQuery({
+		...trpc.mux.getThumbnailBatch.queryOptions({
+			videoIds,
+			libraryId,
+		}),
+		enabled: videoIds.length > 0,
+	});
+
+	// Batch fetch signed tokens for all videos with playback IDs
+	const { data: signedTokensBatch } = useQuery({
+		...trpc.mux.generateSignedTokensBatch.queryOptions({
+			items: playbackItems,
+			libraryId,
+		}),
+		enabled: playbackItems.length > 0,
+	});
+
+	// Create lookup maps for O(1) access in render
+	const thumbnailMap = useMemo(() => {
+		if (!thumbnailBatch) return new Map();
+		return new Map(thumbnailBatch.map((item) => [item.videoId, item]));
+	}, [thumbnailBatch]);
+
+	const signedTokensMap = useMemo(() => {
+		if (!signedTokensBatch) return new Map();
+		return new Map(signedTokensBatch.map((item) => [item.playbackId, item]));
+	}, [signedTokensBatch]);
+
 	const toggleSortDirection = () => {
 		setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
 	};
@@ -298,6 +345,12 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								height={90}
 								policy={row.original.policy ?? undefined}
 								libraryId={libraryId}
+								batchThumbnailData={thumbnailMap.get(row.original.id)}
+								batchSignedTokens={
+									row.original.playbackId
+										? signedTokensMap.get(row.original.playbackId)
+										: undefined
+								}
 							/>
 						</Link>
 					</div>
@@ -460,7 +513,13 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				},
 			},
 		],
-		[handleDeleteRequest, handleSelectVideo, libraryId],
+		[
+			handleDeleteRequest,
+			handleSelectVideo,
+			libraryId,
+			thumbnailMap,
+			signedTokensMap,
+		],
 	);
 
 	const table = useReactTable({
@@ -685,6 +744,12 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 														aspectVideo
 														policy={video.policy ?? undefined}
 														libraryId={libraryId}
+														batchThumbnailData={thumbnailMap.get(video.id)}
+														batchSignedTokens={
+															video.playbackId
+																? signedTokensMap.get(video.playbackId)
+																: undefined
+														}
 													/>
 													<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
 														<Button
