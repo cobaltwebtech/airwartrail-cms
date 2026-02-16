@@ -149,7 +149,7 @@ export const tagsRouter = t.router({
 		}),
 
 	/**
-	 * Delete a tag (soft delete - set isActive to false)
+	 * Delete a tag (hard delete - permanently removes tag and all its assignments)
 	 */
 	deleteTag: protectedProcedure
 		.use(createPermissionMiddleware('mux', ['delete']))
@@ -164,9 +164,28 @@ export const tagsRouter = t.router({
 			const { tagId } = input;
 
 			try {
+				// Verify tag exists
+				const existing = await db
+					.select({ id: videoTag.id })
+					.from(videoTag)
+					.where(eq(videoTag.id, tagId))
+					.limit(1);
+
+				if (existing.length === 0) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Tag not found",
+					});
+				}
+
+				// Delete all tag assignments for this tag (bulk remove from videos)
 				await db
-					.update(videoTag)
-					.set({ isActive: false })
+					.delete(videoTagAssignment)
+					.where(eq(videoTagAssignment.tagId, tagId));
+
+				// Hard delete the tag itself
+				await db
+					.delete(videoTag)
 					.where(eq(videoTag.id, tagId));
 
 				return { success: true };

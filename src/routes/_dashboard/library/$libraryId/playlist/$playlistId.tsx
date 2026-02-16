@@ -661,7 +661,7 @@ function PlaylistEditorPage() {
 											</Badge>
 										</div>
 										{playlist.description && (
-											<div>
+											<div className="col-span-full">
 												<p className="text-sm text-balance font-medium text-muted-foreground">
 													Description
 												</p>
