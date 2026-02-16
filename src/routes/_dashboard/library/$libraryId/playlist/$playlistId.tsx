@@ -896,7 +896,7 @@ function PlaylistEditorPage() {
 											</span>
 										</Button>
 
-										<div className="w-fit shrink-0 overflow-hidden rounded-md">
+										<div className="w-fit max-w-40 shrink-0 overflow-hidden rounded-md">
 											<VideoThumbnail
 												playbackId={item.muxPlaybackId}
 												videoId={item.id}
