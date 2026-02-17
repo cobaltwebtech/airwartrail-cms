@@ -85,7 +85,7 @@ const LIBRARY_TYPE_MAP: Record<string, 'premium' | 'basic'> = {
 
 // Get library type from library ID
 function getLibraryType(libraryId: string): 'premium' | 'basic' {
-	return LIBRARY_TYPE_MAP[libraryId] || 'basic'; // Default to 'basic' if not found
+	return LIBRARY_TYPE_MAP[libraryId] || 'premium'; // Default to 'premium' if not found
 }
 
 // Generate the video URL for the frontend
