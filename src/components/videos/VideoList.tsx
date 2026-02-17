@@ -511,21 +511,6 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								<DropdownMenuLabel>Actions</DropdownMenuLabel>
-								<DropdownMenuItem onClick={() => handleSelectVideo(video)}>
-									<Eye className="mr-2 size-4" />
-									<span>Preview</span>
-								</DropdownMenuItem>
-								<DropdownMenuItem asChild>
-									<Link
-										to="/library/$libraryId/edit-video/$videoId"
-										params={{ videoId: video.id, libraryId }}
-										className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
-									>
-										<Pencil className="mr-2 size-4" />
-										<span>Edit</span>
-									</Link>
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />{' '}
 								<DropdownMenuItem
 									onClick={() => {
 										const url = generateVideoUrl(
@@ -541,7 +526,22 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 									<Copy className="mr-2 size-4" />
 									<span>Copy URL</span>
 								</DropdownMenuItem>
-								<DropdownMenuSeparator />{' '}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={() => handleSelectVideo(video)}>
+									<Eye className="mr-2 size-4" />
+									<span>Preview</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem asChild>
+									<Link
+										to="/library/$libraryId/edit-video/$videoId"
+										params={{ videoId: video.id, libraryId }}
+										className="flex cursor-pointer items-center px-2 py-1.5 text-sm"
+									>
+										<Pencil className="mr-2 size-4" />
+										<span>Edit</span>
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
 								<DropdownMenuItem onClick={() => handleDeleteRequest(video)}>
 									<Trash2 className="text-destructive-foreground mr-2 size-4" />
 									<span className="text-destructive">Delete</span>
@@ -827,6 +827,26 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 															</DropdownMenuTrigger>
 															<DropdownMenuContent align="end">
 																<DropdownMenuLabel>Actions</DropdownMenuLabel>
+																<DropdownMenuItem
+																	onClick={() => {
+																		const url = generateVideoUrl(
+																			libraryId,
+																			video.id,
+																			video.title,
+																		);
+																		navigator.clipboard
+																			.writeText(url)
+																			.then(() => {
+																				toast.success(
+																					'Video URL copied to clipboard',
+																				);
+																			});
+																	}}
+																>
+																	<Copy className="mr-2 size-4" />
+																	<span>Copy URL</span>
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
 																<DropdownMenuItem
 																	onClick={() => setSelectedVideo(video)}
 																>
