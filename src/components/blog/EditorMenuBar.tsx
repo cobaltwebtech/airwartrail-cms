@@ -15,7 +15,7 @@ import {
 	Strikethrough,
 	Undo,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -83,6 +83,8 @@ function MenuButton({
 export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
 	const [linkUrl, setLinkUrl] = useState('');
+	const [openInNewTab, setOpenInNewTab] = useState(false);
+	const [useNofollow, setUseNofollow] = useState(false);
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
 	const handleImageSelected = (image: SelectedImage) => {
@@ -93,38 +95,53 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	};
 
 	const handleLinkClick = () => {
-		const previousUrl = editor.getAttributes('link').href;
-		setLinkUrl(previousUrl || '');
+		const linkAttrs = editor.getAttributes('link');
+		setLinkUrl(linkAttrs.href || '');
+		setOpenInNewTab(linkAttrs.target === '_blank');
+		setUseNofollow(linkAttrs.rel?.includes('nofollow') ?? false);
 		setIsLinkDialogOpen(true);
 	};
 
+	// Handle link clicks from the editor
+	const handleOpenLinkDialog = useEffectEvent((event: Event) => {
+		const customEvent = event as CustomEvent<{ href: string; pos: number }>;
+		const linkAttrs = editor.getAttributes('link');
+		setLinkUrl(customEvent.detail.href || '');
+		setOpenInNewTab(linkAttrs.target === '_blank');
+		setUseNofollow(linkAttrs.rel?.includes('nofollow') ?? false);
+		setIsLinkDialogOpen(true);
+		editor.chain().focus().setTextSelection(customEvent.detail.pos).run();
+	});
+
 	// Listen for link clicks from the editor
 	useEffect(() => {
-		const handleOpenLinkDialog = (event: Event) => {
-			const customEvent = event as CustomEvent<{ href: string; pos: number }>;
-			setLinkUrl(customEvent.detail.href || '');
-			setIsLinkDialogOpen(true);
-			editor.chain().focus().setTextSelection(customEvent.detail.pos).run();
-		};
-
 		window.addEventListener('openLinkDialog', handleOpenLinkDialog);
 		return () =>
 			window.removeEventListener('openLinkDialog', handleOpenLinkDialog);
-	}, [editor]);
+	}, []);
 
 	const handleLinkSave = () => {
 		if (linkUrl) {
-			editor
-				.chain()
-				.focus()
-				.extendMarkRange('link')
-				.setLink({ href: linkUrl })
-				.run();
+			const linkAttrs: { href: string; target?: string; rel?: string } = {
+				href: linkUrl,
+			};
+
+			if (openInNewTab) {
+				linkAttrs.target = '_blank';
+			}
+
+			if (useNofollow) {
+				linkAttrs.rel = 'noopener nofollow';
+			}
+
+			editor.chain().focus().extendMarkRange('link').setLink(linkAttrs).run();
 		} else {
 			editor.chain().focus().extendMarkRange('link').unsetLink().run();
 		}
 		setIsLinkDialogOpen(false);
 		setLinkUrl('');
+		setOpenInNewTab(false);
+		setUseNofollow(false);
 	};
 
 	if (!editor) {
@@ -287,6 +304,26 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 							}}
 							autoFocus
 						/>
+						<div className="space-y-3 border-t pt-4">
+							<label className="flex items-center gap-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={openInNewTab}
+									onChange={(e) => setOpenInNewTab(e.target.checked)}
+									className="rounded border-input"
+								/>
+								<span className="text-sm">Open in new tab</span>
+							</label>
+							<label className="flex items-center gap-2 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={useNofollow}
+									onChange={(e) => setUseNofollow(e.target.checked)}
+									className="rounded border-input"
+								/>
+								<span className="text-sm">Add nofollow for external links</span>
+							</label>
+						</div>
 					</div>
 					<DialogFooter>
 						<Button

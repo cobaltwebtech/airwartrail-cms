@@ -27,6 +27,10 @@ export function TiptapEditor({
 			}),
 			Link.configure({
 				openOnClick: false,
+				HTMLAttributes: {
+					target: null,
+					rel: null,
+				},
 			}),
 			Image.configure({
 				inline: false,

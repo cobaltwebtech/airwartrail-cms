@@ -15,6 +15,7 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	CheckCircle,
+	Copy,
 	Eye,
 	Film,
 	Grid3X3,
@@ -75,6 +76,28 @@ interface VideoListProps {
 type ViewMode = 'grid' | 'table';
 
 const STORAGE_KEY = 'videoList-settings';
+
+// Map library IDs to their types
+const LIBRARY_TYPE_MAP: Record<string, 'premium' | 'basic'> = {
+	WM2OkZia: 'premium',
+	pnr6CRTe: 'basic',
+};
+
+// Get library type from library ID
+function getLibraryType(libraryId: string): 'premium' | 'basic' {
+	return LIBRARY_TYPE_MAP[libraryId] || 'basic'; // Default to 'basic' if not found
+}
+
+// Generate the video URL for the frontend
+function generateVideoUrl(
+	libraryId: string,
+	videoId: string,
+	title: string,
+): string {
+	const libraryType = getLibraryType(libraryId);
+	const encodedTitle = encodeURIComponent(title);
+	return `https://www.airwartrail.com/watch/${libraryType}/${libraryId}/video/${videoId}?title=${encodedTitle}`;
+}
 
 interface VideoListSettings {
 	viewMode: ViewMode;
@@ -502,7 +525,23 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 										<span>Edit</span>
 									</Link>
 								</DropdownMenuItem>
-								<DropdownMenuSeparator />
+								<DropdownMenuSeparator />{' '}
+								<DropdownMenuItem
+									onClick={() => {
+										const url = generateVideoUrl(
+											libraryId,
+											video.id,
+											video.title,
+										);
+										navigator.clipboard.writeText(url).then(() => {
+											toast.success('Video URL copied to clipboard');
+										});
+									}}
+								>
+									<Copy className="mr-2 size-4" />
+									<span>Copy URL</span>
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />{' '}
 								<DropdownMenuItem onClick={() => handleDeleteRequest(video)}>
 									<Trash2 className="text-destructive-foreground mr-2 size-4" />
 									<span className="text-destructive">Delete</span>
