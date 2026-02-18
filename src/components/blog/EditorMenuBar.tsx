@@ -88,9 +88,16 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
 	const handleImageSelected = (image: SelectedImage) => {
-		const src = getImageUrl(image.deliveryUrl, 'md');
-		const alt = image.altText || 'Blog image';
-		editor.chain().focus().setImage({ src, alt }).run();
+		// Store base URL without variant in editor content
+		// The CustomImage extension will automatically apply thumbnail variant in editor preview
+		editor
+			.chain()
+			.focus()
+			.setImage({
+				src: image.deliveryUrl,
+				alt: image.altText || 'Blog image',
+			})
+			.run();
 		setIsImagePickerOpen(false);
 	};
 

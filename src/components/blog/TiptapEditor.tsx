@@ -12,6 +12,20 @@ interface TiptapEditorProps {
 	placeholder?: string;
 }
 
+// Custom Image extension that applies thumbnail variant in editor
+// but preserves base URL for variant application on frontend
+const CustomImage = Image.extend({
+	renderHTML({ HTMLAttributes }) {
+		// Apply thumbnail variant for editor preview if URL doesn't already have a variant
+		let src = HTMLAttributes.src;
+		if (src && !src.endsWith('/thumbnail')) {
+			// Append thumbnail variant for editor preview
+			src = `${src}/thumbnail`;
+		}
+		return ['img', { ...HTMLAttributes, src }];
+	},
+});
+
 export function TiptapEditor({
 	content,
 	onChange,
@@ -32,7 +46,7 @@ export function TiptapEditor({
 					rel: null,
 				},
 			}),
-			Image.configure({
+			CustomImage.configure({
 				inline: false,
 				allowBase64: false,
 				HTMLAttributes: {

@@ -100,6 +100,7 @@ export function ImagePickerDialog({
 		if (!selectedImage) return;
 		onSelect({
 			id: selectedImage.id,
+			// Store base URL without variant - variants will be applied contextually
 			deliveryUrl: selectedImage.deliveryUrl,
 			altText: selectedImage.altText ?? null,
 			fileName: selectedImage.fileName ?? null,
