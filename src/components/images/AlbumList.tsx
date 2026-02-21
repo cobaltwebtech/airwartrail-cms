@@ -414,6 +414,7 @@ export function AlbumList({
 		if (albumToDelete) {
 			await deleteAlbumMutation.mutateAsync({ id: albumToDelete.id });
 			setAlbumToDelete(null);
+			setIsDeleteDialogOpen(false);
 		}
 	};
 
@@ -593,7 +594,7 @@ export function AlbumList({
 				cell: ({ row }) => <AlbumActions album={row.original} />,
 			},
 		],
-		[getCoverImageUrl],
+		[getCoverImageUrl, AlbumActions],
 	);
 
 	const table = useReactTable({

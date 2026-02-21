@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
 	Dialog,
 	DialogContent,
@@ -36,6 +37,8 @@ export interface SelectedImage {
 	altText: string | null;
 	/** Original file name */
 	fileName: string | null;
+	/** Image variant to use ('md' with watermark, 'mdnomark' without) */
+	variant?: string;
 }
 
 interface ImagePickerDialogProps {
@@ -64,6 +67,7 @@ export function ImagePickerDialog({
 }: ImagePickerDialogProps) {
 	const [imageSearch, setImageSearch] = useState('');
 	const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+	const [useNoWatermark, setUseNoWatermark] = useState(false);
 
 	// Fetch images only while the dialog is open
 	const { data: allImagesData } = useQuery({
@@ -104,10 +108,12 @@ export function ImagePickerDialog({
 			deliveryUrl: selectedImage.deliveryUrl,
 			altText: selectedImage.altText ?? null,
 			fileName: selectedImage.fileName ?? null,
+			variant: useNoWatermark ? 'mdnomark' : 'md',
 		});
 		// Reset local state immediately so stale selection doesn't persist
 		setSelectedImageId(null);
 		setImageSearch('');
+		setUseNoWatermark(false);
 	};
 
 	const handleOpenChange = (nextOpen: boolean) => {
@@ -115,6 +121,7 @@ export function ImagePickerDialog({
 		if (!nextOpen) {
 			setSelectedImageId(null);
 			setImageSearch('');
+			setUseNoWatermark(false);
 		}
 	};
 
@@ -133,7 +140,7 @@ export function ImagePickerDialog({
 						onChange={(e) => setImageSearch(e.target.value)}
 					/>
 
-					<div className="dialog-scrollbar max-h-[50vh] overflow-y-auto">
+					<div className="dialog-scrollbar max-h-[50vh] overflow-y-auto p-4 bg-secondary rounded-md">
 						{filteredImages.length > 0 ? (
 							<ItemGroup className="mx-2 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
 								{filteredImages.map((image) => {
@@ -204,13 +211,27 @@ export function ImagePickerDialog({
 					<Button variant="outline" onClick={() => handleOpenChange(false)}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleConfirm}
-						disabled={!selectedImageId || confirmDisabled}
-					>
-						<Check className="size-4" />
-						{confirmLabel}
-					</Button>
+					<div className="flex items-center gap-4">
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="no-watermark"
+								checked={useNoWatermark}
+								onCheckedChange={(checked) =>
+									setUseNoWatermark(checked as boolean)
+								}
+							/>
+							<label htmlFor="no-watermark" className="text-sm cursor-pointer">
+								Use image without watermark
+							</label>
+						</div>
+						<Button
+							onClick={handleConfirm}
+							disabled={!selectedImageId || confirmDisabled}
+						>
+							<Check className="size-4" />
+							{confirmLabel}
+						</Button>
+					</div>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

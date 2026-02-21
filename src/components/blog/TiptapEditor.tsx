@@ -12,14 +12,16 @@ interface TiptapEditorProps {
 	placeholder?: string;
 }
 
-// Custom Image extension that applies thumbnail variant in editor
-// but preserves base URL for variant application on frontend
+// Custom Image extension that applies thumbnail variant in editor for preview
+// but the actual stored URL contains md or mdnomark variant for database
 const CustomImage = Image.extend({
 	renderHTML({ HTMLAttributes }) {
-		// Apply thumbnail variant for editor preview if URL doesn't already have a variant
+		// Apply thumbnail variant for editor preview only
 		let src = HTMLAttributes.src;
-		if (src && !src.endsWith('/thumbnail')) {
-			// Append thumbnail variant for editor preview
+		if (src) {
+			// Remove any existing variant suffix (md, mdnomark, thumbnail, etc.)
+			src = src.replace(/\/(md|mdnomark|thumbnail)$/, '');
+			// Add thumbnail variant for editor preview
 			src = `${src}/thumbnail`;
 		}
 		return ['img', { ...HTMLAttributes, src }];
