@@ -34,29 +34,43 @@ import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute('/_dashboard/api-keys/')({
 	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(trpc.apiKeys.list.queryOptions());
+		await queryClient.ensureQueryData(trpc.apiKeys.list.queryOptions({}));
 	},
 	component: ApiKeysPage,
 });
 
-// Infer type from tRPC router output
-type ApiKey = Awaited<
-	ReturnType<typeof trpc.apiKeys.list.queryOptions>
->['initialData'] extends infer T
-	? T extends unknown[]
-		? T[number]
-		: never
-	: never;
+// Type for API key from list endpoint
+type ApiKey = {
+	id: string;
+	configId: string;
+	referenceId: string;
+	name: string | null;
+	start: string | null;
+	prefix: string | null;
+	enabled: boolean;
+	expiresAt: Date | null;
+	createdAt: Date;
+	updatedAt: Date;
+	lastRequest: Date | null;
+	requestCount: number;
+	rateLimitEnabled: boolean;
+	rateLimitMax: number | null;
+	rateLimitTimeWindow: number | null;
+	permissions: Record<string, string[]> | null;
+	metadata: Record<string, unknown> | null;
+};
 
 function ApiKeysPage() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [deleteKey, setDeleteKey] = useState<ApiKey | null>(null);
 
 	const {
-		data: apiKeys,
+		data: response,
 		isLoading,
 		error,
-	} = useQuery(trpc.apiKeys.list.queryOptions());
+	} = useQuery(trpc.apiKeys.list.queryOptions({}));
+
+	const apiKeys = response?.apiKeys ?? [];
 
 	return (
 		<>

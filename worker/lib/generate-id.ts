@@ -69,3 +69,8 @@ export const generateAlbumImageId = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
   24,
 );
+
+export const generateDocumentId = customAlphabet(
+	"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+	16,
+);

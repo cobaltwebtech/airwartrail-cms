@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
 	FilePlus,
+	Files,
 	GalleryHorizontalEnd,
 	Images,
 	KeyRound,
@@ -67,6 +68,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			title: 'Create Blog Post',
 			url: '/blog-posts/create-post',
 			icon: FilePlus,
+		},
+		{
+			title: 'Documents',
+			url: '/documents',
+			icon: Files,
 		},
 		{
 			title: 'Create Library',

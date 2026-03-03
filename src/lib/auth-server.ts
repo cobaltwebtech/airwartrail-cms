@@ -1,8 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { apiKey } from '@better-auth/api-key';
 import { passkey } from '@better-auth/passkey';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { apiKey, captcha, twoFactor } from 'better-auth/plugins';
+import { captcha, twoFactor } from 'better-auth/plugins';
 import { drizzle } from 'drizzle-orm/d1';
 import { Resend } from 'resend';
 import { PasswordReset } from '@/components/email/PasswordReset';

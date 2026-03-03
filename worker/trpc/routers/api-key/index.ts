@@ -29,7 +29,8 @@ function parseJsonField<T>(value: string | T | null | undefined): T | null {
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1).max(100),
-	expiresIn: z.number().optional(), // Expiration time in seconds
+	expiresIn: z.number().optional(),
+	configId: z.string().optional(),
 	permissions: z.record(z.string(), z.array(z.string())).optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -50,6 +51,12 @@ const getApiKeySchema = z.object({
 	keyId: z.string(),
 });
 
+const listApiKeysSchema = z.object({
+	configId: z.string().optional(),
+	limit: z.number().optional(),
+	offset: z.number().optional(),
+});
+
 // ============================================================================
 // API Key Router
 // ============================================================================
@@ -58,37 +65,51 @@ export const apiKeysRouter = t.router({
 	/**
 	 * List all API keys for the current user
 	 */
-	list: protectedProcedure.query(async ({ ctx }) => {
-		try {
-			const apiKeys = await auth.api.listApiKeys({
-				headers: ctx.headers,
-			});
+	list: protectedProcedure
+		.input(listApiKeysSchema)
+		.query(async ({ ctx, input }) => {
+			try {
+				const response = await auth.api.listApiKeys({
+					query: {
+						configId: input.configId,
+						limit: input.limit,
+						offset: input.offset,
+					},
+					headers: ctx.headers,
+				});
 
-			return apiKeys.map((key) => ({
-				id: key.id,
-				name: key.name,
-				start: key.start, // First few characters for identification
-				prefix: key.prefix,
-				enabled: key.enabled,
-				expiresAt: key.expiresAt,
-				createdAt: key.createdAt,
-				updatedAt: key.updatedAt,
-				lastRequest: key.lastRequest,
-				requestCount: key.requestCount,
-				rateLimitEnabled: key.rateLimitEnabled,
-				rateLimitMax: key.rateLimitMax,
-				rateLimitTimeWindow: key.rateLimitTimeWindow,
-				permissions: parseJsonField<Permissions>(key.permissions),
-				metadata: parseJsonField<Metadata>(key.metadata),
-			}));
-		} catch (error) {
-			console.error("Error listing API keys:", error);
-			throw new TRPCError({
-				code: "INTERNAL_SERVER_ERROR",
-				message: "Failed to list API keys",
-			});
-		}
-	}),
+				return {
+					apiKeys: response.apiKeys.map((key) => ({
+						id: key.id,
+						configId: key.configId,
+						referenceId: key.referenceId,
+						name: key.name,
+						start: key.start,
+						prefix: key.prefix,
+						enabled: key.enabled,
+						expiresAt: key.expiresAt,
+						createdAt: key.createdAt,
+						updatedAt: key.updatedAt,
+						lastRequest: key.lastRequest,
+						requestCount: key.requestCount,
+						rateLimitEnabled: key.rateLimitEnabled,
+						rateLimitMax: key.rateLimitMax,
+						rateLimitTimeWindow: key.rateLimitTimeWindow,
+						permissions: parseJsonField<Permissions>(key.permissions),
+						metadata: parseJsonField<Metadata>(key.metadata),
+					})),
+					total: response.total,
+					limit: response.limit,
+					offset: response.offset,
+				};
+			} catch (error) {
+				console.error("Error listing API keys:", error);
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to list API keys",
+				});
+			}
+		}),
 
 	/**
 	 * Get a specific API key by ID
@@ -104,6 +125,8 @@ export const apiKeysRouter = t.router({
 
 				return {
 					id: apiKey.id,
+					configId: apiKey.configId,
+					referenceId: apiKey.referenceId,
 					name: apiKey.name,
 					start: apiKey.start,
 					prefix: apiKey.prefix,
@@ -145,8 +168,8 @@ export const apiKeysRouter = t.router({
 					body: {
 						name: input.name,
 						expiresIn: input.expiresIn,
-						prefix: "awt_", // Use consistent prefix
-						// Server-only properties - must use userId instead of headers
+						configId: input.configId,
+						prefix: "awt_",
 						userId: ctx.user.id,
 						permissions: input.permissions as Permissions,
 						metadata: input.metadata as Metadata,
@@ -155,6 +178,7 @@ export const apiKeysRouter = t.router({
 
 				return {
 					id: result.id,
+					configId: result.configId,
 					name: result.name,
 					key: result.key, // Full key - only returned on creation!
 					start: result.start,
@@ -196,6 +220,8 @@ export const apiKeysRouter = t.router({
 
 				return {
 					id: result.id,
+					configId: result.configId,
+					referenceId: result.referenceId,
 					name: result.name,
 					start: result.start,
 					prefix: result.prefix,
@@ -286,6 +312,15 @@ export const apiKeysRouter = t.router({
 						{ id: "read", label: "Read", description: "Read images and albums" },
 						{ id: "write", label: "Write", description: "Create and update images and albums" },
 						{ id: "delete", label: "Delete", description: "Delete images and albums" },
+					],
+				},
+				documents: {
+					label: "Documents",
+					description: "Access to document management API",
+					actions: [
+						{ id: "read", label: "Read", description: "Read documents" },
+						{ id: "write", label: "Write", description: "Create and update documents" },
+						{ id: "delete", label: "Delete", description: "Delete documents" },
 					],
 				},
 			},

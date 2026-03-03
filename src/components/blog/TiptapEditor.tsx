@@ -110,7 +110,7 @@ export function TiptapEditor({
 	return (
 		<div className="border-input bg-secondary rounded-md border overflow-hidden">
 			<EditorMenuBar editor={editor} />
-			<EditorContent editor={editor} />
+			<EditorContent editor={editor} className="max-h-150 overflow-y-auto" />
 		</div>
 	);
 }

@@ -320,9 +320,6 @@ function EditApiKeyPage() {
 															className="text-sm font-normal cursor-pointer"
 														>
 															{action.label}
-															<span className="text-muted-foreground ml-1">
-																- {action.description}
-															</span>
 														</Label>
 													</div>
 												))}

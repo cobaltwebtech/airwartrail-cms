@@ -126,7 +126,7 @@ export function ApiKeyCreate({ isOpen, onOpenChange }: ApiKeyCreateProps) {
 	if (createdKey) {
 		return (
 			<Dialog open={isOpen} onOpenChange={handleClose}>
-				<DialogContent className="sm:max-w-md">
+				<DialogContent className="sm:max-w-2xl">
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
 							<Key className="size-5 text-green-500" />
@@ -165,7 +165,7 @@ export function ApiKeyCreate({ isOpen, onOpenChange }: ApiKeyCreateProps) {
 	// Show the create form
 	return (
 		<Dialog open={isOpen} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent className="sm:max-w-3xl">
 				<DialogHeader>
 					<DialogTitle>Create API Key</DialogTitle>
 					<DialogDescription>
@@ -207,7 +207,7 @@ export function ApiKeyCreate({ isOpen, onOpenChange }: ApiKeyCreateProps) {
 					<div className="space-y-3">
 						<Label>Permissions</Label>
 						{permissionOptions?.resources ? (
-							<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-4 sm:grid-cols-3">
 								{Object.entries(permissionOptions.resources).map(
 									([resourceId, resource]) => (
 										<div

@@ -73,6 +73,52 @@ export const blogPosts = sqliteTable(
 // ---------------------------------------------------------------------------
 
 /**
+ * Documents Table Schema
+ * Tracks documents stored in Cloudflare R2 object storage
+ */
+export const documents = sqliteTable(
+	'documents',
+	{
+		// Primary identifier
+		id: text('id').primaryKey(),
+
+		// Document metadata
+		name: text('name').notNull(),
+		description: text('description'),
+
+		// File information (stored in Cloudflare R2)
+		fileUrl: text('file_url').notNull(),
+		fileSize: integer('file_size'), // Size in bytes
+		mimeType: text('mime_type'),
+
+		// Publishing
+		publishStatus: text('publish_status', {
+			enum: ['draft', 'published', 'archived'],
+		})
+			.default('draft')
+			.notNull(),
+
+		// Author and ownership
+		author: text('author').notNull(),
+		authorId: text('author_id'),
+
+		// Timestamps
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		index('documents_publish_status_idx').on(table.publishStatus),
+		index('documents_author_idx').on(table.author),
+		index('documents_created_at_idx').on(table.createdAt),
+	],
+);
+
+/**
  * Images Table Schema
  * Tracks all Cloudflare Images uploaded/used in this project
  * Provides a project-level record of images independent of albums

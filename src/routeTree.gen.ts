@@ -19,11 +19,13 @@ import { Route as DashboardPlaylistsRouteImport } from './routes/_dashboard/play
 import { Route as DashboardLibrariesRouteImport } from './routes/_dashboard/libraries'
 import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
 import { Route as DashboardImagesIndexRouteImport } from './routes/_dashboard/images/index'
+import { Route as DashboardDocumentsIndexRouteImport } from './routes/_dashboard/documents/index'
 import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
 import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
 import { Route as DashboardImagesUploadRouteImport } from './routes/_dashboard/images/upload'
+import { Route as DashboardDocumentsUploadRouteImport } from './routes/_dashboard/documents/upload'
 import { Route as DashboardBlogPostsCreatePostRouteImport } from './routes/_dashboard/blog-posts/create-post'
 import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
 import { Route as DashboardImagesAlbumsIndexRouteImport } from './routes/_dashboard/images/albums/index'
@@ -87,6 +89,11 @@ const DashboardImagesIndexRoute = DashboardImagesIndexRouteImport.update({
   path: '/images/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardDocumentsIndexRoute = DashboardDocumentsIndexRouteImport.update({
+  id: '/documents/',
+  path: '/documents/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardBlogPostsIndexRoute = DashboardBlogPostsIndexRouteImport.update({
   id: '/blog-posts/',
   path: '/blog-posts/',
@@ -113,6 +120,12 @@ const DashboardImagesUploadRoute = DashboardImagesUploadRouteImport.update({
   path: '/images/upload',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardDocumentsUploadRoute =
+  DashboardDocumentsUploadRouteImport.update({
+    id: '/documents/upload',
+    path: '/documents/upload',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardBlogPostsCreatePostRoute =
   DashboardBlogPostsCreatePostRouteImport.update({
     id: '/blog-posts/create-post',
@@ -201,11 +214,13 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
+  '/documents/upload': typeof DashboardDocumentsUploadRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
   '/api-keys/': typeof DashboardApiKeysIndexRoute
   '/blog-posts/': typeof DashboardBlogPostsIndexRoute
+  '/documents/': typeof DashboardDocumentsIndexRoute
   '/images/': typeof DashboardImagesIndexRoute
   '/tags/': typeof DashboardTagsIndexRoute
   '/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
@@ -230,11 +245,13 @@ export interface FileRoutesByTo {
   '/': typeof DashboardIndexRoute
   '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
+  '/documents/upload': typeof DashboardDocumentsUploadRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
   '/api-keys': typeof DashboardApiKeysIndexRoute
   '/blog-posts': typeof DashboardBlogPostsIndexRoute
+  '/documents': typeof DashboardDocumentsIndexRoute
   '/images': typeof DashboardImagesIndexRoute
   '/tags': typeof DashboardTagsIndexRoute
   '/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
@@ -261,11 +278,13 @@ export interface FileRoutesById {
   '/_dashboard/': typeof DashboardIndexRoute
   '/_dashboard/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/_dashboard/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
+  '/_dashboard/documents/upload': typeof DashboardDocumentsUploadRoute
   '/_dashboard/images/upload': typeof DashboardImagesUploadRoute
   '/_dashboard/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
   '/_dashboard/api-keys/': typeof DashboardApiKeysIndexRoute
   '/_dashboard/blog-posts/': typeof DashboardBlogPostsIndexRoute
+  '/_dashboard/documents/': typeof DashboardDocumentsIndexRoute
   '/_dashboard/images/': typeof DashboardImagesIndexRoute
   '/_dashboard/tags/': typeof DashboardTagsIndexRoute
   '/_dashboard/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
@@ -292,11 +311,13 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/api-keys/$keyId'
     | '/blog-posts/create-post'
+    | '/documents/upload'
     | '/images/upload'
     | '/library/create-library'
     | '/user/$userId'
     | '/api-keys/'
     | '/blog-posts/'
+    | '/documents/'
     | '/images/'
     | '/tags/'
     | '/blog-posts/edit-post/$postId'
@@ -321,11 +342,13 @@ export interface FileRouteTypes {
     | '/'
     | '/api-keys/$keyId'
     | '/blog-posts/create-post'
+    | '/documents/upload'
     | '/images/upload'
     | '/library/create-library'
     | '/user/$userId'
     | '/api-keys'
     | '/blog-posts'
+    | '/documents'
     | '/images'
     | '/tags'
     | '/blog-posts/edit-post/$postId'
@@ -351,11 +374,13 @@ export interface FileRouteTypes {
     | '/_dashboard/'
     | '/_dashboard/api-keys/$keyId'
     | '/_dashboard/blog-posts/create-post'
+    | '/_dashboard/documents/upload'
     | '/_dashboard/images/upload'
     | '/_dashboard/library/create-library'
     | '/_dashboard/user/$userId'
     | '/_dashboard/api-keys/'
     | '/_dashboard/blog-posts/'
+    | '/_dashboard/documents/'
     | '/_dashboard/images/'
     | '/_dashboard/tags/'
     | '/_dashboard/blog-posts/edit-post/$postId'
@@ -450,6 +475,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardImagesIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/documents/': {
+      id: '/_dashboard/documents/'
+      path: '/documents'
+      fullPath: '/documents/'
+      preLoaderRoute: typeof DashboardDocumentsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/blog-posts/': {
       id: '/_dashboard/blog-posts/'
       path: '/blog-posts'
@@ -483,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/images/upload'
       fullPath: '/images/upload'
       preLoaderRoute: typeof DashboardImagesUploadRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/documents/upload': {
+      id: '/_dashboard/documents/upload'
+      path: '/documents/upload'
+      fullPath: '/documents/upload'
+      preLoaderRoute: typeof DashboardDocumentsUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/blog-posts/create-post': {
@@ -586,11 +625,13 @@ interface DashboardRouteChildren {
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardApiKeysKeyIdRoute: typeof DashboardApiKeysKeyIdRoute
   DashboardBlogPostsCreatePostRoute: typeof DashboardBlogPostsCreatePostRoute
+  DashboardDocumentsUploadRoute: typeof DashboardDocumentsUploadRoute
   DashboardImagesUploadRoute: typeof DashboardImagesUploadRoute
   DashboardLibraryCreateLibraryRoute: typeof DashboardLibraryCreateLibraryRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
   DashboardApiKeysIndexRoute: typeof DashboardApiKeysIndexRoute
   DashboardBlogPostsIndexRoute: typeof DashboardBlogPostsIndexRoute
+  DashboardDocumentsIndexRoute: typeof DashboardDocumentsIndexRoute
   DashboardImagesIndexRoute: typeof DashboardImagesIndexRoute
   DashboardTagsIndexRoute: typeof DashboardTagsIndexRoute
   DashboardBlogPostsEditPostPostIdRoute: typeof DashboardBlogPostsEditPostPostIdRoute
@@ -613,11 +654,13 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardApiKeysKeyIdRoute: DashboardApiKeysKeyIdRoute,
   DashboardBlogPostsCreatePostRoute: DashboardBlogPostsCreatePostRoute,
+  DashboardDocumentsUploadRoute: DashboardDocumentsUploadRoute,
   DashboardImagesUploadRoute: DashboardImagesUploadRoute,
   DashboardLibraryCreateLibraryRoute: DashboardLibraryCreateLibraryRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
   DashboardApiKeysIndexRoute: DashboardApiKeysIndexRoute,
   DashboardBlogPostsIndexRoute: DashboardBlogPostsIndexRoute,
+  DashboardDocumentsIndexRoute: DashboardDocumentsIndexRoute,
   DashboardImagesIndexRoute: DashboardImagesIndexRoute,
   DashboardTagsIndexRoute: DashboardTagsIndexRoute,
   DashboardBlogPostsEditPostPostIdRoute: DashboardBlogPostsEditPostPostIdRoute,

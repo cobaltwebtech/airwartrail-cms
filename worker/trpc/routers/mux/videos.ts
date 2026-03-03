@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, inArray, asc, desc, sql } from "drizzle-orm";
 import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
-import { video, videoTrack, videoTagAssignment, videoTag, muxLibrary } from "@/db/video-schema";
+import { video, videoTrack, videoTagAssignment, videoTag, muxLibrary, playlistItem } from "@/db/video-schema";
 import { generateVideoId } from "@/worker/lib/generate-id";
 import {
 	getVideosDb,
@@ -1056,6 +1056,11 @@ export const videosRouter = t.router({
 					.update(video)
 					.set({ isDeleted: true, deletedAt: new Date() })
 					.where(eq(video.id, videoId));
+
+				// Remove video from all playlists
+				await db
+					.delete(playlistItem)
+					.where(eq(playlistItem.videoId, videoId));
 
 				return { success: true };
 			} catch (error) {
