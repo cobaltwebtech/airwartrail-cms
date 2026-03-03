@@ -530,7 +530,8 @@ export const playlistsRouter = t.router({
 		}),
 
 	/**
-	 * Delete a playlist (soft delete)
+	 * Delete a playlist (hard delete)
+	 * Permanently removes the playlist and all associated playlist items from the database
 	 */
 	deletePlaylist: protectedProcedure
 		.use(createPermissionMiddleware('playlists', ['delete']))
@@ -553,7 +554,6 @@ export const playlistsRouter = t.router({
 						and(
 							eq(playlist.id, playlistId),
 							eq(playlist.libraryId, libraryId),
-							eq(playlist.isDeleted, false),
 						),
 					)
 					.limit(1);
@@ -565,14 +565,7 @@ export const playlistsRouter = t.router({
 					});
 				}
 
-				await db
-					.update(playlist)
-					.set({
-						isDeleted: true,
-						deletedAt: new Date(),
-						updatedAt: new Date(),
-					})
-					.where(eq(playlist.id, playlistId));
+				await db.delete(playlist).where(eq(playlist.id, playlistId));
 
 				return { success: true };
 			} catch (error) {
