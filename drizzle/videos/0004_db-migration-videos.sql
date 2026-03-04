@@ -1,0 +1,1 @@
+ALTER TABLE `video` ADD `scheduled_release_date` integer;

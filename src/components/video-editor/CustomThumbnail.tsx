@@ -270,7 +270,7 @@ const CustomThumbnail: React.FC<CustomThumbnailProps> = ({
 	const existingThumbnailUrl = thumbnailData?.customThumbnailUrl;
 
 	return (
-		<Card className="col-span-2">
+		<Card className="col-span-3">
 			<CardHeader>
 				<CardTitle>Custom Thumbnail</CardTitle>
 				<CardDescription>

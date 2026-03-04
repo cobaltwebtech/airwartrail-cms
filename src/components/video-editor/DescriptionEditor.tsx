@@ -122,14 +122,16 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 			{isEditing ? (
 				<CardContent className="space-y-4">
 					<div className="space-y-2">
-						<Textarea
-							value={description}
-							onChange={(e) => setDescription(e.target.value)}
-							placeholder="Add a description for your video..."
-							className={isOverLimit ? 'border-destructive' : ''}
-							aria-invalid={isOverLimit || errors.length > 0}
-							rows={6}
-						/>
+						<div className="max-h-90 overflow-y-auto border rounded-md">
+							<Textarea
+								value={description}
+								onChange={(e) => setDescription(e.target.value)}
+								placeholder="Add a description for your video..."
+								className={isOverLimit ? 'border-destructive' : 'border-0'}
+								aria-invalid={isOverLimit || errors.length > 0}
+								rows={6}
+							/>
+						</div>
 						<div className="flex items-center justify-between text-sm">
 							<div className="flex items-center gap-2">
 								<span
@@ -178,15 +180,17 @@ const DescriptionEditor: React.FC<DescriptionEditorProps> = ({
 				</CardContent>
 			) : (
 				<CardContent className="text-sm">
-					{description ? (
-						<p className="whitespace-pre-wrap text-balance bg-secondary p-2 rounded-md">
-							{description}
-						</p>
-					) : (
-						<p className="italic text-muted-foreground">
-							No description added yet.
-						</p>
-					)}
+					<div className="max-h-90 overflow-y-auto border rounded-md">
+						{description ? (
+							<p className="whitespace-pre-wrap text-balance bg-secondary p-2 rounded-md">
+								{description}
+							</p>
+						) : (
+							<p className="italic text-muted-foreground p-2">
+								No description added yet.
+							</p>
+						)}
+					</div>
 				</CardContent>
 			)}
 		</Card>

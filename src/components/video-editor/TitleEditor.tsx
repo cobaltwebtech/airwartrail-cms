@@ -20,7 +20,7 @@ const titleSchema = z
 	.string()
 	.min(1, 'Title cannot be empty')
 	.max(100, 'Title must be 100 characters or less')
-	.regex(/^[a-zA-Z0-9]+$/, 'Title can only contain letters and numbers');
+	.regex(/^[a-zA-Z0-9\s.,!?'"\-&:;]+$/, 'Title contains invalid characters');
 
 interface EditTitleProps {
 	videoId: string; // Internal database ID

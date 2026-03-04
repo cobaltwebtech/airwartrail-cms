@@ -18,17 +18,20 @@ import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
 import { Route as DashboardPlaylistsRouteImport } from './routes/_dashboard/playlists'
 import { Route as DashboardLibrariesRouteImport } from './routes/_dashboard/libraries'
 import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
+import { Route as DashboardPagesIndexRouteImport } from './routes/_dashboard/pages/index'
 import { Route as DashboardImagesIndexRouteImport } from './routes/_dashboard/images/index'
 import { Route as DashboardDocumentsIndexRouteImport } from './routes/_dashboard/documents/index'
 import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
 import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
+import { Route as DashboardPagesCreatePageRouteImport } from './routes/_dashboard/pages/create-page'
 import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
 import { Route as DashboardImagesUploadRouteImport } from './routes/_dashboard/images/upload'
 import { Route as DashboardDocumentsUploadRouteImport } from './routes/_dashboard/documents/upload'
 import { Route as DashboardBlogPostsCreatePostRouteImport } from './routes/_dashboard/blog-posts/create-post'
 import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
 import { Route as DashboardImagesAlbumsIndexRouteImport } from './routes/_dashboard/images/albums/index'
+import { Route as DashboardPagesEditPagePageIdRouteImport } from './routes/_dashboard/pages/edit-page/$pageId'
 import { Route as DashboardLibraryEditLibraryLibraryIdRouteImport } from './routes/_dashboard/library/edit-library/$libraryId'
 import { Route as DashboardLibraryLibraryIdVideosRouteImport } from './routes/_dashboard/library/$libraryId/videos'
 import { Route as DashboardLibraryLibraryIdPlaylistsRouteImport } from './routes/_dashboard/library/$libraryId/playlists'
@@ -84,6 +87,11 @@ const DashboardTagsIndexRoute = DashboardTagsIndexRouteImport.update({
   path: '/tags/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardPagesIndexRoute = DashboardPagesIndexRouteImport.update({
+  id: '/pages/',
+  path: '/pages/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardImagesIndexRoute = DashboardImagesIndexRouteImport.update({
   id: '/images/',
   path: '/images/',
@@ -109,6 +117,12 @@ const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
   path: '/user/$userId',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardPagesCreatePageRoute =
+  DashboardPagesCreatePageRouteImport.update({
+    id: '/pages/create-page',
+    path: '/pages/create-page',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardLibraryCreateLibraryRoute =
   DashboardLibraryCreateLibraryRouteImport.update({
     id: '/library/create-library',
@@ -141,6 +155,12 @@ const DashboardImagesAlbumsIndexRoute =
   DashboardImagesAlbumsIndexRouteImport.update({
     id: '/images/albums/',
     path: '/images/albums/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardPagesEditPagePageIdRoute =
+  DashboardPagesEditPagePageIdRouteImport.update({
+    id: '/pages/edit-page/$pageId',
+    path: '/pages/edit-page/$pageId',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardLibraryEditLibraryLibraryIdRoute =
@@ -217,11 +237,13 @@ export interface FileRoutesByFullPath {
   '/documents/upload': typeof DashboardDocumentsUploadRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
+  '/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
   '/api-keys/': typeof DashboardApiKeysIndexRoute
   '/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/documents/': typeof DashboardDocumentsIndexRoute
   '/images/': typeof DashboardImagesIndexRoute
+  '/pages/': typeof DashboardPagesIndexRoute
   '/tags/': typeof DashboardTagsIndexRoute
   '/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
   '/images/albums/$albumId': typeof DashboardImagesAlbumsAlbumIdRoute
@@ -231,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
+  '/pages/edit-page/$pageId': typeof DashboardPagesEditPagePageIdRoute
   '/images/albums/': typeof DashboardImagesAlbumsIndexRoute
   '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
   '/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
@@ -248,11 +271,13 @@ export interface FileRoutesByTo {
   '/documents/upload': typeof DashboardDocumentsUploadRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
+  '/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
   '/api-keys': typeof DashboardApiKeysIndexRoute
   '/blog-posts': typeof DashboardBlogPostsIndexRoute
   '/documents': typeof DashboardDocumentsIndexRoute
   '/images': typeof DashboardImagesIndexRoute
+  '/pages': typeof DashboardPagesIndexRoute
   '/tags': typeof DashboardTagsIndexRoute
   '/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
   '/images/albums/$albumId': typeof DashboardImagesAlbumsAlbumIdRoute
@@ -262,6 +287,7 @@ export interface FileRoutesByTo {
   '/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
+  '/pages/edit-page/$pageId': typeof DashboardPagesEditPagePageIdRoute
   '/images/albums': typeof DashboardImagesAlbumsIndexRoute
   '/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
   '/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
@@ -281,11 +307,13 @@ export interface FileRoutesById {
   '/_dashboard/documents/upload': typeof DashboardDocumentsUploadRoute
   '/_dashboard/images/upload': typeof DashboardImagesUploadRoute
   '/_dashboard/library/create-library': typeof DashboardLibraryCreateLibraryRoute
+  '/_dashboard/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
   '/_dashboard/api-keys/': typeof DashboardApiKeysIndexRoute
   '/_dashboard/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/_dashboard/documents/': typeof DashboardDocumentsIndexRoute
   '/_dashboard/images/': typeof DashboardImagesIndexRoute
+  '/_dashboard/pages/': typeof DashboardPagesIndexRoute
   '/_dashboard/tags/': typeof DashboardTagsIndexRoute
   '/_dashboard/blog-posts/edit-post/$postId': typeof DashboardBlogPostsEditPostPostIdRoute
   '/_dashboard/images/albums/$albumId': typeof DashboardImagesAlbumsAlbumIdRoute
@@ -295,6 +323,7 @@ export interface FileRoutesById {
   '/_dashboard/library/$libraryId/playlists': typeof DashboardLibraryLibraryIdPlaylistsRoute
   '/_dashboard/library/$libraryId/videos': typeof DashboardLibraryLibraryIdVideosRoute
   '/_dashboard/library/edit-library/$libraryId': typeof DashboardLibraryEditLibraryLibraryIdRoute
+  '/_dashboard/pages/edit-page/$pageId': typeof DashboardPagesEditPagePageIdRoute
   '/_dashboard/images/albums/': typeof DashboardImagesAlbumsIndexRoute
   '/_dashboard/library/$libraryId/edit-video/$videoId': typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
   '/_dashboard/library/$libraryId/playlist/$playlistId': typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
@@ -314,11 +343,13 @@ export interface FileRouteTypes {
     | '/documents/upload'
     | '/images/upload'
     | '/library/create-library'
+    | '/pages/create-page'
     | '/user/$userId'
     | '/api-keys/'
     | '/blog-posts/'
     | '/documents/'
     | '/images/'
+    | '/pages/'
     | '/tags/'
     | '/blog-posts/edit-post/$postId'
     | '/images/albums/$albumId'
@@ -328,6 +359,7 @@ export interface FileRouteTypes {
     | '/library/$libraryId/playlists'
     | '/library/$libraryId/videos'
     | '/library/edit-library/$libraryId'
+    | '/pages/edit-page/$pageId'
     | '/images/albums/'
     | '/library/$libraryId/edit-video/$videoId'
     | '/library/$libraryId/playlist/$playlistId'
@@ -345,11 +377,13 @@ export interface FileRouteTypes {
     | '/documents/upload'
     | '/images/upload'
     | '/library/create-library'
+    | '/pages/create-page'
     | '/user/$userId'
     | '/api-keys'
     | '/blog-posts'
     | '/documents'
     | '/images'
+    | '/pages'
     | '/tags'
     | '/blog-posts/edit-post/$postId'
     | '/images/albums/$albumId'
@@ -359,6 +393,7 @@ export interface FileRouteTypes {
     | '/library/$libraryId/playlists'
     | '/library/$libraryId/videos'
     | '/library/edit-library/$libraryId'
+    | '/pages/edit-page/$pageId'
     | '/images/albums'
     | '/library/$libraryId/edit-video/$videoId'
     | '/library/$libraryId/playlist/$playlistId'
@@ -377,11 +412,13 @@ export interface FileRouteTypes {
     | '/_dashboard/documents/upload'
     | '/_dashboard/images/upload'
     | '/_dashboard/library/create-library'
+    | '/_dashboard/pages/create-page'
     | '/_dashboard/user/$userId'
     | '/_dashboard/api-keys/'
     | '/_dashboard/blog-posts/'
     | '/_dashboard/documents/'
     | '/_dashboard/images/'
+    | '/_dashboard/pages/'
     | '/_dashboard/tags/'
     | '/_dashboard/blog-posts/edit-post/$postId'
     | '/_dashboard/images/albums/$albumId'
@@ -391,6 +428,7 @@ export interface FileRouteTypes {
     | '/_dashboard/library/$libraryId/playlists'
     | '/_dashboard/library/$libraryId/videos'
     | '/_dashboard/library/edit-library/$libraryId'
+    | '/_dashboard/pages/edit-page/$pageId'
     | '/_dashboard/images/albums/'
     | '/_dashboard/library/$libraryId/edit-video/$videoId'
     | '/_dashboard/library/$libraryId/playlist/$playlistId'
@@ -468,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTagsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/pages/': {
+      id: '/_dashboard/pages/'
+      path: '/pages'
+      fullPath: '/pages/'
+      preLoaderRoute: typeof DashboardPagesIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/images/': {
       id: '/_dashboard/images/'
       path: '/images'
@@ -501,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/user/$userId'
       fullPath: '/user/$userId'
       preLoaderRoute: typeof DashboardUserUserIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pages/create-page': {
+      id: '/_dashboard/pages/create-page'
+      path: '/pages/create-page'
+      fullPath: '/pages/create-page'
+      preLoaderRoute: typeof DashboardPagesCreatePageRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/library/create-library': {
@@ -543,6 +595,13 @@ declare module '@tanstack/react-router' {
       path: '/images/albums'
       fullPath: '/images/albums/'
       preLoaderRoute: typeof DashboardImagesAlbumsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pages/edit-page/$pageId': {
+      id: '/_dashboard/pages/edit-page/$pageId'
+      path: '/pages/edit-page/$pageId'
+      fullPath: '/pages/edit-page/$pageId'
+      preLoaderRoute: typeof DashboardPagesEditPagePageIdRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/library/edit-library/$libraryId': {
@@ -628,11 +687,13 @@ interface DashboardRouteChildren {
   DashboardDocumentsUploadRoute: typeof DashboardDocumentsUploadRoute
   DashboardImagesUploadRoute: typeof DashboardImagesUploadRoute
   DashboardLibraryCreateLibraryRoute: typeof DashboardLibraryCreateLibraryRoute
+  DashboardPagesCreatePageRoute: typeof DashboardPagesCreatePageRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
   DashboardApiKeysIndexRoute: typeof DashboardApiKeysIndexRoute
   DashboardBlogPostsIndexRoute: typeof DashboardBlogPostsIndexRoute
   DashboardDocumentsIndexRoute: typeof DashboardDocumentsIndexRoute
   DashboardImagesIndexRoute: typeof DashboardImagesIndexRoute
+  DashboardPagesIndexRoute: typeof DashboardPagesIndexRoute
   DashboardTagsIndexRoute: typeof DashboardTagsIndexRoute
   DashboardBlogPostsEditPostPostIdRoute: typeof DashboardBlogPostsEditPostPostIdRoute
   DashboardImagesAlbumsAlbumIdRoute: typeof DashboardImagesAlbumsAlbumIdRoute
@@ -642,6 +703,7 @@ interface DashboardRouteChildren {
   DashboardLibraryLibraryIdPlaylistsRoute: typeof DashboardLibraryLibraryIdPlaylistsRoute
   DashboardLibraryLibraryIdVideosRoute: typeof DashboardLibraryLibraryIdVideosRoute
   DashboardLibraryEditLibraryLibraryIdRoute: typeof DashboardLibraryEditLibraryLibraryIdRoute
+  DashboardPagesEditPagePageIdRoute: typeof DashboardPagesEditPagePageIdRoute
   DashboardImagesAlbumsIndexRoute: typeof DashboardImagesAlbumsIndexRoute
   DashboardLibraryLibraryIdEditVideoVideoIdRoute: typeof DashboardLibraryLibraryIdEditVideoVideoIdRoute
   DashboardLibraryLibraryIdPlaylistPlaylistIdRoute: typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRoute
@@ -657,11 +719,13 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardDocumentsUploadRoute: DashboardDocumentsUploadRoute,
   DashboardImagesUploadRoute: DashboardImagesUploadRoute,
   DashboardLibraryCreateLibraryRoute: DashboardLibraryCreateLibraryRoute,
+  DashboardPagesCreatePageRoute: DashboardPagesCreatePageRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
   DashboardApiKeysIndexRoute: DashboardApiKeysIndexRoute,
   DashboardBlogPostsIndexRoute: DashboardBlogPostsIndexRoute,
   DashboardDocumentsIndexRoute: DashboardDocumentsIndexRoute,
   DashboardImagesIndexRoute: DashboardImagesIndexRoute,
+  DashboardPagesIndexRoute: DashboardPagesIndexRoute,
   DashboardTagsIndexRoute: DashboardTagsIndexRoute,
   DashboardBlogPostsEditPostPostIdRoute: DashboardBlogPostsEditPostPostIdRoute,
   DashboardImagesAlbumsAlbumIdRoute: DashboardImagesAlbumsAlbumIdRoute,
@@ -674,6 +738,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLibraryLibraryIdVideosRoute: DashboardLibraryLibraryIdVideosRoute,
   DashboardLibraryEditLibraryLibraryIdRoute:
     DashboardLibraryEditLibraryLibraryIdRoute,
+  DashboardPagesEditPagePageIdRoute: DashboardPagesEditPagePageIdRoute,
   DashboardImagesAlbumsIndexRoute: DashboardImagesAlbumsIndexRoute,
   DashboardLibraryLibraryIdEditVideoVideoIdRoute:
     DashboardLibraryLibraryIdEditVideoVideoIdRoute,

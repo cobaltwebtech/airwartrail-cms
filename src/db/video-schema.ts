@@ -118,6 +118,9 @@ export const video = sqliteTable(
 			.default(false)
 			.notNull(),
 		publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+		scheduledReleaseDate: integer('scheduled_release_date', {
+			mode: 'timestamp_ms',
+		}),
 		// Analytics (cached from Mux Data or custom tracking)
 		viewCount: integer('view_count').default(0),
 		viewCountSyncedAt: integer('view_count_synced_at', {

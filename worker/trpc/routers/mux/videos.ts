@@ -242,6 +242,7 @@ export const videosRouter = t.router({
 				description: z.string().optional(),
 				isPublished: z.boolean().optional(),
 				publishedAt: z.string().nullable().optional(),
+				scheduledReleaseDate: z.string().nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -283,6 +284,9 @@ export const videosRouter = t.router({
 				}
 				if (input.publishedAt !== undefined) {
 					updateData.publishedAt = input.publishedAt ? new Date(input.publishedAt) : null;
+				}
+				if (input.scheduledReleaseDate !== undefined) {
+					updateData.scheduledReleaseDate = input.scheduledReleaseDate ? new Date(input.scheduledReleaseDate) : null;
 				}
 
 				// Only update if there are fields to update
@@ -332,6 +336,7 @@ export const videosRouter = t.router({
 						viewCount: video.viewCount,
 						isPublished: video.isPublished,
 						publishedAt: video.publishedAt,
+						scheduledReleaseDate: video.scheduledReleaseDate,
 						viewCountSyncedAt: video.viewCountSyncedAt,
 						createdAt: video.createdAt,
 						updatedAt: video.updatedAt,
@@ -666,6 +671,7 @@ export const videosRouter = t.router({
 						playbackPolicy: video.playbackPolicy,
 						isPublished: video.isPublished,
 						publishedAt: video.publishedAt,
+						scheduledReleaseDate: video.scheduledReleaseDate,
 						viewCount: video.viewCount,
 						createdAt: video.createdAt,
 						updatedAt: video.updatedAt,
@@ -734,6 +740,7 @@ export const videosRouter = t.router({
 					policy: v.playbackPolicy as "public" | "signed" | undefined,
 					isPublished: v.isPublished,
 					publishedAt: v.publishedAt?.toISOString(),
+					scheduledReleaseDate: v.scheduledReleaseDate?.toISOString(),
 					views: v.viewCount ?? 0,
 					tagCount: v.tagCount ?? 0,
 					tags: includeTags ? (videoTagsMap.get(v.id) ?? []) : undefined,
@@ -791,6 +798,7 @@ export const videosRouter = t.router({
 						playbackPolicy: video.playbackPolicy,
 						isPublished: video.isPublished,
 						publishedAt: video.publishedAt,
+						scheduledReleaseDate: video.scheduledReleaseDate,
 						viewCount: video.viewCount,
 						viewCountSyncedAt: video.viewCountSyncedAt,
 						totalWatchTimeMs: video.totalWatchTimeMs,
@@ -900,6 +908,7 @@ export const videosRouter = t.router({
 					// Publishing status
 					isPublished: result.isPublished,
 					publishedAt: result.publishedAt?.toISOString(),
+					scheduledReleaseDate: result.scheduledReleaseDate?.toISOString(),
 					// Analytics
 					views: currentViewCount,
 					viewCountSyncedAt: result.viewCountSyncedAt?.toISOString(),
@@ -935,6 +944,7 @@ export const videosRouter = t.router({
 				description: z.string().optional(),
 				isPublished: z.boolean().optional(),
 				publishedAt: z.string().nullable().optional(),
+				scheduledReleaseDate: z.string().nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -975,6 +985,9 @@ export const videosRouter = t.router({
 				}
 				if (updateFields.publishedAt !== undefined) {
 					updateData.publishedAt = updateFields.publishedAt ? new Date(updateFields.publishedAt) : null;
+				}
+				if (updateFields.scheduledReleaseDate !== undefined) {
+					updateData.scheduledReleaseDate = updateFields.scheduledReleaseDate ? new Date(updateFields.scheduledReleaseDate) : null;
 				}
 
 				if (Object.keys(updateData).length === 0) {

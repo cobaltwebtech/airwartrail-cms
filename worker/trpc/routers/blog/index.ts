@@ -157,7 +157,7 @@ export const blogRouter = t.router({
 	 * Create a new blog post
 	 */
 	create: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(createPostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -229,7 +229,7 @@ export const blogRouter = t.router({
 	 * Update an existing blog post
 	 */
 	update: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(updatePostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -347,7 +347,7 @@ export const blogRouter = t.router({
 	 * List blog posts with filtering and pagination (CMS use)
 	 */
 	list: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["read"]))
+		.use(createPermissionMiddleware("content", ["read"]))
 		.input(listPostsSchema.optional())
 		.query(async ({ ctx, input }) => {
 		const db = getBlogDb(ctx.env);
@@ -437,7 +437,7 @@ export const blogRouter = t.router({
 	 * List published blog posts (public-facing) - filters for posts where publishedAt is now or older
 	 */
 	listFiltered: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["read"]))
+		.use(createPermissionMiddleware("content", ["read"]))
 		.input(listPostsSchema.optional())
 		.query(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -521,7 +521,7 @@ export const blogRouter = t.router({
 	 * Delete a blog post
 	 */
 	delete: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["delete"]))
+		.use(createPermissionMiddleware("content", ["delete"]))
 		.input(deletePostSchema)
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -554,7 +554,7 @@ export const blogRouter = t.router({
 	 * Publish a blog post
 	 */
 	publish: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -597,7 +597,7 @@ export const blogRouter = t.router({
 	 * Unpublish a blog post (move to draft)
 	 */
 	unpublish: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -636,7 +636,7 @@ export const blogRouter = t.router({
 	 * Toggle featured status
 	 */
 	toggleFeatured: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const db = getBlogDb(ctx.env);
@@ -672,7 +672,7 @@ export const blogRouter = t.router({
 	 * Set the featured image URL for a blog post
 	 */
 	setFeaturedImage: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["write"]))
+		.use(createPermissionMiddleware("content", ["write"]))
 		.input(
 			z.object({
 				postId: z.string(),
@@ -725,7 +725,7 @@ export const blogRouter = t.router({
 	 * Clear the featured image URL from a blog post
 	 */
 	removeFeaturedImage: protectedProcedure
-		.use(createPermissionMiddleware("blog", ["delete"]))
+		.use(createPermissionMiddleware("content", ["delete"]))
 		.input(
 			z.object({
 				postId: z.string(),

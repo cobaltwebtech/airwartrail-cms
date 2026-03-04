@@ -71,7 +71,7 @@ const PlaybackPolicyEditor: React.FC<PlaybackPolicyEditorProps> = ({
 	};
 
 	return (
-		<Card className="col-span-3">
+		<Card className="col-span-full">
 			<CardHeader>
 				<CardTitle>Playback Policy</CardTitle>
 				<CardDescription>

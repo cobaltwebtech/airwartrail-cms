@@ -8,6 +8,53 @@ import {
 } from 'drizzle-orm/sqlite-core';
 
 /**
+ * Pages Table Schema
+ * Stores static pages for the CMS
+ */
+export const pages = sqliteTable(
+	'pages',
+	{
+		// Primary identifier
+		id: text('id').primaryKey(),
+
+		// SEO and URL
+		slug: text('slug').notNull().unique(),
+		title: text('title').notNull(),
+
+		// Content
+		pageContent: text('page_content', { mode: 'json' }), // JSON content data for rich text editor
+
+		// Publishing
+		publishStatus: text('publish_status', {
+			enum: ['published', 'unpublished'],
+		})
+			.default('unpublished')
+			.notNull(),
+		publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
+
+		// Author and ownership
+		author: text('author').notNull(),
+		authorId: text('author_id'),
+
+		// Timestamps
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		index('pages_slug_idx').on(table.slug),
+		index('pages_publish_status_idx').on(table.publishStatus),
+		index('pages_author_idx').on(table.author),
+		index('pages_published_at_idx').on(table.publishedAt),
+		index('pages_created_at_idx').on(table.createdAt),
+	],
+);
+
+/**
  * Blog Posts Table Schema
  * Stores blog posts for the CMS
  */

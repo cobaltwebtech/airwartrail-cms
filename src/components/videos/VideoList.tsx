@@ -135,6 +135,9 @@ const initialSettings = getStoredSettings();
 export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState('');
+	const [filterStatus, setFilterStatus] = useState<
+		'all' | 'published' | 'unpublished'
+	>('all');
 	const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -246,14 +249,31 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 
 	const filteredVideos = useMemo(() => {
 		return videoArray
-			.filter((video) =>
-				video.title.toLowerCase().includes(searchTerm.toLowerCase()),
-			)
+			.filter((video) => {
+				// Filter by search term
+				const matchesSearch = video.title
+					.toLowerCase()
+					.includes(searchTerm.toLowerCase());
+				// Filter by published status
+				const matchesStatus =
+					filterStatus === 'all' ||
+					(filterStatus === 'published' && video.isPublished) ||
+					(filterStatus === 'unpublished' && !video.isPublished);
+				return matchesSearch && matchesStatus;
+			})
 			.sort((a, b) => {
 				if (sortCriteria === 'title') {
 					return sortDirection === 'asc'
 						? a.title.localeCompare(b.title)
 						: b.title.localeCompare(a.title);
+				} else if (sortCriteria === 'scheduledRelease') {
+					const aDate = a.scheduledReleaseDate
+						? new Date(a.scheduledReleaseDate).getTime()
+						: 0;
+					const bDate = b.scheduledReleaseDate
+						? new Date(b.scheduledReleaseDate).getTime()
+						: 0;
+					return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
 				} else {
 					return sortDirection === 'asc'
 						? new Date(a.dateUploaded || 0).getTime() -
@@ -262,7 +282,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								new Date(a.dateUploaded || 0).getTime();
 				}
 			});
-	}, [videoArray, searchTerm, sortCriteria, sortDirection]);
+	}, [videoArray, searchTerm, filterStatus, sortCriteria, sortDirection]);
 
 	// Extract video IDs for batch thumbnail query
 	const videoIds = useMemo(
@@ -420,24 +440,6 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				),
 			},
 			{
-				accessorKey: 'views',
-				header: ({ column }) => (
-					<Button
-						variant="ghost"
-						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-						className="-ml-4"
-					>
-						Views
-						<ArrowUpDown className="ml-2 h-4 w-4" />
-					</Button>
-				),
-				cell: ({ row }) => (
-					<Badge variant="secondary">
-						{row.original.views?.toLocaleString() ?? 0}
-					</Badge>
-				),
-			},
-			{
 				accessorKey: 'status',
 				header: 'Status',
 				cell: ({ row }) => {
@@ -469,7 +471,16 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			},
 			{
 				accessorKey: 'isPublished',
-				header: 'Visibility',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Visibility
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
 				cell: ({ row }) => (
 					<Badge variant={row.original.isPublished ? 'default' : 'secondary'}>
 						{row.original.isPublished ? 'Published' : 'Unpublished'}
@@ -491,6 +502,26 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 				cell: ({ row }) => (
 					<span className="text-muted-foreground text-sm">
 						{formatDate(row.original.createdAt)}
+					</span>
+				),
+			},
+			{
+				accessorKey: 'scheduledReleaseDate',
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+						className="-ml-4"
+					>
+						Scheduled
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<span className="text-muted-foreground text-sm">
+						{row.original.scheduledReleaseDate
+							? formatDate(row.original.scheduledReleaseDate)
+							: '-'}
 					</span>
 				),
 			},
@@ -594,13 +625,29 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between gap-2">
-				<Input
-					placeholder="Search videos..."
-					value={searchTerm}
-					onChange={(e) => setSearchTerm(e.target.value)}
-					className="max-w-sm"
-				/>
+				<div className="flex gap-2">
+					<Input
+						placeholder="Search videos..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="max-w-sm"
+					/>
+				</div>
 				<div className="flex gap-x-2">
+					<Select
+						value={filterStatus}
+						onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}
+					>
+						<SelectTrigger className="w-fit">
+							<SelectValue placeholder="Filter by" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">View All Videos</SelectItem>
+							<SelectItem value="published">Published</SelectItem>
+							<SelectItem value="unpublished">Unpublished</SelectItem>
+						</SelectContent>
+					</Select>
+
 					{viewMode === 'grid' && (
 						<>
 							<Select value={sortCriteria} onValueChange={setSortCriteria}>
@@ -609,6 +656,9 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="date">Sort by Date</SelectItem>
+									<SelectItem value="scheduledRelease">
+										Sort by Scheduled
+									</SelectItem>
 									<SelectItem value="title">Sort by Title</SelectItem>
 								</SelectContent>
 							</Select>
@@ -923,7 +973,17 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 													</CardDescription>
 												</CardHeader>
 												<CardFooter className="text-muted-foreground p-4 pt-0 text-xs">
-													Uploaded on {formatDate(video.createdAt)}
+													<div className="flex flex-col gap-1">
+														<span>
+															Uploaded on {formatDate(video.createdAt)}
+														</span>
+														{video.scheduledReleaseDate && (
+															<span className="text-primary">
+																Scheduled:{' '}
+																{formatDate(video.scheduledReleaseDate)}
+															</span>
+														)}
+													</div>
 												</CardFooter>
 											</Card>
 										))}

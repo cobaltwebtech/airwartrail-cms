@@ -17,6 +17,7 @@ import CustomThumbnail from '@/components/video-editor/CustomThumbnail';
 import DescriptionEditor from '@/components/video-editor/DescriptionEditor';
 import PlaybackPolicyEditor from '@/components/video-editor/PlaybackPolicyEditor';
 import PublishStatus from '@/components/video-editor/PublishStatus';
+import ScheduledRelease from '@/components/video-editor/ScheduledRelease';
 import TagEditor from '@/components/video-editor/TagEditor';
 import TitleEditor from '@/components/video-editor/TitleEditor';
 import VideoData from '@/components/video-editor/VideoData';
@@ -196,6 +197,11 @@ function VideoEditorPage() {
 							libraryId={libraryId}
 							initialTitle={title}
 							onTitleUpdate={handleTitleUpdate}
+						/>
+						<ScheduledRelease
+							videoId={videoId}
+							libraryId={libraryId}
+							initialScheduledReleaseDate={videoData?.scheduledReleaseDate}
 						/>
 						<TagEditor
 							videoId={videoId}

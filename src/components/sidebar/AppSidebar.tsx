@@ -2,7 +2,9 @@ import { Link } from '@tanstack/react-router';
 import {
 	CirclePlus,
 	FilePlus,
+	FilePlusCorner,
 	Files,
+	FileText,
 	GalleryHorizontalEnd,
 	Images,
 	KeyRound,
@@ -60,6 +62,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			icon: GalleryHorizontalEnd,
 		},
 		{
+			title: 'Documents',
+			url: '/documents',
+			icon: Files,
+		},
+		{
 			title: 'Blog Posts',
 			url: '/blog-posts',
 			icon: NotebookPen,
@@ -70,9 +77,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			icon: FilePlus,
 		},
 		{
-			title: 'Documents',
-			url: '/documents',
-			icon: Files,
+			title: 'Updates List',
+			url: '/pages',
+			icon: FileText,
+		},
+		{
+			title: 'Create Update',
+			url: '/pages/create-page',
+			icon: FilePlusCorner,
 		},
 		{
 			title: 'Create Library',

@@ -296,13 +296,13 @@ export const apiKeysRouter = t.router({
 						{ id: "write", label: "Write", description: "Update library settings" },
 					],
 				},
-				blog: {
-					label: "Blog",
-					description: "Access to blog management API",
+				content: {
+					label: "Content",
+					description: "Access to content management API",
 					actions: [
-						{ id: "read", label: "Read", description: "View blog posts" },
-						{ id: "write", label: "Write", description: "Create and update blog posts" },
-						{ id: "delete", label: "Delete", description: "Delete blog posts" },
+						{ id: "read", label: "Read", description: "View posts and pages" },
+						{ id: "write", label: "Write", description: "Create and update posts and pages" },
+						{ id: "delete", label: "Delete", description: "Delete posts and pages" },
 					],
 				},
 				images: {

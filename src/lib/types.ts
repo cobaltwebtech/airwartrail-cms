@@ -41,6 +41,7 @@ export interface Video {
 	policy?: PlaybackPolicy | null;
 	isPublished?: boolean;
 	publishedAt?: string | null;
+	scheduledReleaseDate?: string | null;
 	// Video properties
 	aspectRatio?: string | null;
 	maxWidth?: number | null;
