@@ -1,6 +1,7 @@
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
+import { FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
@@ -59,6 +60,8 @@ export function TiptapEditor({
 			TextAlign.configure({
 				types: ['heading', 'paragraph'],
 			}),
+			TextStyle,
+			FontSize,
 		],
 		content: content as string | null,
 		editable: !disabled,

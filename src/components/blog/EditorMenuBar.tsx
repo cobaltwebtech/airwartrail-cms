@@ -29,6 +29,13 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import {
 	Tooltip,
@@ -49,6 +56,22 @@ interface MenuButtonProps {
 	tooltip: string;
 	children: React.ReactNode;
 }
+
+const FONT_SIZES = [
+	{ label: '12px', value: '12px' },
+	{ label: '14px', value: '14px' },
+	{ label: '16px', value: '16px' },
+	{ label: '18px', value: '18px' },
+	{ label: '20px', value: '20px' },
+	{ label: '24px', value: '24px' },
+	{ label: '30px', value: '30px' },
+	{ label: '36px', value: '36px' },
+	{ label: '48px', value: '48px' },
+	{ label: '60px', value: '60px' },
+	{ label: '72px', value: '72px' },
+];
+
+const DEFAULT_FONT_SIZE = '16px';
 
 function MenuButton({
 	onClick,
@@ -86,6 +109,17 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	const [openInNewTab, setOpenInNewTab] = useState(false);
 	const [useNofollow, setUseNofollow] = useState(false);
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+
+	const currentFontSize =
+		editor.getAttributes('textStyle').fontSize ?? DEFAULT_FONT_SIZE;
+
+	const handleFontSizeChange = (value: string) => {
+		if (value === DEFAULT_FONT_SIZE) {
+			editor.chain().focus().unsetFontSize().run();
+		} else {
+			editor.chain().focus().setFontSize(value).run();
+		}
+	};
 
 	const handleImageSelected = (image: SelectedImage) => {
 		// Build the image URL with the selected variant
@@ -195,6 +229,34 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 			>
 				<Code className="size-4" />
 			</MenuButton>
+
+			<Separator orientation="vertical" className="mx-1 h-6" />
+
+			{/* Font Size */}
+			<TooltipProvider delayDuration={300}>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Select
+							value={currentFontSize}
+							onValueChange={handleFontSizeChange}
+						>
+							<SelectTrigger className="h-8 w-20 text-xs">
+								<SelectValue placeholder="Size" />
+							</SelectTrigger>
+							<SelectContent>
+								{FONT_SIZES.map(({ label, value }) => (
+									<SelectItem key={value} value={value} className="text-xs">
+										{label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</TooltipTrigger>
+					<TooltipContent side="bottom">
+						<p>Font Size</p>
+					</TooltipContent>
+				</Tooltip>
+			</TooltipProvider>
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
