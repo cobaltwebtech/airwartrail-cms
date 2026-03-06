@@ -45,8 +45,53 @@ import {
 } from '@/components/ui/tooltip';
 import { ImagePickerDialog, type SelectedImage } from './ImagePickerDialog';
 
+// ============================================================================
+// Types
+// ============================================================================
+
+/**
+ * A snapshot of all toolbar-relevant editor states derived via useEditorState
+ * in TiptapEditor. Passing this as a prop (rather than calling editor.isActive()
+ * inside the menu bar directly) ensures the toolbar re-renders reactively on
+ * every cursor move and selection change.
+ */
+export interface ActiveEditorState {
+	// Marks
+	bold: boolean;
+	italic: boolean;
+	strike: boolean;
+	code: boolean;
+	link: boolean;
+	// Block types
+	blockquote: boolean;
+	bulletList: boolean;
+	orderedList: boolean;
+	codeBlock: boolean;
+	// Headings
+	heading2: boolean;
+	heading3: boolean;
+	heading4: boolean;
+	// Alignment
+	alignLeft: boolean;
+	alignCenter: boolean;
+	alignRight: boolean;
+	alignJustify: boolean;
+	// TextStyle
+	fontSize: string | null;
+	// History capability
+	canUndo: boolean;
+	canRedo: boolean;
+	// Mark capability (drives disabled state)
+	canBold: boolean;
+	canItalic: boolean;
+	canStrike: boolean;
+	canCode: boolean;
+}
+
 interface EditorMenuBarProps {
 	editor: Editor;
+	/** Reactive state snapshot from useEditorState — drives all isActive highlights */
+	activeState: ActiveEditorState | null;
 }
 
 interface MenuButtonProps {
@@ -56,6 +101,10 @@ interface MenuButtonProps {
 	tooltip: string;
 	children: React.ReactNode;
 }
+
+// ============================================================================
+// Constants
+// ============================================================================
 
 const FONT_SIZES = [
 	{ label: '12px', value: '12px' },
@@ -72,6 +121,10 @@ const FONT_SIZES = [
 ];
 
 const DEFAULT_FONT_SIZE = '16px';
+
+// ============================================================================
+// MenuButton
+// ============================================================================
 
 function MenuButton({
 	onClick,
@@ -103,15 +156,23 @@ function MenuButton({
 	);
 }
 
-export function EditorMenuBar({ editor }: EditorMenuBarProps) {
+// ============================================================================
+// EditorMenuBar
+// ============================================================================
+
+export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 	const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
 	const [linkUrl, setLinkUrl] = useState('');
 	const [openInNewTab, setOpenInNewTab] = useState(false);
 	const [useNofollow, setUseNofollow] = useState(false);
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
+	// Resolve the current font size from the reactive snapshot, falling back to
+	// the editor directly (covers the brief window before the first snapshot).
 	const currentFontSize =
-		editor.getAttributes('textStyle').fontSize ?? DEFAULT_FONT_SIZE;
+		activeState?.fontSize ??
+		editor.getAttributes('textStyle').fontSize ??
+		DEFAULT_FONT_SIZE;
 
 	const handleFontSizeChange = (value: string) => {
 		if (value === DEFAULT_FONT_SIZE) {
@@ -122,10 +183,8 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 	};
 
 	const handleImageSelected = (image: SelectedImage) => {
-		// Build the image URL with the selected variant
 		const variant = image.variant || 'md';
 		const imageUrl = `${image.deliveryUrl}/${variant}`;
-
 		editor
 			.chain()
 			.focus()
@@ -145,7 +204,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 		setIsLinkDialogOpen(true);
 	};
 
-	// Handle link clicks from the editor
+	// Handle link clicks from inside the editor content area
 	const handleOpenLinkDialog = useEffectEvent((event: Event) => {
 		const customEvent = event as CustomEvent<{ href: string; pos: number }>;
 		const linkAttrs = editor.getAttributes('link');
@@ -156,7 +215,6 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 		editor.chain().focus().setTextSelection(customEvent.detail.pos).run();
 	});
 
-	// Listen for link clicks from the editor
 	useEffect(() => {
 		window.addEventListener('openLinkDialog', handleOpenLinkDialog);
 		return () =>
@@ -168,15 +226,8 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 			const linkAttrs: { href: string; target?: string; rel?: string } = {
 				href: linkUrl,
 			};
-
-			if (openInNewTab) {
-				linkAttrs.target = '_blank';
-			}
-
-			if (useNofollow) {
-				linkAttrs.rel = 'noopener nofollow';
-			}
-
+			if (openInNewTab) linkAttrs.target = '_blank';
+			if (useNofollow) linkAttrs.rel = 'noopener nofollow';
 			editor.chain().focus().extendMarkRange('link').setLink(linkAttrs).run();
 		} else {
 			editor.chain().focus().extendMarkRange('link').unsetLink().run();
@@ -193,11 +244,11 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 	return (
 		<div className="flex flex-wrap items-center gap-1 border-b border-input bg-background p-2">
-			{/* Text formatting */}
+			{/* ── Text formatting ─────────────────────────────────────────────── */}
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleBold().run()}
-				isActive={editor.isActive('bold')}
-				disabled={!editor.can().chain().focus().toggleBold().run()}
+				isActive={activeState?.bold}
+				disabled={!activeState?.canBold}
 				tooltip="Bold (Ctrl+B)"
 			>
 				<Bold className="size-4" />
@@ -205,8 +256,8 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleItalic().run()}
-				isActive={editor.isActive('italic')}
-				disabled={!editor.can().chain().focus().toggleItalic().run()}
+				isActive={activeState?.italic}
+				disabled={!activeState?.canItalic}
 				tooltip="Italic (Ctrl+I)"
 			>
 				<Italic className="size-4" />
@@ -214,8 +265,8 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleStrike().run()}
-				isActive={editor.isActive('strike')}
-				disabled={!editor.can().chain().focus().toggleStrike().run()}
+				isActive={activeState?.strike}
+				disabled={!activeState?.canStrike}
 				tooltip="Strikethrough"
 			>
 				<Strikethrough className="size-4" />
@@ -223,8 +274,8 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleCode().run()}
-				isActive={editor.isActive('code')}
-				disabled={!editor.can().chain().focus().toggleCode().run()}
+				isActive={activeState?.code}
+				disabled={!activeState?.canCode}
 				tooltip="Inline Code"
 			>
 				<Code className="size-4" />
@@ -232,7 +283,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* Font Size */}
+			{/* ── Font size ────────────────────────────────────────────────────── */}
 			<TooltipProvider delayDuration={300}>
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -260,10 +311,10 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* Text Alignment */}
+			{/* ── Text alignment ───────────────────────────────────────────────── */}
 			<MenuButton
 				onClick={() => editor.chain().focus().setTextAlign('left').run()}
-				isActive={editor.isActive({ textAlign: 'left' })}
+				isActive={activeState?.alignLeft}
 				tooltip="Align Left"
 			>
 				<AlignLeft className="size-4" />
@@ -271,7 +322,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().setTextAlign('center').run()}
-				isActive={editor.isActive({ textAlign: 'center' })}
+				isActive={activeState?.alignCenter}
 				tooltip="Align Center"
 			>
 				<AlignCenter className="size-4" />
@@ -279,7 +330,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().setTextAlign('right').run()}
-				isActive={editor.isActive({ textAlign: 'right' })}
+				isActive={activeState?.alignRight}
 				tooltip="Align Right"
 			>
 				<AlignRight className="size-4" />
@@ -287,7 +338,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-				isActive={editor.isActive({ textAlign: 'justify' })}
+				isActive={activeState?.alignJustify}
 				tooltip="Justify"
 			>
 				<AlignJustify className="size-4" />
@@ -295,16 +346,15 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* Link */}
+			{/* ── Link & Image ─────────────────────────────────────────────────── */}
 			<MenuButton
 				onClick={handleLinkClick}
-				isActive={editor.isActive('link')}
+				isActive={activeState?.link}
 				tooltip="Add Link"
 			>
 				<Link className="size-4" />
 			</MenuButton>
 
-			{/* Image */}
 			<MenuButton
 				onClick={() => setIsImagePickerOpen(true)}
 				tooltip="Insert Image"
@@ -313,9 +363,11 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 			</MenuButton>
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
+
+			{/* ── Headings ─────────────────────────────────────────────────────── */}
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-				isActive={editor.isActive('heading', { level: 2 })}
+				isActive={activeState?.heading2}
 				tooltip="Heading 2"
 			>
 				<Heading2 className="size-4" />
@@ -323,7 +375,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-				isActive={editor.isActive('heading', { level: 3 })}
+				isActive={activeState?.heading3}
 				tooltip="Heading 3"
 			>
 				<Heading3 className="size-4" />
@@ -331,7 +383,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-				isActive={editor.isActive('heading', { level: 4 })}
+				isActive={activeState?.heading4}
 				tooltip="Heading 4"
 			>
 				<Heading4 className="size-4" />
@@ -339,10 +391,10 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* Lists */}
+			{/* ── Lists & Blockquote ───────────────────────────────────────────── */}
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleBulletList().run()}
-				isActive={editor.isActive('bulletList')}
+				isActive={activeState?.bulletList}
 				tooltip="Bullet List"
 			>
 				<List className="size-4" />
@@ -350,7 +402,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleOrderedList().run()}
-				isActive={editor.isActive('orderedList')}
+				isActive={activeState?.orderedList}
 				tooltip="Numbered List"
 			>
 				<ListOrdered className="size-4" />
@@ -358,7 +410,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().toggleBlockquote().run()}
-				isActive={editor.isActive('blockquote')}
+				isActive={activeState?.blockquote}
 				tooltip="Quote"
 			>
 				<Quote className="size-4" />
@@ -366,10 +418,10 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
 
-			{/* History */}
+			{/* ── History ──────────────────────────────────────────────────────── */}
 			<MenuButton
 				onClick={() => editor.chain().focus().undo().run()}
-				disabled={!editor.can().chain().focus().undo().run()}
+				disabled={!activeState?.canUndo}
 				tooltip="Undo (Ctrl+Z)"
 			>
 				<Undo className="size-4" />
@@ -377,13 +429,13 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 
 			<MenuButton
 				onClick={() => editor.chain().focus().redo().run()}
-				disabled={!editor.can().chain().focus().redo().run()}
+				disabled={!activeState?.canRedo}
 				tooltip="Redo (Ctrl+Shift+Z)"
 			>
 				<Redo className="size-4" />
 			</MenuButton>
 
-			{/* Image Picker Dialog */}
+			{/* ── Dialogs ──────────────────────────────────────────────────────── */}
 			<ImagePickerDialog
 				open={isImagePickerOpen}
 				onOpenChange={setIsImagePickerOpen}
@@ -392,7 +444,6 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 				description="Choose an image from your library to insert into the editor."
 			/>
 
-			{/* Link Dialog */}
 			<Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
@@ -404,9 +455,7 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 							value={linkUrl}
 							onChange={(e) => setLinkUrl(e.target.value)}
 							onKeyDown={(e) => {
-								if (e.key === 'Enter') {
-									handleLinkSave();
-								}
+								if (e.key === 'Enter') handleLinkSave();
 							}}
 							autoFocus
 						/>

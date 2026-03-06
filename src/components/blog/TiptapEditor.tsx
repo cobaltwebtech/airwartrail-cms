@@ -2,9 +2,10 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import { FontSize, TextStyle } from '@tiptap/extension-text-style';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
+import type { ActiveEditorState } from './EditorMenuBar';
 import { EditorMenuBar } from './EditorMenuBar';
 
 interface TiptapEditorProps {
@@ -91,6 +92,68 @@ export function TiptapEditor({
 		},
 	});
 
+	// Derive a snapshot of all toolbar-relevant active states on every
+	// selection change or transaction. useEditorState re-renders only this
+	// component (and EditorMenuBar) — not the full editor — keeping it cheap.
+	const activeState = useEditorState({
+		editor,
+		selector: (ctx): ActiveEditorState => {
+			const e = ctx.editor;
+			if (!e) {
+				return {
+					bold: false,
+					italic: false,
+					strike: false,
+					code: false,
+					link: false,
+					blockquote: false,
+					bulletList: false,
+					orderedList: false,
+					codeBlock: false,
+					heading2: false,
+					heading3: false,
+					heading4: false,
+					alignLeft: false,
+					alignCenter: false,
+					alignRight: false,
+					alignJustify: false,
+					fontSize: null,
+					canUndo: false,
+					canRedo: false,
+					canBold: false,
+					canItalic: false,
+					canStrike: false,
+					canCode: false,
+				};
+			}
+			return {
+				bold: e.isActive('bold'),
+				italic: e.isActive('italic'),
+				strike: e.isActive('strike'),
+				code: e.isActive('code'),
+				link: e.isActive('link'),
+				blockquote: e.isActive('blockquote'),
+				bulletList: e.isActive('bulletList'),
+				orderedList: e.isActive('orderedList'),
+				codeBlock: e.isActive('codeBlock'),
+				heading2: e.isActive('heading', { level: 2 }),
+				heading3: e.isActive('heading', { level: 3 }),
+				heading4: e.isActive('heading', { level: 4 }),
+				alignLeft: e.isActive({ textAlign: 'left' }),
+				alignCenter: e.isActive({ textAlign: 'center' }),
+				alignRight: e.isActive({ textAlign: 'right' }),
+				alignJustify: e.isActive({ textAlign: 'justify' }),
+				fontSize: e.getAttributes('textStyle').fontSize ?? null,
+				canUndo: e.can().undo(),
+				canRedo: e.can().redo(),
+				canBold: e.can().toggleBold(),
+				canItalic: e.can().toggleItalic(),
+				canStrike: e.can().toggleStrike(),
+				canCode: e.can().toggleCode(),
+			};
+		},
+	});
+
 	// Update content when it changes from outside (e.g., loading data)
 	useEffect(() => {
 		if (editor && content && editor.isEmpty) {
@@ -116,7 +179,7 @@ export function TiptapEditor({
 
 	return (
 		<div className="border-input bg-secondary rounded-md border overflow-hidden">
-			<EditorMenuBar editor={editor} />
+			<EditorMenuBar editor={editor} activeState={activeState} />
 			<EditorContent editor={editor} className="max-h-150 overflow-y-auto" />
 		</div>
 	);
