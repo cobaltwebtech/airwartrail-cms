@@ -1,5 +1,9 @@
 import type { Editor } from '@tiptap/react';
 import {
+	AlignCenter,
+	AlignJustify,
+	AlignLeft,
+	AlignRight,
 	Bold,
 	Code,
 	Heading2,
@@ -32,11 +36,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-	getImageUrl,
-	ImagePickerDialog,
-	type SelectedImage,
-} from './ImagePickerDialog';
+import { ImagePickerDialog, type SelectedImage } from './ImagePickerDialog';
 
 interface EditorMenuBarProps {
 	editor: Editor;
@@ -194,6 +194,41 @@ export function EditorMenuBar({ editor }: EditorMenuBarProps) {
 				tooltip="Inline Code"
 			>
 				<Code className="size-4" />
+			</MenuButton>
+
+			<Separator orientation="vertical" className="mx-1 h-6" />
+
+			{/* Text Alignment */}
+			<MenuButton
+				onClick={() => editor.chain().focus().setTextAlign('left').run()}
+				isActive={editor.isActive({ textAlign: 'left' })}
+				tooltip="Align Left"
+			>
+				<AlignLeft className="size-4" />
+			</MenuButton>
+
+			<MenuButton
+				onClick={() => editor.chain().focus().setTextAlign('center').run()}
+				isActive={editor.isActive({ textAlign: 'center' })}
+				tooltip="Align Center"
+			>
+				<AlignCenter className="size-4" />
+			</MenuButton>
+
+			<MenuButton
+				onClick={() => editor.chain().focus().setTextAlign('right').run()}
+				isActive={editor.isActive({ textAlign: 'right' })}
+				tooltip="Align Right"
+			>
+				<AlignRight className="size-4" />
+			</MenuButton>
+
+			<MenuButton
+				onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+				isActive={editor.isActive({ textAlign: 'justify' })}
+				tooltip="Justify"
+			>
+				<AlignJustify className="size-4" />
 			</MenuButton>
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
