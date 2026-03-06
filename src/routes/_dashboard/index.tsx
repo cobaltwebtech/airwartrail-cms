@@ -28,7 +28,7 @@ function IndexPage() {
 	return (
 		<>
 			<DashboardHeader
-				heading="Air War Trail Dashboard"
+				heading="AWT Dashboard"
 				text="Manage content for the airwartrail.com website."
 			></DashboardHeader>
 			<section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
