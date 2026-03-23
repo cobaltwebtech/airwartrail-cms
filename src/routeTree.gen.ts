@@ -20,6 +20,7 @@ import { Route as DashboardLibrariesRouteImport } from './routes/_dashboard/libr
 import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
 import { Route as DashboardPagesIndexRouteImport } from './routes/_dashboard/pages/index'
 import { Route as DashboardImagesIndexRouteImport } from './routes/_dashboard/images/index'
+import { Route as DashboardFrontendUsersIndexRouteImport } from './routes/_dashboard/frontend-users/index'
 import { Route as DashboardDocumentsIndexRouteImport } from './routes/_dashboard/documents/index'
 import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
@@ -27,6 +28,7 @@ import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/use
 import { Route as DashboardPagesCreatePageRouteImport } from './routes/_dashboard/pages/create-page'
 import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
 import { Route as DashboardImagesUploadRouteImport } from './routes/_dashboard/images/upload'
+import { Route as DashboardFrontendUsersUserIdRouteImport } from './routes/_dashboard/frontend-users/$userId'
 import { Route as DashboardDocumentsUploadRouteImport } from './routes/_dashboard/documents/upload'
 import { Route as DashboardBlogPostsCreatePostRouteImport } from './routes/_dashboard/blog-posts/create-post'
 import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
@@ -97,6 +99,12 @@ const DashboardImagesIndexRoute = DashboardImagesIndexRouteImport.update({
   path: '/images/',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFrontendUsersIndexRoute =
+  DashboardFrontendUsersIndexRouteImport.update({
+    id: '/frontend-users/',
+    path: '/frontend-users/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardDocumentsIndexRoute = DashboardDocumentsIndexRouteImport.update({
   id: '/documents/',
   path: '/documents/',
@@ -134,6 +142,12 @@ const DashboardImagesUploadRoute = DashboardImagesUploadRouteImport.update({
   path: '/images/upload',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFrontendUsersUserIdRoute =
+  DashboardFrontendUsersUserIdRouteImport.update({
+    id: '/frontend-users/$userId',
+    path: '/frontend-users/$userId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardDocumentsUploadRoute =
   DashboardDocumentsUploadRouteImport.update({
     id: '/documents/upload',
@@ -235,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
   '/documents/upload': typeof DashboardDocumentsUploadRoute
+  '/frontend-users/$userId': typeof DashboardFrontendUsersUserIdRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/pages/create-page': typeof DashboardPagesCreatePageRoute
@@ -242,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/api-keys/': typeof DashboardApiKeysIndexRoute
   '/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/documents/': typeof DashboardDocumentsIndexRoute
+  '/frontend-users/': typeof DashboardFrontendUsersIndexRoute
   '/images/': typeof DashboardImagesIndexRoute
   '/pages/': typeof DashboardPagesIndexRoute
   '/tags/': typeof DashboardTagsIndexRoute
@@ -269,6 +285,7 @@ export interface FileRoutesByTo {
   '/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
   '/documents/upload': typeof DashboardDocumentsUploadRoute
+  '/frontend-users/$userId': typeof DashboardFrontendUsersUserIdRoute
   '/images/upload': typeof DashboardImagesUploadRoute
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/pages/create-page': typeof DashboardPagesCreatePageRoute
@@ -276,6 +293,7 @@ export interface FileRoutesByTo {
   '/api-keys': typeof DashboardApiKeysIndexRoute
   '/blog-posts': typeof DashboardBlogPostsIndexRoute
   '/documents': typeof DashboardDocumentsIndexRoute
+  '/frontend-users': typeof DashboardFrontendUsersIndexRoute
   '/images': typeof DashboardImagesIndexRoute
   '/pages': typeof DashboardPagesIndexRoute
   '/tags': typeof DashboardTagsIndexRoute
@@ -305,6 +323,7 @@ export interface FileRoutesById {
   '/_dashboard/api-keys/$keyId': typeof DashboardApiKeysKeyIdRoute
   '/_dashboard/blog-posts/create-post': typeof DashboardBlogPostsCreatePostRoute
   '/_dashboard/documents/upload': typeof DashboardDocumentsUploadRoute
+  '/_dashboard/frontend-users/$userId': typeof DashboardFrontendUsersUserIdRoute
   '/_dashboard/images/upload': typeof DashboardImagesUploadRoute
   '/_dashboard/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/_dashboard/pages/create-page': typeof DashboardPagesCreatePageRoute
@@ -312,6 +331,7 @@ export interface FileRoutesById {
   '/_dashboard/api-keys/': typeof DashboardApiKeysIndexRoute
   '/_dashboard/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/_dashboard/documents/': typeof DashboardDocumentsIndexRoute
+  '/_dashboard/frontend-users/': typeof DashboardFrontendUsersIndexRoute
   '/_dashboard/images/': typeof DashboardImagesIndexRoute
   '/_dashboard/pages/': typeof DashboardPagesIndexRoute
   '/_dashboard/tags/': typeof DashboardTagsIndexRoute
@@ -341,6 +361,7 @@ export interface FileRouteTypes {
     | '/api-keys/$keyId'
     | '/blog-posts/create-post'
     | '/documents/upload'
+    | '/frontend-users/$userId'
     | '/images/upload'
     | '/library/create-library'
     | '/pages/create-page'
@@ -348,6 +369,7 @@ export interface FileRouteTypes {
     | '/api-keys/'
     | '/blog-posts/'
     | '/documents/'
+    | '/frontend-users/'
     | '/images/'
     | '/pages/'
     | '/tags/'
@@ -375,6 +397,7 @@ export interface FileRouteTypes {
     | '/api-keys/$keyId'
     | '/blog-posts/create-post'
     | '/documents/upload'
+    | '/frontend-users/$userId'
     | '/images/upload'
     | '/library/create-library'
     | '/pages/create-page'
@@ -382,6 +405,7 @@ export interface FileRouteTypes {
     | '/api-keys'
     | '/blog-posts'
     | '/documents'
+    | '/frontend-users'
     | '/images'
     | '/pages'
     | '/tags'
@@ -410,6 +434,7 @@ export interface FileRouteTypes {
     | '/_dashboard/api-keys/$keyId'
     | '/_dashboard/blog-posts/create-post'
     | '/_dashboard/documents/upload'
+    | '/_dashboard/frontend-users/$userId'
     | '/_dashboard/images/upload'
     | '/_dashboard/library/create-library'
     | '/_dashboard/pages/create-page'
@@ -417,6 +442,7 @@ export interface FileRouteTypes {
     | '/_dashboard/api-keys/'
     | '/_dashboard/blog-posts/'
     | '/_dashboard/documents/'
+    | '/_dashboard/frontend-users/'
     | '/_dashboard/images/'
     | '/_dashboard/pages/'
     | '/_dashboard/tags/'
@@ -520,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardImagesIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/frontend-users/': {
+      id: '/_dashboard/frontend-users/'
+      path: '/frontend-users'
+      fullPath: '/frontend-users/'
+      preLoaderRoute: typeof DashboardFrontendUsersIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/documents/': {
       id: '/_dashboard/documents/'
       path: '/documents'
@@ -567,6 +600,13 @@ declare module '@tanstack/react-router' {
       path: '/images/upload'
       fullPath: '/images/upload'
       preLoaderRoute: typeof DashboardImagesUploadRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/frontend-users/$userId': {
+      id: '/_dashboard/frontend-users/$userId'
+      path: '/frontend-users/$userId'
+      fullPath: '/frontend-users/$userId'
+      preLoaderRoute: typeof DashboardFrontendUsersUserIdRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/documents/upload': {
@@ -685,6 +725,7 @@ interface DashboardRouteChildren {
   DashboardApiKeysKeyIdRoute: typeof DashboardApiKeysKeyIdRoute
   DashboardBlogPostsCreatePostRoute: typeof DashboardBlogPostsCreatePostRoute
   DashboardDocumentsUploadRoute: typeof DashboardDocumentsUploadRoute
+  DashboardFrontendUsersUserIdRoute: typeof DashboardFrontendUsersUserIdRoute
   DashboardImagesUploadRoute: typeof DashboardImagesUploadRoute
   DashboardLibraryCreateLibraryRoute: typeof DashboardLibraryCreateLibraryRoute
   DashboardPagesCreatePageRoute: typeof DashboardPagesCreatePageRoute
@@ -692,6 +733,7 @@ interface DashboardRouteChildren {
   DashboardApiKeysIndexRoute: typeof DashboardApiKeysIndexRoute
   DashboardBlogPostsIndexRoute: typeof DashboardBlogPostsIndexRoute
   DashboardDocumentsIndexRoute: typeof DashboardDocumentsIndexRoute
+  DashboardFrontendUsersIndexRoute: typeof DashboardFrontendUsersIndexRoute
   DashboardImagesIndexRoute: typeof DashboardImagesIndexRoute
   DashboardPagesIndexRoute: typeof DashboardPagesIndexRoute
   DashboardTagsIndexRoute: typeof DashboardTagsIndexRoute
@@ -717,6 +759,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardApiKeysKeyIdRoute: DashboardApiKeysKeyIdRoute,
   DashboardBlogPostsCreatePostRoute: DashboardBlogPostsCreatePostRoute,
   DashboardDocumentsUploadRoute: DashboardDocumentsUploadRoute,
+  DashboardFrontendUsersUserIdRoute: DashboardFrontendUsersUserIdRoute,
   DashboardImagesUploadRoute: DashboardImagesUploadRoute,
   DashboardLibraryCreateLibraryRoute: DashboardLibraryCreateLibraryRoute,
   DashboardPagesCreatePageRoute: DashboardPagesCreatePageRoute,
@@ -724,6 +767,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardApiKeysIndexRoute: DashboardApiKeysIndexRoute,
   DashboardBlogPostsIndexRoute: DashboardBlogPostsIndexRoute,
   DashboardDocumentsIndexRoute: DashboardDocumentsIndexRoute,
+  DashboardFrontendUsersIndexRoute: DashboardFrontendUsersIndexRoute,
   DashboardImagesIndexRoute: DashboardImagesIndexRoute,
   DashboardPagesIndexRoute: DashboardPagesIndexRoute,
   DashboardTagsIndexRoute: DashboardTagsIndexRoute,

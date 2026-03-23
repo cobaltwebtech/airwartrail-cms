@@ -13,6 +13,7 @@ import {
 	NotebookPen,
 	Tags,
 	Upload,
+	Users,
 } from 'lucide-react';
 import { Logo } from '@/components/sidebar/Logo';
 import { NavMain } from '@/components/sidebar/NavMain';
@@ -90,6 +91,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			title: 'Create Library',
 			url: '/library/create-library',
 			icon: CirclePlus,
+		},
+		{
+			title: 'AWT Users',
+			url: '/frontend-users',
+			icon: Users,
 		},
 		{
 			title: 'API Keys',

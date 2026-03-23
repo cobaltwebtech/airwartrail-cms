@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, desc, asc, count, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { t, protectedProcedure, publicProcedure, createPermissionMiddleware } from "../../trpc-init";
+import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
 import { documents } from "@/db/content-schema";
 import { customAlphabet } from "nanoid";
 

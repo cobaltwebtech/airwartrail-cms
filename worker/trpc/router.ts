@@ -5,6 +5,7 @@ import { blogRouter } from "./routers/blog";
 import { pagesRouter } from "./routers/pages";
 import { cfImagesRouter } from "./routers/cf-images";
 import { documentsRouter } from "./routers/documents";
+import { frontendAuthRouter } from "./routers/frontend-auth";
 
 export const appRouter = t.router({
 	mux: muxRouter,
@@ -13,6 +14,7 @@ export const appRouter = t.router({
 	pages: pagesRouter,
 	cfImages: cfImagesRouter,
 	documents: documentsRouter,
+	frontendAuth: frontendAuthRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -2,7 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "airwartrail-cms",
 	"main": "./worker/index.ts",
-	"compatibility_date": "2026-02-10",
+	"compatibility_date": "2026-02-24",
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
@@ -40,7 +40,14 @@
 			"database_name": "airwartrail-cms-content",
 			"database_id": "f5c8983a-7eb7-454e-a533-74299e920183",
 			"migrations_dir": "./drizzle/content"
-		}
+		},
+		{
+			// Database used by the frontend for authentication, separate from the CMS auth
+			"binding": "DB_FRONTEND_AUTH",
+			"database_name": "airwartrail-frontend-auth",
+			"database_id": "992f6914-4e3b-4bae-9eac-639f4a675498",
+			"remote": true,
+		},
 	],
 	"r2_buckets": [
 		{
