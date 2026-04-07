@@ -186,9 +186,9 @@ export function VideoThumbnail({
 	}, []);
 
 	// Skeleton classes based on aspect ratio
-	const skeletonClass = aspectVideo ? 'aspect-video w-full' : 'h-full w-full';
+	const skeletonClass = aspectVideo ? 'aspect-video w-full' : 'size-full';
 
-	const containerClass = aspectVideo ? 'aspect-video' : 'h-full w-full';
+	const containerClass = aspectVideo ? 'aspect-video' : 'size-full';
 
 	// Show fallback if no playbackId or error occurred
 	if (!playbackId || hasError) {
