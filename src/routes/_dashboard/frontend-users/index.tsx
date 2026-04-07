@@ -176,7 +176,7 @@ function FrontendUsersPage() {
 					if (status === 'canceled') {
 						return <Badge variant="destructive">Canceled</Badge>;
 					}
-					return <span className="text-muted-foreground text-sm">None</span>;
+					return <Badge variant="outline">None</Badge>;
 				},
 			},
 			{
