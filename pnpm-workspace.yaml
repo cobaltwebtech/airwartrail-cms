@@ -1,0 +1,14 @@
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  better-sqlite3: true
+  esbuild: true
+  prisma: true
+  sharp: true
+  workerd: true
+minimumReleaseAge: 4320 # 3 days (in minutes)
+minimumReleaseAgeExclude:
+  - workerd
+  - wrangler
+  - miniflare
+  - '@cloudflare/*'

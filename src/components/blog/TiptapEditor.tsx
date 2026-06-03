@@ -5,6 +5,7 @@ import { FontSize, TextStyle } from '@tiptap/extension-text-style';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
+import { Iframe } from '@/lib/tiptap-iframe';
 import type { ActiveEditorState } from './EditorMenuBar';
 import { EditorMenuBar } from './EditorMenuBar';
 
@@ -63,6 +64,7 @@ export function TiptapEditor({
 			}),
 			TextStyle,
 			FontSize,
+			Iframe,
 		],
 		content: content as string | null,
 		editable: !disabled,
@@ -110,6 +112,7 @@ export function TiptapEditor({
 					bulletList: false,
 					orderedList: false,
 					codeBlock: false,
+					iframe: false,
 					heading2: false,
 					heading3: false,
 					heading4: false,
@@ -136,6 +139,7 @@ export function TiptapEditor({
 				bulletList: e.isActive('bulletList'),
 				orderedList: e.isActive('orderedList'),
 				codeBlock: e.isActive('codeBlock'),
+				iframe: e.isActive('iframe'),
 				heading2: e.isActive('heading', { level: 2 }),
 				heading3: e.isActive('heading', { level: 3 }),
 				heading4: e.isActive('heading', { level: 4 }),

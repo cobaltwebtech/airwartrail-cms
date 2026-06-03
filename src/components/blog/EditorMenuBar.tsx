@@ -6,6 +6,7 @@ import {
 	AlignRight,
 	Bold,
 	Code,
+	Film,
 	Heading2,
 	Heading3,
 	Heading4,
@@ -67,6 +68,7 @@ export interface ActiveEditorState {
 	bulletList: boolean;
 	orderedList: boolean;
 	codeBlock: boolean;
+	iframe: boolean;
 	// Headings
 	heading2: boolean;
 	heading3: boolean;
@@ -166,6 +168,8 @@ export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 	const [openInNewTab, setOpenInNewTab] = useState(false);
 	const [useNofollow, setUseNofollow] = useState(false);
 	const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+	const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
+	const [embedHtml, setEmbedHtml] = useState('');
 
 	// Resolve the current font size from the reactive snapshot, falling back to
 	// the editor directly (covers the brief window before the first snapshot).
@@ -236,6 +240,43 @@ export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 		setLinkUrl('');
 		setOpenInNewTab(false);
 		setUseNofollow(false);
+	};
+
+	const handleEmbedSave = () => {
+		if (!embedHtml.trim()) {
+			return;
+		}
+
+		// Extract attributes from iframe HTML
+		// Supports both: <iframe src="..."></iframe> and full embed HTML
+		const srcMatch = embedHtml.match(/src=["']([^"']+)["']/i);
+		const widthMatch = embedHtml.match(/width=["']?([^"'\s>]+)/i);
+		const heightMatch = embedHtml.match(/height=["']?([^"'\s>]+)/i);
+		const allowMatch = embedHtml.match(/allow=["']([^"']+)["']/i);
+		const allowfullscreen = /allowfullscreen/i.test(embedHtml);
+
+		if (srcMatch?.[1]) {
+			const attrs = {
+				src: srcMatch[1],
+				width: widthMatch?.[1] || '640',
+				height: heightMatch?.[1] || '360',
+				allow: allowMatch?.[1] || undefined,
+				allowfullscreen: allowfullscreen,
+			};
+
+			// Insert iframe node using the generic insertContent command
+			editor
+				.chain()
+				.focus()
+				.insertContent({
+					type: 'iframe',
+					attrs,
+				})
+				.run();
+		}
+
+		setIsEmbedDialogOpen(false);
+		setEmbedHtml('');
 	};
 
 	if (!editor) {
@@ -360,6 +401,13 @@ export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 				tooltip="Insert Image"
 			>
 				<ImagePlus className="size-4" />
+			</MenuButton>
+
+			<MenuButton
+				onClick={() => setIsEmbedDialogOpen(true)}
+				tooltip="Embed Video (Vimeo/YouTube)"
+			>
+				<Film className="size-4" />
 			</MenuButton>
 
 			<Separator orientation="vertical" className="mx-1 h-6" />
@@ -489,6 +537,51 @@ export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 						</Button>
 						<Button onClick={handleLinkSave}>
 							{linkUrl ? 'Add Link' : 'Remove Link'}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={isEmbedDialogOpen} onOpenChange={setIsEmbedDialogOpen}>
+				<DialogContent className="max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>Embed Video</DialogTitle>
+					</DialogHeader>
+					<div className="space-y-4">
+						<div>
+							<label htmlFor="embed-textarea" className="text-sm font-medium">
+								Paste embed code
+							</label>
+							<p className="text-xs text-muted-foreground mt-1 mb-2">
+								Paste the complete iframe code from Vimeo or YouTube share embed
+								option
+							</p>
+							<textarea
+								id="embed-textarea"
+								placeholder='<iframe src="https://player.vimeo.com/video/..." width="640" height="360" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>'
+								value={embedHtml}
+								onChange={(e) => setEmbedHtml(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' && e.ctrlKey) handleEmbedSave();
+								}}
+								className="w-full h-32 p-2 border border-input rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+							/>
+						</div>
+						<div className="rounded-md bg-muted p-3">
+							<p className="text-xs text-muted-foreground">
+								<strong>Supported:</strong> Vimeo and YouTube embeds only
+							</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setIsEmbedDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button onClick={handleEmbedSave} disabled={!embedHtml.trim()}>
+							Embed Video
 						</Button>
 					</DialogFooter>
 				</DialogContent>

@@ -6,6 +6,7 @@ import { createContext } from "@/worker/trpc/context";
 import { auth } from "@/lib/auth-server";
 import { muxWebhookRouter } from "@/worker/api/webhooks/mux";
 import { imageDownloadRouter } from "@/worker/api/cf-images/download";
+import { trpcCacheMiddleware } from "@/worker/middleware/trpc-cache";
 
 export const App = new Hono<{ Bindings: Env }>();
 
@@ -33,37 +34,27 @@ App.route("/api/webhooks/mux", muxWebhookRouter);
 // Image download handler (auth handled inside router)
 App.route("/api/cf-images/download", imageDownloadRouter);
 
+// tRPC: Layer 1 — Authentication
+//
+// getSession() resolves BOTH cookie sessions and API-key sessions when
+// `enableSessionForAPIKeys: true` (see auth-server.ts). One call is enough.
 App.use("/trpc/*", async (c, next) => {
-  // Check for API key in header first
-  const apiKey = c.req.header('x-api-key');
-  
-  // Better Auth's getSession handles both cookie sessions and API key sessions
-  // when enableSessionForAPIKeys is enabled in the apiKey plugin
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
   });
 
-  // Allow access if either session cookie or API key is valid
-  if (!session && !apiKey) {
+  if (!session) {
     return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  // If API key is provided but session is null, verify the API key directly
-  if (!session && apiKey) {
-    try {
-      const verifyResult = await auth.api.verifyApiKey({
-        body: { key: apiKey },
-      });
-      if (!verifyResult.valid) {
-        return c.json({ error: "Invalid API key" }, 401);
-      }
-    } catch {
-      return c.json({ error: "Invalid API key" }, 401);
-    }
   }
 
   await next();
 });
+
+// tRPC: Layer 2 — Edge cache (MUST run after auth)
+//
+// Caches allow-listed public GET procedures at the Cloudflare edge.
+// Cache key is the bare URL — auth headers are excluded by construction.
+App.use("/trpc/*", trpcCacheMiddleware);
 
 App.all("/trpc/*", (c) => {
   return fetchRequestHandler({
