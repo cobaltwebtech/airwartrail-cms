@@ -1,12 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
+	createSortedRowModel,
 	flexRender,
-	getCoreRowModel,
-	getSortedRowModel,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
+	sortFn_alphanumeric,
+	sortFn_basic,
+	sortFn_datetime,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -71,11 +76,29 @@ import { VideoDialog } from './VideoDialog';
 interface VideoListProps {
 	videos: Video[] | null | undefined;
 	libraryId: string;
+	/** Whether more pages are available for infinite scroll */
+	hasNextPage?: boolean;
+	/** Loads the next page of videos */
+	fetchNextPage?: () => void;
+	/** True while the next page is being fetched */
+	isFetchingNextPage?: boolean;
 }
 
 type ViewMode = 'grid' | 'table';
 
 const STORAGE_KEY = 'videoList-settings';
+
+// Batch procedures accept at most 100 items server-side; chunk client-side so
+// requests stay well under that limit even as libraries grow.
+const BATCH_CHUNK_SIZE = 50;
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+	const chunks: T[][] = [];
+	for (let i = 0; i < items.length; i += size) {
+		chunks.push(items.slice(i, i + size));
+	}
+	return chunks;
+}
 
 // Map library IDs to their types
 const LIBRARY_TYPE_MAP: Record<string, 'premium' | 'basic'> = {
@@ -132,7 +155,24 @@ function getStoredSettings(): VideoListSettings {
 // Read stored settings once at module level to avoid multiple reads
 const initialSettings = getStoredSettings();
 
-export function VideoList({ videos = [], libraryId }: VideoListProps) {
+const features = tableFeatures({
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: {
+		alphanumeric: sortFn_alphanumeric,
+		basic: sortFn_basic,
+		datetime: sortFn_datetime,
+		text: sortFn_text,
+	},
+});
+
+export function VideoList({
+	videos = [],
+	libraryId,
+	hasNextPage = false,
+	fetchNextPage,
+	isFetchingNextPage = false,
+}: VideoListProps) {
 	const queryClient = useQueryClient();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [filterStatus, setFilterStatus] = useState<
@@ -148,6 +188,10 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	const tableParentRef = useRef<HTMLDivElement>(null);
 	const gridParentOffsetRef = useRef(0);
 	const tableParentOffsetRef = useRef(0);
+
+	// Sentinel at the end of the list - when it scrolls into view, load the
+	// next page of videos (infinite scroll)
+	const endSentinelRef = useRef<HTMLDivElement>(null);
 
 	// Track column count for grid virtualization (matches CSS breakpoints)
 	const [columnCount, setColumnCount] = useState(() => {
@@ -202,6 +246,24 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			tableParentOffsetRef.current = tableParentRef.current.offsetTop ?? 0;
 		}
 	}, [viewMode]);
+
+	// Infinite scroll: when the end sentinel scrolls into view, load the next
+	// page of videos. `isFetchingNextPage` guards against overlapping fetches.
+	useEffect(() => {
+		const el = endSentinelRef.current;
+		if (!el || !hasNextPage || !fetchNextPage) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+					fetchNextPage();
+				}
+			},
+			{ rootMargin: '400px 0px' },
+		);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasNextPage, fetchNextPage, isFetchingNextPage]);
 
 	// Persist settings to localStorage with debouncing
 	useEffect(() => {
@@ -302,23 +364,43 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 		[filteredVideos],
 	);
 
-	// Batch fetch custom thumbnails for all videos
-	const { data: thumbnailBatch } = useQuery({
-		...trpc.mux.getThumbnailBatch.queryOptions({
-			videoIds,
-			libraryId,
-		}),
-		enabled: videoIds.length > 0,
-	});
+	// Batch fetch custom thumbnails for all videos (chunked to respect server limits)
+	const thumbnailChunks = useMemo(
+		() => chunkArray(videoIds, BATCH_CHUNK_SIZE),
+		[videoIds],
+	);
+	const { data: thumbnailBatch, isLoading: isThumbnailBatchLoading } =
+		useQueries({
+			queries: thumbnailChunks.map((chunk) =>
+				trpc.mux.getThumbnailBatch.queryOptions({
+					videoIds: chunk,
+					libraryId,
+				}),
+			),
+			combine: (results) => ({
+				data: results.flatMap((r) => r.data ?? []),
+				isLoading: results.some((r) => r.isLoading),
+			}),
+		});
 
-	// Batch fetch signed tokens for all videos with playback IDs
-	const { data: signedTokensBatch } = useQuery({
-		...trpc.mux.generateSignedTokensBatch.queryOptions({
-			items: playbackItems,
-			libraryId,
-		}),
-		enabled: playbackItems.length > 0,
-	});
+	// Batch fetch signed tokens for all videos with playback IDs (chunked)
+	const playbackChunks = useMemo(
+		() => chunkArray(playbackItems, BATCH_CHUNK_SIZE),
+		[playbackItems],
+	);
+	const { data: signedTokensBatch, isLoading: isSignedTokensBatchLoading } =
+		useQueries({
+			queries: playbackChunks.map((chunk) =>
+				trpc.mux.generateSignedTokensBatch.queryOptions({
+					items: chunk,
+					libraryId,
+				}),
+			),
+			combine: (results) => ({
+				data: results.flatMap((r) => r.data ?? []),
+				isLoading: results.some((r) => r.isLoading),
+			}),
+		});
 
 	// Create lookup maps for O(1) access in render
 	const thumbnailMap = useMemo(() => {
@@ -365,7 +447,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 	};
 
 	// Table columns definition
-	const columns = useMemo<ColumnDef<Video>[]>(
+	const columns = useMemo<ColumnDef<typeof features, Video>[]>(
 		() => [
 			{
 				accessorKey: 'thumbnail',
@@ -389,11 +471,13 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 								policy={row.original.policy ?? undefined}
 								libraryId={libraryId}
 								batchThumbnailData={thumbnailMap.get(row.original.id)}
+								batchThumbnailPending={isThumbnailBatchLoading}
 								batchSignedTokens={
 									row.original.playbackId
 										? signedTokensMap.get(row.original.playbackId)
 										: undefined
 								}
+								batchSignedTokensPending={isSignedTokensBatchLoading}
 							/>
 						</Link>
 					</div>
@@ -589,18 +673,19 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 			libraryId,
 			thumbnailMap,
 			signedTokensMap,
+			isThumbnailBatchLoading,
+			isSignedTokensBatchLoading,
 		],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: filteredVideos,
 		columns,
+		features,
 		state: {
 			sorting: tableSorting,
 		},
 		onSortingChange: handleSortingChange,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
 	});
 
 	// Grid virtualization - virtualize by rows, not individual items
@@ -747,7 +832,7 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 												data-index={virtualRow.index}
 												ref={tableVirtualizer.measureElement}
 											>
-												{row.getVisibleCells().map((cell) => (
+												{row.getAllCells().map((cell) => (
 													<TableCell key={cell.id}>
 														{flexRender(
 															cell.column.columnDef.cell,
@@ -834,10 +919,14 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 														policy={video.policy ?? undefined}
 														libraryId={libraryId}
 														batchThumbnailData={thumbnailMap.get(video.id)}
+														batchThumbnailPending={isThumbnailBatchLoading}
 														batchSignedTokens={
 															video.playbackId
 																? signedTokensMap.get(video.playbackId)
 																: undefined
+														}
+														batchSignedTokensPending={
+															isSignedTokensBatchLoading
 														}
 													/>
 													<div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100">
@@ -1004,6 +1093,12 @@ export function VideoList({ videos = [], libraryId }: VideoListProps) {
 							? 'Try a different search term'
 							: 'Upload your first video to get started'}
 					</p>
+				</div>
+			)}
+
+			{hasNextPage && (
+				<div ref={endSentinelRef} className="flex justify-center py-4">
+					{isFetchingNextPage && <Loader2 className="size-4 animate-spin" />}
 				</div>
 			)}
 		</div>

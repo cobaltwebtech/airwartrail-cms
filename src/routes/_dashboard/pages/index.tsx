@@ -2,12 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
+	columnFilteringFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFn_includesString,
 	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getSortedRowModel,
+	globalFilteringFeature,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
+	sortFn_alphanumeric,
+	sortFn_basic,
+	sortFn_datetime,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import { ArrowUpDown, Edit, FileText, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -33,18 +41,36 @@ import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute('/_dashboard/pages/')({
 	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(
-			trpc.pages.list.queryOptions({
+		await queryClient.query({
+			...trpc.pages.list.queryOptions({
 				sortBy: 'publishedAt',
 				sortOrder: 'desc',
 				limit: 100,
 			}),
-		);
+			staleTime: 'static',
+		});
 	},
 	component: PagesPage,
 });
 
 type PublishStatus = 'published' | 'unpublished';
+
+const features = tableFeatures({
+	rowSortingFeature,
+	columnFilteringFeature,
+	globalFilteringFeature,
+	sortedRowModel: createSortedRowModel(),
+	filteredRowModel: createFilteredRowModel(),
+	filterFns: {
+		includesString: filterFn_includesString,
+	},
+	sortFns: {
+		alphanumeric: sortFn_alphanumeric,
+		basic: sortFn_basic,
+		datetime: sortFn_datetime,
+		text: sortFn_text,
+	},
+});
 
 interface Page {
 	id: string;
@@ -75,7 +101,7 @@ function PagesPage() {
 		}),
 	);
 
-	const columns = useMemo<ColumnDef<Page>[]>(
+	const columns = useMemo<ColumnDef<typeof features, Page>[]>(
 		() => [
 			{
 				accessorKey: 'title',
@@ -183,18 +209,16 @@ function PagesPage() {
 
 	const pages = pagesData?.pages ?? [];
 
-	const table = useReactTable({
+	const table = useTable({
 		data: pages,
 		columns,
+		features,
 		state: {
 			sorting,
 			globalFilter: searchTerm,
 		},
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setSearchTerm,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
 	});
 
 	if (error) {
@@ -276,7 +300,7 @@ function PagesPage() {
 								) : (
 									table.getRowModel().rows.map((row) => (
 										<TableRow key={row.id}>
-											{row.getVisibleCells().map((cell) => (
+											{row.getAllCells().map((cell) => (
 												<TableCell key={cell.id}>
 													{flexRender(
 														cell.column.columnDef.cell,

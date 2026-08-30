@@ -34,7 +34,10 @@ import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute('/_dashboard/api-keys/')({
 	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(trpc.apiKeys.list.queryOptions({}));
+		await queryClient.query({
+			...trpc.apiKeys.list.queryOptions({}),
+			staleTime: 'static',
+		});
 	},
 	component: ApiKeysPage,
 });

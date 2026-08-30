@@ -85,9 +85,10 @@ export const Route = createFileRoute(
 	loader: async ({ context: { queryClient }, params }) => {
 		const { libraryId, playlistId } = params;
 		try {
-			const playlist = await queryClient.ensureQueryData(
-				trpc.mux.getPlaylist.queryOptions({ playlistId, libraryId }),
-			);
+			const playlist = await queryClient.query({
+				...trpc.mux.getPlaylist.queryOptions({ playlistId, libraryId }),
+				staleTime: 'static',
+			});
 			if (!playlist) {
 				throw notFound();
 			}

@@ -36,7 +36,10 @@ import { trpc } from '@/lib/trpc';
 export const Route = createFileRoute('/_dashboard/upload')({
 	loader: async ({ context: { queryClient } }) => {
 		// Prefetch libraries for the selector
-		await queryClient.ensureQueryData(trpc.mux.listLibraries.queryOptions());
+		await queryClient.query({
+			...trpc.mux.listLibraries.queryOptions(),
+			staleTime: 'static',
+		});
 	},
 	component: UploadPage,
 });
@@ -151,9 +154,7 @@ function UploadPage() {
 				});
 				// Invalidate video list to show new video
 				queryClient.invalidateQueries({
-					queryKey: trpc.mux.listVideosFromDatabase.queryKey({
-						libraryId: selectedLibraryId,
-					}),
+					queryKey: [['mux', 'listVideosFromDatabase']],
 				});
 			},
 			onError: (error) => {
@@ -181,9 +182,7 @@ function UploadPage() {
 				description: `"${title}" is now available in your library`,
 			});
 			queryClient.invalidateQueries({
-				queryKey: trpc.mux.listVideosFromDatabase.queryKey({
-					libraryId: selectedLibraryId,
-				}),
+				queryKey: [['mux', 'listVideosFromDatabase']],
 			});
 			return;
 		}

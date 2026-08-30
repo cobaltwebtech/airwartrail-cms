@@ -73,9 +73,10 @@ export const Route = createFileRoute(
 		if (!postId) {
 			return { postId };
 		}
-		await queryClient.ensureQueryData(
-			trpc.blog.get.queryOptions({ id: postId }),
-		);
+		await queryClient.query({
+			...trpc.blog.get.queryOptions({ id: postId }),
+			staleTime: 'static',
+		});
 	},
 	component: EditPostPage,
 });

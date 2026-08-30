@@ -2,12 +2,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
 	type ColumnDef,
+	columnFilteringFeature,
+	createFilteredRowModel,
+	createSortedRowModel,
+	filterFn_includesString,
 	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getSortedRowModel,
+	globalFilteringFeature,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
+	sortFn_alphanumeric,
+	sortFn_basic,
+	sortFn_datetime,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import {
 	ArrowUpDown,
@@ -57,10 +65,14 @@ import { trpc } from '@/lib/trpc';
 export const Route = createFileRoute('/_dashboard/tags/')({
 	component: TagsPage,
 	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(trpc.mux.listTags.queryOptions());
-		await queryClient.ensureQueryData(
-			trpc.mux.getTagStatistics.queryOptions({}),
-		);
+		await queryClient.query({
+			...trpc.mux.listTags.queryOptions(),
+			staleTime: 'static',
+		});
+		await queryClient.query({
+			...trpc.mux.getTagStatistics.queryOptions({}),
+			staleTime: 'static',
+		});
 	},
 });
 
@@ -74,6 +86,23 @@ interface VideoTag {
 	createdAt: Date;
 	updatedAt: Date;
 }
+
+const features = tableFeatures({
+	rowSortingFeature,
+	columnFilteringFeature,
+	globalFilteringFeature,
+	sortedRowModel: createSortedRowModel(),
+	filteredRowModel: createFilteredRowModel(),
+	filterFns: {
+		includesString: filterFn_includesString,
+	},
+	sortFns: {
+		alphanumeric: sortFn_alphanumeric,
+		basic: sortFn_basic,
+		datetime: sortFn_datetime,
+		text: sortFn_text,
+	},
+});
 
 // Validation schemas
 const tagNameSchema = z
@@ -505,7 +534,7 @@ function TagsPage() {
 	}, [tags, statsMap]);
 
 	// Table columns definition
-	const columns = useMemo<ColumnDef<TagRowData>[]>(
+	const columns = useMemo<ColumnDef<typeof features, TagRowData>[]>(
 		() => [
 			{
 				accessorKey: 'name',
@@ -579,18 +608,16 @@ function TagsPage() {
 		[],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: tagsWithCounts,
 		columns,
+		features,
 		state: {
 			sorting,
 			globalFilter: searchTerm,
 		},
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setSearchTerm,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
 	});
 
 	if (error) {
@@ -662,7 +689,7 @@ function TagsPage() {
 								) : (
 									table.getRowModel().rows.map((row) => (
 										<TableRow key={row.id}>
-											{row.getVisibleCells().map((cell) => (
+											{row.getAllCells().map((cell) => (
 												<TableCell key={cell.id}>
 													{flexRender(
 														cell.column.columnDef.cell,

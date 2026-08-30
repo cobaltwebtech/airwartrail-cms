@@ -87,9 +87,10 @@ export const Route = createFileRoute(
 		}
 
 		try {
-			const library = await queryClient.ensureQueryData(
-				trpc.mux.getLibrary.queryOptions({ libraryId }),
-			);
+			const library = await queryClient.query({
+				...trpc.mux.getLibrary.queryOptions({ libraryId }),
+				staleTime: 'static',
+			});
 			if (!library) {
 				throw notFound();
 			}

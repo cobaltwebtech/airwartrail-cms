@@ -108,9 +108,10 @@ export const Route = createFileRoute('/_dashboard/images/albums/$albumId')({
 	loader: async ({ context: { queryClient }, params }) => {
 		const { albumId } = params;
 		try {
-			const album = await queryClient.ensureQueryData(
-				trpc.cfImages.albums.getAlbum.queryOptions({ id: albumId }),
-			);
+			const album = await queryClient.query({
+				...trpc.cfImages.albums.getAlbum.queryOptions({ id: albumId }),
+				staleTime: 'static',
+			});
 			if (!album) {
 				throw notFound();
 			}

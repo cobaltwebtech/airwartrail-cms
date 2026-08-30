@@ -3,8 +3,9 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
 	flexRender,
-	getCoreRowModel,
-	useReactTable,
+	rowPaginationFeature,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import {
 	ArrowUpDown,
@@ -43,19 +44,24 @@ const PAGE_SIZE = 50;
 
 export const Route = createFileRoute('/_dashboard/frontend-users/')({
 	loader: async ({ context: { queryClient } }) => {
-		await queryClient.ensureQueryData(
-			trpc.frontendAuth.listUsers.queryOptions({
+		await queryClient.query({
+			...trpc.frontendAuth.listUsers.queryOptions({
 				limit: PAGE_SIZE,
 				page: 1,
 				sortBy: 'createdAt',
 				sortOrder: 'desc',
 			}),
-		);
+			staleTime: 'static',
+		});
 	},
 	component: FrontendUsersPage,
 });
 
 type SortBy = 'createdAt' | 'updatedAt' | 'name' | 'email';
+
+const features = tableFeatures({
+	rowPaginationFeature,
+});
 
 interface FrontendUser {
 	id: string;
@@ -105,7 +111,7 @@ function FrontendUsersPage() {
 	const users = (usersData?.users ?? []) as FrontendUser[];
 	const pagination = usersData?.pagination;
 
-	const columns = useMemo<ColumnDef<FrontendUser>[]>(
+	const columns = useMemo<ColumnDef<typeof features, FrontendUser>[]>(
 		() => [
 			{
 				accessorKey: 'name',
@@ -240,10 +246,10 @@ function FrontendUsersPage() {
 		[sortBy],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: users,
 		columns,
-		getCoreRowModel: getCoreRowModel(),
+		features,
 		manualPagination: true,
 		pageCount: pagination?.totalPages ?? -1,
 	});
@@ -358,7 +364,7 @@ function FrontendUsersPage() {
 								) : (
 									table.getRowModel().rows.map((row) => (
 										<TableRow key={row.id}>
-											{row.getVisibleCells().map((cell) => (
+											{row.getAllCells().map((cell) => (
 												<TableCell key={cell.id}>
 													{flexRender(
 														cell.column.columnDef.cell,

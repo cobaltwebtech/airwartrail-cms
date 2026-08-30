@@ -354,7 +354,7 @@ export const thumbnailsRouter = t.router({
 		.use(createPermissionMiddleware('mux', ['read']))
 		.input(
 			z.object({
-				videoIds: z.array(z.string()).max(50), // Limit batch size
+				videoIds: z.array(z.string()).max(100), // Limit batch size for performance
 				libraryId: z.string(),
 			}),
 		)

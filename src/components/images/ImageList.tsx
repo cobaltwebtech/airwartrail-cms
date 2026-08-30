@@ -2,11 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
+	createSortedRowModel,
 	flexRender,
-	getCoreRowModel,
-	getSortedRowModel,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
+	sortFn_alphanumeric,
+	sortFn_basic,
+	sortFn_datetime,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -136,6 +141,17 @@ function formatDate(date: Date | string | null | undefined): string {
 
 // Read stored settings once at module level
 const initialSettings = getStoredSettings();
+
+const features = tableFeatures({
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: {
+		alphanumeric: sortFn_alphanumeric,
+		basic: sortFn_basic,
+		datetime: sortFn_datetime,
+		text: sortFn_text,
+	},
+});
 
 export function ImageList({
 	images = [],
@@ -377,7 +393,7 @@ export function ImageList({
 	};
 
 	// Table columns definition
-	const columns = useMemo<ColumnDef<Image>[]>(
+	const columns = useMemo<ColumnDef<typeof features, Image>[]>(
 		() => [
 			{
 				accessorKey: 'thumbnail',
@@ -527,15 +543,14 @@ export function ImageList({
 		[handleCopy, handleDeleteRequest, getImageUrlForDisplay],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: filteredImages,
 		columns,
+		features,
 		state: {
 			sorting: tableSorting,
 		},
 		onSortingChange: handleSortingChange,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
 	});
 
 	// Grid virtualization - virtualize by rows, not individual items
@@ -651,7 +666,7 @@ export function ImageList({
 												data-index={virtualRow.index}
 												ref={tableVirtualizer.measureElement}
 											>
-												{row.getVisibleCells().map((cell) => (
+												{row.getAllCells().map((cell) => (
 													<TableCell key={cell.id}>
 														{flexRender(
 															cell.column.columnDef.cell,

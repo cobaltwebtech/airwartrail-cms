@@ -1,11 +1,16 @@
 import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
+	createSortedRowModel,
 	flexRender,
-	getCoreRowModel,
-	getSortedRowModel,
+	rowSortingFeature,
 	type SortingState,
-	useReactTable,
+	sortFn_alphanumeric,
+	sortFn_basic,
+	sortFn_datetime,
+	sortFn_text,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import {
 	Archive,
@@ -88,6 +93,17 @@ function formatDate(date: Date): string {
 	}).format(new Date(date));
 }
 
+const features = tableFeatures({
+	rowSortingFeature,
+	sortedRowModel: createSortedRowModel(),
+	sortFns: {
+		alphanumeric: sortFn_alphanumeric,
+		basic: sortFn_basic,
+		datetime: sortFn_datetime,
+		text: sortFn_text,
+	},
+});
+
 export function DocumentList({
 	documents,
 	onPageChange,
@@ -102,7 +118,7 @@ export function DocumentList({
 		{ id: 'createdAt', desc: true },
 	]);
 
-	const columns = useMemo<ColumnDef<Document>[]>(
+	const columns = useMemo<ColumnDef<typeof features, Document>[]>(
 		() => [
 			{
 				accessorKey: 'name',
@@ -271,11 +287,10 @@ export function DocumentList({
 		[onStatusChange, onDelete, onEditDescription],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: documents || [],
 		columns,
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
+		features,
 		onSortingChange: setSorting,
 		state: {
 			sorting,
@@ -320,11 +335,8 @@ export function DocumentList({
 					<TableBody>
 						{table.getRowModel().rows?.length ? (
 							table.getRowModel().rows.map((row) => (
-								<TableRow
-									key={row.id}
-									data-state={row.getIsSelected() && 'selected'}
-								>
-									{row.getVisibleCells().map((cell) => (
+								<TableRow key={row.id}>
+									{row.getAllCells().map((cell) => (
 										<TableCell key={cell.id}>
 											{flexRender(
 												cell.column.columnDef.cell,

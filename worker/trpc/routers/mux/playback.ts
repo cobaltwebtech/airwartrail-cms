@@ -60,7 +60,7 @@ export const playbackRouter = t.router({
 						}).optional(),
 						playbackRestrictionId: z.string().optional().nullable(),
 					}),
-				).max(50), // Limit batch size for performance
+				).max(100), // Limit batch size for performance
 				libraryId: z.string().optional(),
 			}),
 		)

@@ -25,13 +25,15 @@ export const Route = createFileRoute(
 		}
 
 		// Prefetch playlists from database
-		await queryClient.ensureQueryData(
-			trpc.mux.listPlaylists.queryOptions({ libraryId }),
-		);
+		await queryClient.query({
+			...trpc.mux.listPlaylists.queryOptions({ libraryId }),
+			staleTime: 'static',
+		});
 		// Also prefetch library info
-		await queryClient.ensureQueryData(
-			trpc.mux.getLibrary.queryOptions({ libraryId }),
-		);
+		await queryClient.query({
+			...trpc.mux.getLibrary.queryOptions({ libraryId }),
+			staleTime: 'static',
+		});
 		return { libraryId };
 	},
 });

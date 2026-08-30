@@ -35,9 +35,10 @@ export const Route = createFileRoute(
 		const { libraryId, videoId } = params;
 		try {
 			// Prefetch video details using internal database ID
-			const video = await queryClient.ensureQueryData(
-				trpc.mux.getVideoById.queryOptions({ videoId, libraryId }),
-			);
+			const video = await queryClient.query({
+				...trpc.mux.getVideoById.queryOptions({ videoId, libraryId }),
+				staleTime: 'static',
+			});
 			// Throw notFound() to trigger the notFoundComponent instead of error boundary
 			if (!video) {
 				throw notFound();

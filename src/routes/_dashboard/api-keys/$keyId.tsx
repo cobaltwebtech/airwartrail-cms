@@ -35,10 +35,14 @@ export const Route = createFileRoute('/_dashboard/api-keys/$keyId')({
 			return { keyId };
 		}
 
-		await queryClient.ensureQueryData(trpc.apiKeys.get.queryOptions({ keyId }));
-		await queryClient.ensureQueryData(
-			trpc.apiKeys.getPermissionOptions.queryOptions(),
-		);
+		await queryClient.query({
+			...trpc.apiKeys.get.queryOptions({ keyId }),
+			staleTime: 'static',
+		});
+		await queryClient.query({
+			...trpc.apiKeys.getPermissionOptions.queryOptions(),
+			staleTime: 'static',
+		});
 	},
 	component: EditApiKeyPage,
 });

@@ -8,11 +8,4 @@ allowBuilds:
   sharp: false
   workerd: false
 
-minimumReleaseAgeExclude:
-  - '@cloudflare/vite-plugin@1.44.0'
-  - miniflare@4.20260708.1
-  - wrangler@4.110.0
-
 nodeLinker: hoisted
-
-

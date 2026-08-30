@@ -3,8 +3,8 @@ import { Link } from '@tanstack/react-router';
 import {
 	type ColumnDef,
 	flexRender,
-	getCoreRowModel,
-	useReactTable,
+	tableFeatures,
+	useTable,
 } from '@tanstack/react-table';
 import {
 	Eye,
@@ -81,6 +81,8 @@ function parseTags(tags: string | null): string[] {
 		return [];
 	}
 }
+
+const features = tableFeatures({});
 
 interface PlaylistListProps {
 	playlists: Playlist[] | null | undefined;
@@ -319,7 +321,7 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 	}, [originalPlaylistOrder]);
 
 	// Table columns
-	const columns: ColumnDef<Playlist>[] = useMemo(
+	const columns: ColumnDef<typeof features, Playlist>[] = useMemo(
 		() => [
 			{
 				id: 'drag-handle',
@@ -460,10 +462,10 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 		[libraryId, handleDeleteClick, handleTogglePublish],
 	);
 
-	const table = useReactTable({
+	const table = useTable({
 		data: orderedPlaylists,
 		columns,
-		getCoreRowModel: getCoreRowModel(),
+		features,
 	});
 
 	if (!playlists || playlists.length === 0) {
@@ -573,7 +575,7 @@ export function PlaylistList({ playlists = [], libraryId }: PlaylistListProps) {
 											: ''
 									}`}
 								>
-									{row.getVisibleCells().map((cell) => (
+									{row.getAllCells().map((cell) => (
 										<TableCell key={cell.id}>
 											{flexRender(
 												cell.column.columnDef.cell,

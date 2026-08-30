@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { RefreshCw, Settings } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +18,23 @@ import { Button } from '@/components/ui/button';
 import { VideoList } from '@/components/videos/VideoList';
 import { trpc } from '@/lib/trpc';
 
+const PAGE_SIZE = 50;
+
+// Infinite-query options for paginated video listing. The procedure receives
+// `cursor` (tRPC appends it to the input) which is used as the SQL offset.
+function videoPageOptions(libraryId: string) {
+	return trpc.mux.listVideosFromDatabase.infiniteQueryOptions(
+		{ libraryId, limit: PAGE_SIZE },
+		{
+			initialCursor: 0,
+			getNextPageParam: (lastPage, allPages) => {
+				if (lastPage.length < PAGE_SIZE) return undefined;
+				return allPages.reduce((sum, page) => sum + page.length, 0);
+			},
+		},
+	);
+}
+
 export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 	component: VideosPageWrapper,
 	loader: async ({ context: { queryClient }, params }) => {
@@ -23,14 +45,13 @@ export const Route = createFileRoute('/_dashboard/library/$libraryId/videos')({
 			return { libraryId };
 		}
 
-		// Prefetch videos from database on the server/during navigation
-		await queryClient.ensureQueryData(
-			trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
-		);
+		// Prefetch the first page of videos on the server/during navigation
+		await queryClient.infiniteQuery(videoPageOptions(libraryId));
 		// Also prefetch library info
-		await queryClient.ensureQueryData(
-			trpc.mux.getLibrary.queryOptions({ libraryId }),
-		);
+		await queryClient.query({
+			...trpc.mux.getLibrary.queryOptions({ libraryId }),
+			staleTime: 'static',
+		});
 		return { libraryId };
 	},
 });
@@ -50,25 +71,31 @@ function VideosPageWrapper() {
 function VideosPage({ libraryId }: { libraryId: string }) {
 	const queryClient = useQueryClient();
 
-	// Fetch videos from internal database (uses internal IDs)
+	// Fetch videos from internal database with infinite scroll (uses internal IDs)
 	const {
-		data: videos,
+		data: videosData,
 		isLoading,
 		error,
-	} = useQuery({
-		...trpc.mux.listVideosFromDatabase.queryOptions({ libraryId }),
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+	} = useInfiniteQuery({
+		...videoPageOptions(libraryId),
 		enabled: !!libraryId,
 		// Poll every 5 seconds while any video is still processing
 		// Check for any non-terminal status (not ready or errored) to handle
 		// undefined, null, 'preparing', or any other interim status
 		refetchInterval: (query) => {
-			const data = query.state.data;
-			const hasProcessingVideos = data?.some(
-				(video) => video.status !== 'ready' && video.status !== 'errored',
-			);
+			const hasProcessingVideos = query.state.data?.pages
+				.flat()
+				.some(
+					(video) => video.status !== 'ready' && video.status !== 'errored',
+				);
 			return hasProcessingVideos ? 5000 : false;
 		},
 	});
+
+	const videos = videosData?.pages.flat() ?? [];
 
 	const { data: library } = useQuery({
 		...trpc.mux.getLibrary.queryOptions({ libraryId }),
@@ -94,7 +121,7 @@ function VideosPage({ libraryId }: { libraryId: string }) {
 					toast.success(messages.join(', '));
 					// Refresh the video list from database
 					queryClient.invalidateQueries({
-						queryKey: trpc.mux.listVideosFromDatabase.queryKey({ libraryId }),
+						queryKey: [['mux', 'listVideosFromDatabase']],
 					});
 				} else {
 					toast.info('All videos are already synced');
@@ -162,7 +189,13 @@ function VideosPage({ libraryId }: { libraryId: string }) {
 				{isLoading ? (
 					<div className="text-muted-foreground">Loading videos...</div>
 				) : (
-					<VideoList videos={videos} libraryId={libraryId} />
+					<VideoList
+						videos={videos}
+						libraryId={libraryId}
+						hasNextPage={hasNextPage}
+						fetchNextPage={fetchNextPage}
+						isFetchingNextPage={isFetchingNextPage}
+					/>
 				)}
 			</section>
 		</>

@@ -58,9 +58,10 @@ export const Route = createFileRoute('/_dashboard/pages/edit-page/$pageId')({
 		if (!pageId) {
 			return { pageId };
 		}
-		await queryClient.ensureQueryData(
-			trpc.pages.get.queryOptions({ id: pageId }),
-		);
+		await queryClient.query({
+			...trpc.pages.get.queryOptions({ id: pageId }),
+			staleTime: 'static',
+		});
 	},
 	component: EditPagePage,
 });

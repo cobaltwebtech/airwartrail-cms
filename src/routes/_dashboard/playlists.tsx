@@ -23,7 +23,10 @@ export const Route = createFileRoute('/_dashboard/playlists')({
 	},
 	loader: async ({ context: { queryClient } }) => {
 		// Prefetch libraries on navigation
-		await queryClient.ensureQueryData(trpc.mux.listLibraries.queryOptions());
+		await queryClient.query({
+			...trpc.mux.listLibraries.queryOptions(),
+			staleTime: 'static',
+		});
 	},
 	component: LibrariesPage,
 });

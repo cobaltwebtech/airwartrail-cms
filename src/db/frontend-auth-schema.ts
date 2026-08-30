@@ -1,3 +1,7 @@
+// This schema is used for the frontend auth database, which is separate
+// from the CMS auth database. It is used to store read and list user
+// session information in the CMS dashboard. Read-only setup here.
+//
 // This is copied over from the frontend auth schema of airwartrail.com
 // Be sure to keep it in sync with any changes made to the
 // frontend auth schema, as they are separate databases and won't

@@ -11,39 +11,39 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as DashboardIndexRouteImport } from './routes/_dashboard/index'
-import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
-import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
-import { Route as DashboardPlaylistsRouteImport } from './routes/_dashboard/playlists'
 import { Route as DashboardLibrariesRouteImport } from './routes/_dashboard/libraries'
-import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
-import { Route as DashboardPagesIndexRouteImport } from './routes/_dashboard/pages/index'
-import { Route as DashboardImagesIndexRouteImport } from './routes/_dashboard/images/index'
-import { Route as DashboardFrontendUsersIndexRouteImport } from './routes/_dashboard/frontend-users/index'
-import { Route as DashboardDocumentsIndexRouteImport } from './routes/_dashboard/documents/index'
-import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
+import { Route as DashboardPlaylistsRouteImport } from './routes/_dashboard/playlists'
+import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
-import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
-import { Route as DashboardPagesCreatePageRouteImport } from './routes/_dashboard/pages/create-page'
-import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
-import { Route as DashboardImagesUploadRouteImport } from './routes/_dashboard/images/upload'
-import { Route as DashboardFrontendUsersUserIdRouteImport } from './routes/_dashboard/frontend-users/$userId'
-import { Route as DashboardDocumentsUploadRouteImport } from './routes/_dashboard/documents/upload'
-import { Route as DashboardBlogPostsCreatePostRouteImport } from './routes/_dashboard/blog-posts/create-post'
 import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
-import { Route as DashboardImagesAlbumsIndexRouteImport } from './routes/_dashboard/images/albums/index'
-import { Route as DashboardPagesEditPagePageIdRouteImport } from './routes/_dashboard/pages/edit-page/$pageId'
-import { Route as DashboardLibraryEditLibraryLibraryIdRouteImport } from './routes/_dashboard/library/edit-library/$libraryId'
-import { Route as DashboardLibraryLibraryIdVideosRouteImport } from './routes/_dashboard/library/$libraryId/videos'
-import { Route as DashboardLibraryLibraryIdPlaylistsRouteImport } from './routes/_dashboard/library/$libraryId/playlists'
-import { Route as DashboardLibraryLibraryIdCreatePlaylistRouteImport } from './routes/_dashboard/library/$libraryId/create-playlist'
-import { Route as DashboardImagesEditImageImageIdRouteImport } from './routes/_dashboard/images/edit-image/$imageId'
-import { Route as DashboardImagesAlbumsCreateAlbumRouteImport } from './routes/_dashboard/images/albums/create-album'
-import { Route as DashboardImagesAlbumsAlbumIdRouteImport } from './routes/_dashboard/images/albums/$albumId'
+import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
+import { Route as DashboardBlogPostsCreatePostRouteImport } from './routes/_dashboard/blog-posts/create-post'
+import { Route as DashboardDocumentsIndexRouteImport } from './routes/_dashboard/documents/index'
+import { Route as DashboardDocumentsUploadRouteImport } from './routes/_dashboard/documents/upload'
+import { Route as DashboardFrontendUsersIndexRouteImport } from './routes/_dashboard/frontend-users/index'
+import { Route as DashboardFrontendUsersUserIdRouteImport } from './routes/_dashboard/frontend-users/$userId'
+import { Route as DashboardImagesIndexRouteImport } from './routes/_dashboard/images/index'
+import { Route as DashboardImagesUploadRouteImport } from './routes/_dashboard/images/upload'
+import { Route as DashboardLibraryCreateLibraryRouteImport } from './routes/_dashboard/library/create-library'
+import { Route as DashboardPagesIndexRouteImport } from './routes/_dashboard/pages/index'
+import { Route as DashboardPagesCreatePageRouteImport } from './routes/_dashboard/pages/create-page'
+import { Route as DashboardTagsIndexRouteImport } from './routes/_dashboard/tags/index'
+import { Route as DashboardUserUserIdRouteImport } from './routes/_dashboard/user/$userId'
 import { Route as DashboardBlogPostsEditPostPostIdRouteImport } from './routes/_dashboard/blog-posts/edit-post/$postId'
-import { Route as DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport } from './routes/_dashboard/library/$libraryId/playlist/$playlistId'
+import { Route as DashboardImagesAlbumsIndexRouteImport } from './routes/_dashboard/images/albums/index'
+import { Route as DashboardImagesAlbumsAlbumIdRouteImport } from './routes/_dashboard/images/albums/$albumId'
+import { Route as DashboardImagesAlbumsCreateAlbumRouteImport } from './routes/_dashboard/images/albums/create-album'
+import { Route as DashboardImagesEditImageImageIdRouteImport } from './routes/_dashboard/images/edit-image/$imageId'
+import { Route as DashboardLibraryLibraryIdCreatePlaylistRouteImport } from './routes/_dashboard/library/$libraryId/create-playlist'
+import { Route as DashboardLibraryLibraryIdPlaylistsRouteImport } from './routes/_dashboard/library/$libraryId/playlists'
+import { Route as DashboardLibraryLibraryIdVideosRouteImport } from './routes/_dashboard/library/$libraryId/videos'
+import { Route as DashboardLibraryEditLibraryLibraryIdRouteImport } from './routes/_dashboard/library/edit-library/$libraryId'
+import { Route as DashboardPagesEditPagePageIdRouteImport } from './routes/_dashboard/pages/edit-page/$pageId'
 import { Route as DashboardLibraryLibraryIdEditVideoVideoIdRouteImport } from './routes/_dashboard/library/$libraryId/edit-video/$videoId'
+import { Route as DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport } from './routes/_dashboard/library/$libraryId/playlist/$playlistId'
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/_dashboard',
@@ -54,24 +54,9 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/auth/reset-password',
-  path: '/auth/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/auth/forgot-password',
-  path: '/auth/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardUploadRoute = DashboardUploadRouteImport.update({
-  id: '/upload',
-  path: '/upload',
+const DashboardLibrariesRoute = DashboardLibrariesRouteImport.update({
+  id: '/libraries',
+  path: '/libraries',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardPlaylistsRoute = DashboardPlaylistsRouteImport.update({
@@ -79,35 +64,34 @@ const DashboardPlaylistsRoute = DashboardPlaylistsRouteImport.update({
   path: '/playlists',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardLibrariesRoute = DashboardLibrariesRouteImport.update({
-  id: '/libraries',
-  path: '/libraries',
+const DashboardUploadRoute = DashboardUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardTagsIndexRoute = DashboardTagsIndexRouteImport.update({
-  id: '/tags/',
-  path: '/tags/',
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardApiKeysIndexRoute = DashboardApiKeysIndexRouteImport.update({
+  id: '/api-keys/',
+  path: '/api-keys/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardPagesIndexRoute = DashboardPagesIndexRouteImport.update({
-  id: '/pages/',
-  path: '/pages/',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardImagesIndexRoute = DashboardImagesIndexRouteImport.update({
-  id: '/images/',
-  path: '/images/',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardFrontendUsersIndexRoute =
-  DashboardFrontendUsersIndexRouteImport.update({
-    id: '/frontend-users/',
-    path: '/frontend-users/',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardDocumentsIndexRoute = DashboardDocumentsIndexRouteImport.update({
-  id: '/documents/',
-  path: '/documents/',
+const DashboardApiKeysKeyIdRoute = DashboardApiKeysKeyIdRouteImport.update({
+  id: '/api-keys/$keyId',
+  path: '/api-keys/$keyId',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardBlogPostsIndexRoute = DashboardBlogPostsIndexRouteImport.update({
@@ -115,14 +99,54 @@ const DashboardBlogPostsIndexRoute = DashboardBlogPostsIndexRouteImport.update({
   path: '/blog-posts/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardApiKeysIndexRoute = DashboardApiKeysIndexRouteImport.update({
-  id: '/api-keys/',
-  path: '/api-keys/',
+const DashboardBlogPostsCreatePostRoute =
+  DashboardBlogPostsCreatePostRouteImport.update({
+    id: '/blog-posts/create-post',
+    path: '/blog-posts/create-post',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardDocumentsIndexRoute = DashboardDocumentsIndexRouteImport.update({
+  id: '/documents/',
+  path: '/documents/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
-  id: '/user/$userId',
-  path: '/user/$userId',
+const DashboardDocumentsUploadRoute =
+  DashboardDocumentsUploadRouteImport.update({
+    id: '/documents/upload',
+    path: '/documents/upload',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardFrontendUsersIndexRoute =
+  DashboardFrontendUsersIndexRouteImport.update({
+    id: '/frontend-users/',
+    path: '/frontend-users/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardFrontendUsersUserIdRoute =
+  DashboardFrontendUsersUserIdRouteImport.update({
+    id: '/frontend-users/$userId',
+    path: '/frontend-users/$userId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardImagesIndexRoute = DashboardImagesIndexRouteImport.update({
+  id: '/images/',
+  path: '/images/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardImagesUploadRoute = DashboardImagesUploadRouteImport.update({
+  id: '/images/upload',
+  path: '/images/upload',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLibraryCreateLibraryRoute =
+  DashboardLibraryCreateLibraryRouteImport.update({
+    id: '/library/create-library',
+    path: '/library/create-library',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardPagesIndexRoute = DashboardPagesIndexRouteImport.update({
+  id: '/pages/',
+  path: '/pages/',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardPagesCreatePageRoute =
@@ -131,86 +155,26 @@ const DashboardPagesCreatePageRoute =
     path: '/pages/create-page',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardLibraryCreateLibraryRoute =
-  DashboardLibraryCreateLibraryRouteImport.update({
-    id: '/library/create-library',
-    path: '/library/create-library',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardImagesUploadRoute = DashboardImagesUploadRouteImport.update({
-  id: '/images/upload',
-  path: '/images/upload',
+const DashboardTagsIndexRoute = DashboardTagsIndexRouteImport.update({
+  id: '/tags/',
+  path: '/tags/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardFrontendUsersUserIdRoute =
-  DashboardFrontendUsersUserIdRouteImport.update({
-    id: '/frontend-users/$userId',
-    path: '/frontend-users/$userId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardDocumentsUploadRoute =
-  DashboardDocumentsUploadRouteImport.update({
-    id: '/documents/upload',
-    path: '/documents/upload',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardBlogPostsCreatePostRoute =
-  DashboardBlogPostsCreatePostRouteImport.update({
-    id: '/blog-posts/create-post',
-    path: '/blog-posts/create-post',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardApiKeysKeyIdRoute = DashboardApiKeysKeyIdRouteImport.update({
-  id: '/api-keys/$keyId',
-  path: '/api-keys/$keyId',
+const DashboardUserUserIdRoute = DashboardUserUserIdRouteImport.update({
+  id: '/user/$userId',
+  path: '/user/$userId',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardBlogPostsEditPostPostIdRoute =
+  DashboardBlogPostsEditPostPostIdRouteImport.update({
+    id: '/blog-posts/edit-post/$postId',
+    path: '/blog-posts/edit-post/$postId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardImagesAlbumsIndexRoute =
   DashboardImagesAlbumsIndexRouteImport.update({
     id: '/images/albums/',
     path: '/images/albums/',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardPagesEditPagePageIdRoute =
-  DashboardPagesEditPagePageIdRouteImport.update({
-    id: '/pages/edit-page/$pageId',
-    path: '/pages/edit-page/$pageId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardLibraryEditLibraryLibraryIdRoute =
-  DashboardLibraryEditLibraryLibraryIdRouteImport.update({
-    id: '/library/edit-library/$libraryId',
-    path: '/library/edit-library/$libraryId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardLibraryLibraryIdVideosRoute =
-  DashboardLibraryLibraryIdVideosRouteImport.update({
-    id: '/library/$libraryId/videos',
-    path: '/library/$libraryId/videos',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardLibraryLibraryIdPlaylistsRoute =
-  DashboardLibraryLibraryIdPlaylistsRouteImport.update({
-    id: '/library/$libraryId/playlists',
-    path: '/library/$libraryId/playlists',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardLibraryLibraryIdCreatePlaylistRoute =
-  DashboardLibraryLibraryIdCreatePlaylistRouteImport.update({
-    id: '/library/$libraryId/create-playlist',
-    path: '/library/$libraryId/create-playlist',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardImagesEditImageImageIdRoute =
-  DashboardImagesEditImageImageIdRouteImport.update({
-    id: '/images/edit-image/$imageId',
-    path: '/images/edit-image/$imageId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardImagesAlbumsCreateAlbumRoute =
-  DashboardImagesAlbumsCreateAlbumRouteImport.update({
-    id: '/images/albums/create-album',
-    path: '/images/albums/create-album',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardImagesAlbumsAlbumIdRoute =
@@ -219,22 +183,58 @@ const DashboardImagesAlbumsAlbumIdRoute =
     path: '/images/albums/$albumId',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardBlogPostsEditPostPostIdRoute =
-  DashboardBlogPostsEditPostPostIdRouteImport.update({
-    id: '/blog-posts/edit-post/$postId',
-    path: '/blog-posts/edit-post/$postId',
+const DashboardImagesAlbumsCreateAlbumRoute =
+  DashboardImagesAlbumsCreateAlbumRouteImport.update({
+    id: '/images/albums/create-album',
+    path: '/images/albums/create-album',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardLibraryLibraryIdPlaylistPlaylistIdRoute =
-  DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport.update({
-    id: '/library/$libraryId/playlist/$playlistId',
-    path: '/library/$libraryId/playlist/$playlistId',
+const DashboardImagesEditImageImageIdRoute =
+  DashboardImagesEditImageImageIdRouteImport.update({
+    id: '/images/edit-image/$imageId',
+    path: '/images/edit-image/$imageId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdCreatePlaylistRoute =
+  DashboardLibraryLibraryIdCreatePlaylistRouteImport.update({
+    id: '/library/$libraryId/create-playlist',
+    path: '/library/$libraryId/create-playlist',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdPlaylistsRoute =
+  DashboardLibraryLibraryIdPlaylistsRouteImport.update({
+    id: '/library/$libraryId/playlists',
+    path: '/library/$libraryId/playlists',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdVideosRoute =
+  DashboardLibraryLibraryIdVideosRouteImport.update({
+    id: '/library/$libraryId/videos',
+    path: '/library/$libraryId/videos',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryEditLibraryLibraryIdRoute =
+  DashboardLibraryEditLibraryLibraryIdRouteImport.update({
+    id: '/library/edit-library/$libraryId',
+    path: '/library/edit-library/$libraryId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardPagesEditPagePageIdRoute =
+  DashboardPagesEditPagePageIdRouteImport.update({
+    id: '/pages/edit-page/$pageId',
+    path: '/pages/edit-page/$pageId',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardLibraryLibraryIdEditVideoVideoIdRoute =
   DashboardLibraryLibraryIdEditVideoVideoIdRouteImport.update({
     id: '/library/$libraryId/edit-video/$videoId',
     path: '/library/$libraryId/edit-video/$videoId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardLibraryLibraryIdPlaylistPlaylistIdRoute =
+  DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport.update({
+    id: '/library/$libraryId/playlist/$playlistId',
+    path: '/library/$libraryId/playlist/$playlistId',
     getParentRoute: () => DashboardRoute,
   } as any)
 
@@ -483,32 +483,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/auth/reset-password': {
-      id: '/auth/reset-password'
-      path: '/auth/reset-password'
-      fullPath: '/auth/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/forgot-password': {
-      id: '/auth/forgot-password'
-      path: '/auth/forgot-password'
-      fullPath: '/auth/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_dashboard/upload': {
-      id: '/_dashboard/upload'
-      path: '/upload'
-      fullPath: '/upload'
-      preLoaderRoute: typeof DashboardUploadRouteImport
+    '/_dashboard/libraries': {
+      id: '/_dashboard/libraries'
+      path: '/libraries'
+      fullPath: '/libraries'
+      preLoaderRoute: typeof DashboardLibrariesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/playlists': {
@@ -518,109 +497,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPlaylistsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/libraries': {
-      id: '/_dashboard/libraries'
-      path: '/libraries'
-      fullPath: '/libraries'
-      preLoaderRoute: typeof DashboardLibrariesRouteImport
+    '/_dashboard/upload': {
+      id: '/_dashboard/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof DashboardUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/tags/': {
-      id: '/_dashboard/tags/'
-      path: '/tags'
-      fullPath: '/tags/'
-      preLoaderRoute: typeof DashboardTagsIndexRouteImport
-      parentRoute: typeof DashboardRoute
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_dashboard/pages/': {
-      id: '/_dashboard/pages/'
-      path: '/pages'
-      fullPath: '/pages/'
-      preLoaderRoute: typeof DashboardPagesIndexRouteImport
-      parentRoute: typeof DashboardRoute
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_dashboard/images/': {
-      id: '/_dashboard/images/'
-      path: '/images'
-      fullPath: '/images/'
-      preLoaderRoute: typeof DashboardImagesIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/frontend-users/': {
-      id: '/_dashboard/frontend-users/'
-      path: '/frontend-users'
-      fullPath: '/frontend-users/'
-      preLoaderRoute: typeof DashboardFrontendUsersIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/documents/': {
-      id: '/_dashboard/documents/'
-      path: '/documents'
-      fullPath: '/documents/'
-      preLoaderRoute: typeof DashboardDocumentsIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/blog-posts/': {
-      id: '/_dashboard/blog-posts/'
-      path: '/blog-posts'
-      fullPath: '/blog-posts/'
-      preLoaderRoute: typeof DashboardBlogPostsIndexRouteImport
-      parentRoute: typeof DashboardRoute
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_dashboard/api-keys/': {
       id: '/_dashboard/api-keys/'
       path: '/api-keys'
       fullPath: '/api-keys/'
       preLoaderRoute: typeof DashboardApiKeysIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/user/$userId': {
-      id: '/_dashboard/user/$userId'
-      path: '/user/$userId'
-      fullPath: '/user/$userId'
-      preLoaderRoute: typeof DashboardUserUserIdRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/pages/create-page': {
-      id: '/_dashboard/pages/create-page'
-      path: '/pages/create-page'
-      fullPath: '/pages/create-page'
-      preLoaderRoute: typeof DashboardPagesCreatePageRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/library/create-library': {
-      id: '/_dashboard/library/create-library'
-      path: '/library/create-library'
-      fullPath: '/library/create-library'
-      preLoaderRoute: typeof DashboardLibraryCreateLibraryRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/images/upload': {
-      id: '/_dashboard/images/upload'
-      path: '/images/upload'
-      fullPath: '/images/upload'
-      preLoaderRoute: typeof DashboardImagesUploadRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/frontend-users/$userId': {
-      id: '/_dashboard/frontend-users/$userId'
-      path: '/frontend-users/$userId'
-      fullPath: '/frontend-users/$userId'
-      preLoaderRoute: typeof DashboardFrontendUsersUserIdRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/documents/upload': {
-      id: '/_dashboard/documents/upload'
-      path: '/documents/upload'
-      fullPath: '/documents/upload'
-      preLoaderRoute: typeof DashboardDocumentsUploadRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/blog-posts/create-post': {
-      id: '/_dashboard/blog-posts/create-post'
-      path: '/blog-posts/create-post'
-      fullPath: '/blog-posts/create-post'
-      preLoaderRoute: typeof DashboardBlogPostsCreatePostRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/api-keys/$keyId': {
@@ -630,67 +539,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardApiKeysKeyIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/images/albums/': {
-      id: '/_dashboard/images/albums/'
-      path: '/images/albums'
-      fullPath: '/images/albums/'
-      preLoaderRoute: typeof DashboardImagesAlbumsIndexRouteImport
+    '/_dashboard/blog-posts/': {
+      id: '/_dashboard/blog-posts/'
+      path: '/blog-posts'
+      fullPath: '/blog-posts/'
+      preLoaderRoute: typeof DashboardBlogPostsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/pages/edit-page/$pageId': {
-      id: '/_dashboard/pages/edit-page/$pageId'
-      path: '/pages/edit-page/$pageId'
-      fullPath: '/pages/edit-page/$pageId'
-      preLoaderRoute: typeof DashboardPagesEditPagePageIdRouteImport
+    '/_dashboard/blog-posts/create-post': {
+      id: '/_dashboard/blog-posts/create-post'
+      path: '/blog-posts/create-post'
+      fullPath: '/blog-posts/create-post'
+      preLoaderRoute: typeof DashboardBlogPostsCreatePostRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/edit-library/$libraryId': {
-      id: '/_dashboard/library/edit-library/$libraryId'
-      path: '/library/edit-library/$libraryId'
-      fullPath: '/library/edit-library/$libraryId'
-      preLoaderRoute: typeof DashboardLibraryEditLibraryLibraryIdRouteImport
+    '/_dashboard/documents/': {
+      id: '/_dashboard/documents/'
+      path: '/documents'
+      fullPath: '/documents/'
+      preLoaderRoute: typeof DashboardDocumentsIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/$libraryId/videos': {
-      id: '/_dashboard/library/$libraryId/videos'
-      path: '/library/$libraryId/videos'
-      fullPath: '/library/$libraryId/videos'
-      preLoaderRoute: typeof DashboardLibraryLibraryIdVideosRouteImport
+    '/_dashboard/documents/upload': {
+      id: '/_dashboard/documents/upload'
+      path: '/documents/upload'
+      fullPath: '/documents/upload'
+      preLoaderRoute: typeof DashboardDocumentsUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/$libraryId/playlists': {
-      id: '/_dashboard/library/$libraryId/playlists'
-      path: '/library/$libraryId/playlists'
-      fullPath: '/library/$libraryId/playlists'
-      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistsRouteImport
+    '/_dashboard/frontend-users/': {
+      id: '/_dashboard/frontend-users/'
+      path: '/frontend-users'
+      fullPath: '/frontend-users/'
+      preLoaderRoute: typeof DashboardFrontendUsersIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/$libraryId/create-playlist': {
-      id: '/_dashboard/library/$libraryId/create-playlist'
-      path: '/library/$libraryId/create-playlist'
-      fullPath: '/library/$libraryId/create-playlist'
-      preLoaderRoute: typeof DashboardLibraryLibraryIdCreatePlaylistRouteImport
+    '/_dashboard/frontend-users/$userId': {
+      id: '/_dashboard/frontend-users/$userId'
+      path: '/frontend-users/$userId'
+      fullPath: '/frontend-users/$userId'
+      preLoaderRoute: typeof DashboardFrontendUsersUserIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/images/edit-image/$imageId': {
-      id: '/_dashboard/images/edit-image/$imageId'
-      path: '/images/edit-image/$imageId'
-      fullPath: '/images/edit-image/$imageId'
-      preLoaderRoute: typeof DashboardImagesEditImageImageIdRouteImport
+    '/_dashboard/images/': {
+      id: '/_dashboard/images/'
+      path: '/images'
+      fullPath: '/images/'
+      preLoaderRoute: typeof DashboardImagesIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/images/albums/create-album': {
-      id: '/_dashboard/images/albums/create-album'
-      path: '/images/albums/create-album'
-      fullPath: '/images/albums/create-album'
-      preLoaderRoute: typeof DashboardImagesAlbumsCreateAlbumRouteImport
+    '/_dashboard/images/upload': {
+      id: '/_dashboard/images/upload'
+      path: '/images/upload'
+      fullPath: '/images/upload'
+      preLoaderRoute: typeof DashboardImagesUploadRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/images/albums/$albumId': {
-      id: '/_dashboard/images/albums/$albumId'
-      path: '/images/albums/$albumId'
-      fullPath: '/images/albums/$albumId'
-      preLoaderRoute: typeof DashboardImagesAlbumsAlbumIdRouteImport
+    '/_dashboard/library/create-library': {
+      id: '/_dashboard/library/create-library'
+      path: '/library/create-library'
+      fullPath: '/library/create-library'
+      preLoaderRoute: typeof DashboardLibraryCreateLibraryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pages/': {
+      id: '/_dashboard/pages/'
+      path: '/pages'
+      fullPath: '/pages/'
+      preLoaderRoute: typeof DashboardPagesIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pages/create-page': {
+      id: '/_dashboard/pages/create-page'
+      path: '/pages/create-page'
+      fullPath: '/pages/create-page'
+      preLoaderRoute: typeof DashboardPagesCreatePageRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/tags/': {
+      id: '/_dashboard/tags/'
+      path: '/tags'
+      fullPath: '/tags/'
+      preLoaderRoute: typeof DashboardTagsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/user/$userId': {
+      id: '/_dashboard/user/$userId'
+      path: '/user/$userId'
+      fullPath: '/user/$userId'
+      preLoaderRoute: typeof DashboardUserUserIdRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/blog-posts/edit-post/$postId': {
@@ -700,11 +637,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardBlogPostsEditPostPostIdRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/library/$libraryId/playlist/$playlistId': {
-      id: '/_dashboard/library/$libraryId/playlist/$playlistId'
-      path: '/library/$libraryId/playlist/$playlistId'
-      fullPath: '/library/$libraryId/playlist/$playlistId'
-      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport
+    '/_dashboard/images/albums/': {
+      id: '/_dashboard/images/albums/'
+      path: '/images/albums'
+      fullPath: '/images/albums/'
+      preLoaderRoute: typeof DashboardImagesAlbumsIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/images/albums/$albumId': {
+      id: '/_dashboard/images/albums/$albumId'
+      path: '/images/albums/$albumId'
+      fullPath: '/images/albums/$albumId'
+      preLoaderRoute: typeof DashboardImagesAlbumsAlbumIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/images/albums/create-album': {
+      id: '/_dashboard/images/albums/create-album'
+      path: '/images/albums/create-album'
+      fullPath: '/images/albums/create-album'
+      preLoaderRoute: typeof DashboardImagesAlbumsCreateAlbumRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/images/edit-image/$imageId': {
+      id: '/_dashboard/images/edit-image/$imageId'
+      path: '/images/edit-image/$imageId'
+      fullPath: '/images/edit-image/$imageId'
+      preLoaderRoute: typeof DashboardImagesEditImageImageIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/create-playlist': {
+      id: '/_dashboard/library/$libraryId/create-playlist'
+      path: '/library/$libraryId/create-playlist'
+      fullPath: '/library/$libraryId/create-playlist'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdCreatePlaylistRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/playlists': {
+      id: '/_dashboard/library/$libraryId/playlists'
+      path: '/library/$libraryId/playlists'
+      fullPath: '/library/$libraryId/playlists'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/videos': {
+      id: '/_dashboard/library/$libraryId/videos'
+      path: '/library/$libraryId/videos'
+      fullPath: '/library/$libraryId/videos'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdVideosRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/edit-library/$libraryId': {
+      id: '/_dashboard/library/edit-library/$libraryId'
+      path: '/library/edit-library/$libraryId'
+      fullPath: '/library/edit-library/$libraryId'
+      preLoaderRoute: typeof DashboardLibraryEditLibraryLibraryIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pages/edit-page/$pageId': {
+      id: '/_dashboard/pages/edit-page/$pageId'
+      path: '/pages/edit-page/$pageId'
+      fullPath: '/pages/edit-page/$pageId'
+      preLoaderRoute: typeof DashboardPagesEditPagePageIdRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/library/$libraryId/edit-video/$videoId': {
@@ -712,6 +705,13 @@ declare module '@tanstack/react-router' {
       path: '/library/$libraryId/edit-video/$videoId'
       fullPath: '/library/$libraryId/edit-video/$videoId'
       preLoaderRoute: typeof DashboardLibraryLibraryIdEditVideoVideoIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/library/$libraryId/playlist/$playlistId': {
+      id: '/_dashboard/library/$libraryId/playlist/$playlistId'
+      path: '/library/$libraryId/playlist/$playlistId'
+      fullPath: '/library/$libraryId/playlist/$playlistId'
+      preLoaderRoute: typeof DashboardLibraryLibraryIdPlaylistPlaylistIdRouteImport
       parentRoute: typeof DashboardRoute
     }
   }

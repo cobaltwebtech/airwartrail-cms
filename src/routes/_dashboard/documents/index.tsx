@@ -35,14 +35,15 @@ export const Route = createFileRoute('/_dashboard/documents/')({
 		context: { queryClient },
 		deps: { page, publishStatus },
 	}) => {
-		await queryClient.ensureQueryData(
-			trpc.documents.list.queryOptions({
+		await queryClient.query({
+			...trpc.documents.list.queryOptions({
 				limit: 50,
 				page: page || 1,
 				sortOrder: 'desc',
 				publishStatus,
 			}),
-		);
+			staleTime: 'static',
+		});
 		return { page, publishStatus };
 	},
 });

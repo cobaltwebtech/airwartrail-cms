@@ -639,13 +639,17 @@ export const videosRouter = t.router({
 				libraryId: z.string(),
 				limit: z.number().min(1).max(100).default(50),
 				offset: z.number().min(0).default(0),
+				// Cursor for infinite scroll - tRPC appends this to the input for
+				// `infiniteQueryOptions`. Takes precedence over `offset`.
+				cursor: z.number().min(0).optional(),
 				includeTags: z.boolean().default(false),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
 			const { env } = ctx;
 			const db = getVideosDb(env);
-			const { libraryId, limit, offset, includeTags } = input;
+			const { libraryId, limit, offset, includeTags, cursor } = input;
+			const start = cursor ?? offset;
 
 			try {
 				// Verify library exists and get credentials
@@ -692,7 +696,7 @@ export const videosRouter = t.router({
 					.groupBy(video.id)
 					.orderBy(desc(video.createdAt))
 					.limit(limit)
-					.offset(offset);
+					.offset(start);
 
 				// If includeTags is true, fetch tags for all videos in one query
 				let videoTagsMap = new Map<string, Array<{ id: string; slug: string; name: string }>>();

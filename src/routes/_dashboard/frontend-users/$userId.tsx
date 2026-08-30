@@ -30,9 +30,10 @@ import { trpc } from '@/lib/trpc';
 
 export const Route = createFileRoute('/_dashboard/frontend-users/$userId')({
 	loader: async ({ context: { queryClient }, params: { userId } }) => {
-		await queryClient.ensureQueryData(
-			trpc.frontendAuth.getUser.queryOptions({ id: userId }),
-		);
+		await queryClient.query({
+			...trpc.frontendAuth.getUser.queryOptions({ id: userId }),
+			staleTime: 'static',
+		});
 	},
 	component: FrontendUserDetailPage,
 });

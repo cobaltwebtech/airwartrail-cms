@@ -32,14 +32,15 @@ export const Route = createFileRoute('/_dashboard/images/albums/')({
 	},
 	loaderDeps: ({ search: { page, status } }) => ({ page, status }),
 	loader: async ({ context: { queryClient }, deps: { page, status } }) => {
-		await queryClient.ensureQueryData(
-			trpc.cfImages.albums.listAlbums.queryOptions({
+		await queryClient.query({
+			...trpc.cfImages.albums.listAlbums.queryOptions({
 				limit: 25,
 				page: page || 1,
 				sortOrder: 'desc',
 				status,
 			}),
-		);
+			staleTime: 'static',
+		});
 		return { page };
 	},
 });

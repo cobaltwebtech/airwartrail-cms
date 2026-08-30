@@ -21,13 +21,14 @@ export const Route = createFileRoute('/_dashboard/images/')({
 	loaderDeps: ({ search: { page } }) => ({ page }),
 	loader: async ({ context: { queryClient }, deps: { page } }) => {
 		// Prefetch images from database
-		await queryClient.ensureQueryData(
-			trpc.cfImages.images.listImages.queryOptions({
+		await queryClient.query({
+			...trpc.cfImages.images.listImages.queryOptions({
 				limit: 50,
 				page: page || 1,
 				sortOrder: 'desc',
 			}),
-		);
+			staleTime: 'static',
+		});
 		return { page };
 	},
 });

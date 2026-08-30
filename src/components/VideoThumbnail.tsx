@@ -38,6 +38,8 @@ export interface VideoThumbnailProps {
 		customThumbnailTime: number | null;
 		hasCustomThumbnail: boolean;
 	};
+	/** True while the batch thumbnail query is loading - suppresses individual fallback queries */
+	batchThumbnailPending?: boolean;
 	/** Batch signed tokens from generateSignedTokensBatch - avoids individual query */
 	batchSignedTokens?: {
 		playbackId: string;
@@ -45,6 +47,8 @@ export interface VideoThumbnailProps {
 		thumbnail: string;
 		storyboard: string;
 	};
+	/** True while the batch signed tokens query is loading - suppresses individual fallback queries */
+	batchSignedTokensPending?: boolean;
 }
 
 /**
@@ -96,7 +100,9 @@ export function VideoThumbnail({
 	time,
 	fallbackIcon,
 	batchThumbnailData,
+	batchThumbnailPending,
 	batchSignedTokens,
+	batchSignedTokensPending,
 }: VideoThumbnailProps) {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [hasError, setHasError] = useState(false);
@@ -111,7 +117,13 @@ export function VideoThumbnail({
 	const { data: thumbnailData, isLoading: isLoadingThumbnail } = useQuery(
 		trpc.mux.getThumbnail.queryOptions(
 			{ videoId: videoId || '', libraryId: libraryId || '' },
-			{ enabled: !!videoId && !!libraryId && !batchThumbnailData },
+			{
+				enabled:
+					!!videoId &&
+					!!libraryId &&
+					!batchThumbnailData &&
+					!batchThumbnailPending,
+			},
 		),
 	);
 
@@ -156,7 +168,8 @@ export function VideoThumbnail({
 					!!playbackId &&
 					!!libraryId &&
 					!customThumbnailUrl &&
-					!batchSignedTokens, // Only fetch token if not using custom URL and no batch data
+					!batchSignedTokens &&
+					!batchSignedTokensPending, // Only fetch token if not using custom URL and no batch data
 				staleTime: 60 * 60 * 1000, // Cache for 1 hour
 			},
 		),
