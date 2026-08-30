@@ -67,5 +67,8 @@ App.all("/trpc/*", (c) => {
         env: c.env,
         workerCtx: c.executionCtx as ExecutionContext,
       }),
+    // Client sends large query inputs (video/playback ID batches) as POST via
+    // methodOverride; tRPC v11 rejects POSTs to queries unless allowed here.
+    allowMethodOverride: true,
   });
 });
