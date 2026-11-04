@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { t, protectedProcedure, createPermissionMiddleware } from "../../trpc-init";
-import Mux from "@mux/mux-node";
+import Mux from "@mux/ts";
 import { eq } from "drizzle-orm";
 import { muxLibrary } from "@/db/video-schema";
 import { generateLibraryId } from "@/worker/lib/generate-id";

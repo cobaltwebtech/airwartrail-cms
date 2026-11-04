@@ -14,7 +14,7 @@ export type MuxAssetStatus = VideoStatus;
 export interface MuxTrack {
 	id: string;
 	type: 'text' | 'audio' | 'video';
-	textType?: 'captions' | 'subtitles';
+	textType?: 'captions' | 'subtitles' | 'chapters';
 	language?: string;
 	languageCode?: string;
 	name?: string;

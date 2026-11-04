@@ -316,7 +316,7 @@ function EditPagePage() {
 													mode="single"
 													selected={publishedAt || undefined}
 													onSelect={(date) => setPublishedAt(date || null)}
-													initialFocus
+													autoFocus
 												/>
 											</PopoverContent>
 										</Popover>

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import Mux from "@mux/mux-node";
+import Mux from "@mux/ts";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
 import {
@@ -42,7 +42,7 @@ export interface MuxAsset {
 export interface MuxTrack {
 	id: string;
 	type: "text" | "audio" | "video";
-	textType?: "captions" | "subtitles";
+	textType?: "captions" | "subtitles" | "chapters";
 	language?: string;
 	languageCode?: string;
 	name?: string;

@@ -82,6 +82,14 @@ export const uploadsRouter = t.router({
 					},
 				});
 
+				// Mux types `url` as optional; a freshly created upload must have one
+				if (!upload.url) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: "Mux did not return an upload URL",
+					});
+				}
+
 				return {
 					id: upload.id,
 					url: upload.url,
@@ -105,7 +113,7 @@ export const uploadsRouter = t.router({
 	getDirectUpload: protectedProcedure
 		.use(createPermissionMiddleware('mux', ['read']))
 		.input(z.object({ uploadId: z.string(), libraryId: z.string().optional() }))
-		.query(async ({ ctx, input }): Promise<DirectUpload> => {
+		.query(async ({ ctx, input }): Promise<Omit<DirectUpload, "url"> & { url?: string }> => {
 			const { env } = ctx;
 
 			try {

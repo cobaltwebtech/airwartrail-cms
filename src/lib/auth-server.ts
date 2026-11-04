@@ -24,9 +24,6 @@ export const auth = betterAuth({
 		provider: 'sqlite',
 		schema: authSchema,
 	}),
-	experimental: {
-		joins: true,
-	},
 	session: {
 		expiresIn: 60 * 60 * 24 * 7, // Session expires in 7 days
 		updateAge: 60 * 60 * 24, // Every 24 hours the session expiration is updated
@@ -39,6 +36,9 @@ export const auth = betterAuth({
 		enabled: true,
 	},
 	advanced: {
+		database: {
+			joins: true,
+		},
 		ipAddress: {
 			// Cloudflare specific header for rate limiting
 			ipAddressHeaders: ['cf-connecting-ip'],

@@ -18,6 +18,9 @@ import { requireNoSession } from '@/lib/auth-check';
 import { signUp } from '@/lib/auth-client';
 import { signupSchema } from '@/lib/schemas';
 
+// Signup is disabled: the "-" prefix keeps this file out of the route tree, so
+// '/auth/signup' isn't a registered path. Remove this when renaming to signup.tsx.
+// @ts-expect-error
 export const Route = createFileRoute('/auth/signup')({
 	validateSearch: (search: Record<string, unknown>) => {
 		return {
