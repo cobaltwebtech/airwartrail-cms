@@ -115,6 +115,32 @@ export const blogPosts = sqliteTable(
 	],
 );
 
+/**
+ * Site Content Table Schema
+ * Stores rich text content for single, fixed frontend routes (e.g. the About page).
+ * One row per route, keyed by a fixed identifier such as 'about'.
+ */
+export const siteContent = sqliteTable('site_content', {
+	// Fixed key identifying the frontend route (e.g. 'about')
+	id: text('id').primaryKey(),
+
+	// Content
+	content: text('content', { mode: 'json' }), // JSON content data for rich text editor
+
+	// Last editor
+	updatedBy: text('updated_by'),
+	updatedById: text('updated_by_id'),
+
+	// Timestamps
+	createdAt: integer('created_at', { mode: 'timestamp_ms' })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull(),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => new Date())
+		.notNull(),
+});
+
 // ---------------------------------------------------------------------------
 // Images and Albums Schema
 // ---------------------------------------------------------------------------

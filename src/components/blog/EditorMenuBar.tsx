@@ -15,6 +15,7 @@ import {
 	Link,
 	List,
 	ListOrdered,
+	Minus,
 	Quote,
 	Redo,
 	Strikethrough,
@@ -462,6 +463,13 @@ export function EditorMenuBar({ editor, activeState }: EditorMenuBarProps) {
 				tooltip="Quote"
 			>
 				<Quote className="size-4" />
+			</MenuButton>
+
+			<MenuButton
+				onClick={() => editor.chain().focus().setHorizontalRule().run()}
+				tooltip="Horizontal Line"
+			>
+				<Minus className="size-4" />
 			</MenuButton>
 
 			<Separator orientation="vertical" className="mx-1 h-6" />

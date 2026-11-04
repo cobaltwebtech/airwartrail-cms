@@ -7,6 +7,7 @@ import {
 	FileText,
 	GalleryHorizontalEnd,
 	Images,
+	Info,
 	KeyRound,
 	LibraryBig,
 	ListVideo,
@@ -86,6 +87,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			title: 'Create Update',
 			url: '/pages/create-page',
 			icon: FilePlusCorner,
+		},
+		{
+			title: 'About Page',
+			url: '/about-page',
+			icon: Info,
 		},
 		{
 			title: 'Create Library',

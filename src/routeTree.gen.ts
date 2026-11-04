@@ -17,6 +17,7 @@ import { Route as DashboardUploadRouteImport } from './routes/_dashboard/upload'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
+import { Route as DashboardAboutPageIndexRouteImport } from './routes/_dashboard/about-page/index'
 import { Route as DashboardApiKeysIndexRouteImport } from './routes/_dashboard/api-keys/index'
 import { Route as DashboardApiKeysKeyIdRouteImport } from './routes/_dashboard/api-keys/$keyId'
 import { Route as DashboardBlogPostsIndexRouteImport } from './routes/_dashboard/blog-posts/index'
@@ -83,6 +84,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/auth/reset-password',
   path: '/auth/reset-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAboutPageIndexRoute = DashboardAboutPageIndexRouteImport.update({
+  id: '/about-page/',
+  path: '/about-page/',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardApiKeysIndexRoute = DashboardApiKeysIndexRouteImport.update({
   id: '/api-keys/',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
+  '/about-page/': typeof DashboardAboutPageIndexRoute
   '/api-keys/': typeof DashboardApiKeysIndexRoute
   '/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/documents/': typeof DashboardDocumentsIndexRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/user/$userId': typeof DashboardUserUserIdRoute
+  '/about-page': typeof DashboardAboutPageIndexRoute
   '/api-keys': typeof DashboardApiKeysIndexRoute
   '/blog-posts': typeof DashboardBlogPostsIndexRoute
   '/documents': typeof DashboardDocumentsIndexRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/_dashboard/library/create-library': typeof DashboardLibraryCreateLibraryRoute
   '/_dashboard/pages/create-page': typeof DashboardPagesCreatePageRoute
   '/_dashboard/user/$userId': typeof DashboardUserUserIdRoute
+  '/_dashboard/about-page/': typeof DashboardAboutPageIndexRoute
   '/_dashboard/api-keys/': typeof DashboardApiKeysIndexRoute
   '/_dashboard/blog-posts/': typeof DashboardBlogPostsIndexRoute
   '/_dashboard/documents/': typeof DashboardDocumentsIndexRoute
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/library/create-library'
     | '/pages/create-page'
     | '/user/$userId'
+    | '/about-page/'
     | '/api-keys/'
     | '/blog-posts/'
     | '/documents/'
@@ -402,6 +412,7 @@ export interface FileRouteTypes {
     | '/library/create-library'
     | '/pages/create-page'
     | '/user/$userId'
+    | '/about-page'
     | '/api-keys'
     | '/blog-posts'
     | '/documents'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/_dashboard/library/create-library'
     | '/_dashboard/pages/create-page'
     | '/_dashboard/user/$userId'
+    | '/_dashboard/about-page/'
     | '/_dashboard/api-keys/'
     | '/_dashboard/blog-posts/'
     | '/_dashboard/documents/'
@@ -524,6 +536,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/about-page/': {
+      id: '/_dashboard/about-page/'
+      path: '/about-page'
+      fullPath: '/about-page/'
+      preLoaderRoute: typeof DashboardAboutPageIndexRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/api-keys/': {
       id: '/_dashboard/api-keys/'
@@ -730,6 +749,7 @@ interface DashboardRouteChildren {
   DashboardLibraryCreateLibraryRoute: typeof DashboardLibraryCreateLibraryRoute
   DashboardPagesCreatePageRoute: typeof DashboardPagesCreatePageRoute
   DashboardUserUserIdRoute: typeof DashboardUserUserIdRoute
+  DashboardAboutPageIndexRoute: typeof DashboardAboutPageIndexRoute
   DashboardApiKeysIndexRoute: typeof DashboardApiKeysIndexRoute
   DashboardBlogPostsIndexRoute: typeof DashboardBlogPostsIndexRoute
   DashboardDocumentsIndexRoute: typeof DashboardDocumentsIndexRoute
@@ -764,6 +784,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLibraryCreateLibraryRoute: DashboardLibraryCreateLibraryRoute,
   DashboardPagesCreatePageRoute: DashboardPagesCreatePageRoute,
   DashboardUserUserIdRoute: DashboardUserUserIdRoute,
+  DashboardAboutPageIndexRoute: DashboardAboutPageIndexRoute,
   DashboardApiKeysIndexRoute: DashboardApiKeysIndexRoute,
   DashboardBlogPostsIndexRoute: DashboardBlogPostsIndexRoute,
   DashboardDocumentsIndexRoute: DashboardDocumentsIndexRoute,

@@ -18,6 +18,8 @@ export default defineConfig({
 		cloudflare(),
 	],
 	server: {
+		// Hostname the frontend's AWT_CMS service binding uses when calling this worker in local dev
+		allowedHosts: ['awt-cms-worker'],
 		watch: {
 			ignored: ['**/.wrangler/state/**'],
 		},

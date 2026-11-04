@@ -3,6 +3,7 @@ import { muxRouter } from "./routers/mux";
 import { apiKeysRouter } from "./routers/api-key";
 import { blogRouter } from "./routers/blog";
 import { pagesRouter } from "./routers/pages";
+import { siteContentRouter } from "./routers/site-content";
 import { cfImagesRouter } from "./routers/cf-images";
 import { documentsRouter } from "./routers/documents";
 import { frontendAuthRouter } from "./routers/frontend-auth";
@@ -12,6 +13,7 @@ export const appRouter = t.router({
 	apiKeys: apiKeysRouter,
 	blog: blogRouter,
 	pages: pagesRouter,
+	siteContent: siteContentRouter,
 	cfImages: cfImagesRouter,
 	documents: documentsRouter,
 	frontendAuth: frontendAuthRouter,
